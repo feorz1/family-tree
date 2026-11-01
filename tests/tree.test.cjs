@@ -149,3 +149,34 @@ for(const c of charts){
  }
 }
 console.log(`Even spacing verified on ${evenSides} card sides.`);
+// On narrow screens, the years control opens temporarily without consuming chart width.
+if(!file.includes('@media(max-width:700px)')||!file.includes('.chart-shell{grid-template-columns:minmax(0,1fr)}')||!file.includes('.timeline.is-collapsed .timeline-list{display:none}'))throw Error('Mobile timeline layout missing');
+for(const c of charts){
+ const subtree=walk(roots['#chart-'+c.id]),timeline=subtree.find(e=>e.className==='timeline'),toggle=subtree.find(e=>e.className==='timeline-toggle'),list=subtree.find(e=>e.className==='timeline-list'),chartView=subtree.find(e=>e.className==='viewport'),chartPanel=subtree.find(e=>e.className==='selection-panel');
+ if(!timeline||!toggle||!list||toggle.attrs['aria-controls']!==list.attrs.id||toggle.attrs['aria-expanded']!=='false'||!timeline.classList.contains('is-collapsed'))throw Error(`${c.id}: timeline should start closed`);
+ toggle.handlers.click();if(toggle.attrs['aria-expanded']!=='true'||timeline.classList.contains('is-collapsed'))throw Error(`${c.id}: timeline did not open`);
+ const item=list.children.find(e=>e.className==='timeline-item');
+ if(item){item.handlers.click();if(toggle.attrs['aria-expanded']!=='false'||!timeline.classList.contains('is-collapsed')||!chartPanel.children.some(e=>e.tag==='strong'))throw Error(`${c.id}: choosing a year should close and select`)}
+ else {toggle.handlers.click();if(toggle.attrs['aria-expanded']!=='false')throw Error(`${c.id}: empty timeline did not close`)}
+ toggle.handlers.click();chartView.handlers.pointerdown({button:0,pointerId:71,clientX:50,clientY:50,target:{closest:()=>false}});chartView.handlers.pointerup({pointerId:71});if(toggle.attrs['aria-expanded']!=='false')throw Error(`${c.id}: touching the chart should close the timeline`);
+ toggle.handlers.click();document.handlers.keydown.forEach(f=>f({key:'Escape'}));if(toggle.attrs['aria-expanded']!=='false')throw Error(`${c.id}: Escape should close the timeline`);
+}
+console.log('Mobile birth-year panel opens, selects, and closes without taking chart width.');
+// Touch opens details on one tap; mouse keeps single-click highlight and double-click details.
+const modal=roots['#person-dialog'];modal.close();
+mishaCard.handlers.pointerdown({pointerType:'touch'});mishaCard.handlers.click();
+if(!modal.open||roots['#dialog-name'].textContent!=='Миша Никифоров'||!panel.children.some(e=>e.textContent==='Миша Никифоров'))throw Error('Touch should select a person and open details');
+modal.close();mishaCard.handlers.pointerdown({pointerType:'mouse'});mishaCard.handlers.click();
+if(modal.open||!panel.children.some(e=>e.textContent==='Миша Никифоров'))throw Error('A mouse click should only select the person');
+mishaCard.handlers.dblclick();if(!modal.open)throw Error('A double-click should open details');modal.close();
+mishaCard.handlers.pointerdown({pointerType:'touch'});mishaCard.handlers.pointercancel();mishaCard.handlers.click();if(modal.open)throw Error('A cancelled touch must not open details');
+console.log('Touch opens details; mouse click and double-click retain their behaviour.');
+modal.close();mishaCard.handlers.pointerdown({pointerType:'touch',clientX:10,clientY:10});mishaCard.handlers.pointermove({pointerType:'touch',clientX:35,clientY:10});mishaCard.handlers.click({detail:1});if(modal.open)throw Error('A swipe on a card must not open details');
+mishaCard.handlers.pointerdown({pointerType:'touch',clientX:10,clientY:10});mishaCard.handlers.click({detail:0});if(modal.open)throw Error('Keyboard activation must not be treated as a touch');
+mishaCard.handlers.pointerdown({pointerType:'touch',clientX:10,clientY:10});mishaCard.handlers.click({detail:1});mishaCard.handlers.dblclick();if(!modal.open)throw Error('Repeated activation should keep details open');modal.close();
+console.log('Swipes and keyboard activation do not accidentally open touch details.');
+const tatiana=card('Татьяна Перикова'),tatianaData=charts[0].nodes.find(n=>n.id==='tan');tatiana.handlers.pointerdown({pointerType:'touch',clientX:5,clientY:5});tatiana.handlers.click({detail:1});
+if(!modal.open||roots['#dialog-description'].textContent!==tatianaData.info)throw Error('Touch details must contain the person’s story');modal.close();
+const archiveTree=charts.find(c=>c.id==='perikov'),archivePerson=archiveTree.nodes.find(n=>n.id==='io'),archiveCard=walk(roots['#chart-perikov']).find(e=>e.tag==='button'&&e.attrs['aria-label']?.startsWith(archivePerson.name+','));archiveCard.handlers.pointerdown({pointerType:'touch',clientX:5,clientY:5});archiveCard.handlers.click({detail:1});
+if(!modal.open||!roots['#dialog-links'].children.some(e=>e.href===archivePerson.source))throw Error('Touch details must retain archive sources');modal.close();
+console.log('Touch details contain the person’s story and source links.');
