@@ -126,7 +126,7 @@ function roundedPath(points,radius=8){
 }
 // Simple routes use the fewest natural turns and allow every card side.
 // In focus mode only highlighted cards are obstacles; faded cards do not force detours.
-function focusRoute(a,b,visibleNodes,usedPaths,preferTop=false,preferredStart=null,adaptivePorts=false){
+function focusRoute(a,b,visibleNodes,usedPaths,preferTop=false,preferredStart=null,adaptivePorts=false,targetPlacement=null){
  const pad=24,centrex=n=>n.x+NODE_W/2,centrey=n=>n.y+NODE_H/2;
  const candidates=[];
  const push=(pts,style)=>{
@@ -154,11 +154,12 @@ function focusRoute(a,b,visibleNodes,usedPaths,preferTop=false,preferredStart=nu
   const top=a.y<b.y?a:b,bottom=top===a?b:a,yt=top.y+NODE_H,yb=bottom.y;
   const preferred=top===a&&preferredStart!==null&&preferredStart>=top.x+pad&&preferredStart<=top.x+NODE_W-pad?preferredStart:centrex(top),tx=centrex(bottom);
   const starts=(adaptivePorts?[preferred,preferred-20,preferred+20,centrex(top)]:[preferred]).filter((x,i,all)=>x>=top.x+pad&&x<=top.x+NODE_W-pad&&all.indexOf(x)===i);
-  const targets=adaptivePorts?[tx,tx-20,tx+20]:[tx];
-  if(xlo<=xhi)for(const sx of starts){const x=Math.max(xlo,Math.min(xhi,sx));push([[x,yt],[x,yb]],'top')}
+  const targets=targetPlacement?[targetPlacement.x]:(adaptivePorts?[tx,tx-20,tx+20]:[tx]);
+  if(xlo<=xhi)for(const sx of starts){const x=targetPlacement?targetPlacement.x:Math.max(xlo,Math.min(xhi,sx));if(x>=xlo&&x<=xhi)push([[x,yt],[x,yb]],'top')}
   for(const sx of starts)for(const target of targets)for(const fraction of (adaptivePorts?[.12,.2,.28,.36,.44,.52,.6,.68,.76,.84,.92]:[.3,.45,.6,.75])){const mid=yt+(yb-yt)*fraction;push([[sx,yt],[sx,mid],[target,mid],[target,yb]],'top')}
   const side=centrex(top)<centrex(bottom)?bottom.x:bottom.x+NODE_W;
-  for(const sx of starts)for(const y of (adaptivePorts?[centrey(bottom),centrey(bottom)-14,centrey(bottom)+14]:[centrey(bottom)]))if((side===bottom.x&&sx<side)||(side!==bottom.x&&sx>side))push([[sx,yt],[sx,y],[side,y]],'side');
+  const sideInOrder=!targetPlacement||(side===bottom.x&&targetPlacement.rank===0)||(side===bottom.x+NODE_W&&targetPlacement.rank===targetPlacement.count-1);
+  if(sideInOrder)for(const sx of starts)for(const y of (adaptivePorts?[centrey(bottom),centrey(bottom)-14,centrey(bottom)+14]:[centrey(bottom)]))if((side===bottom.x&&sx<side)||(side!==bottom.x&&sx>side))push([[sx,yt],[sx,y],[side,y]],'side');
  }else if(a.x+NODE_W<=b.x||b.x+NODE_W<=a.x){
   const left=a.x<b.x?a:b,right=left===a?b:a,xl=left.x+NODE_W,xr=right.x;
   if(ylo<=yhi)for(const yy of (adaptivePorts?[centrey(left),centrey(left)-15,centrey(left)+15]:[centrey(left)])){const y=Math.max(ylo,Math.min(yhi,yy));push([[xl,y],[xr,y]],'horizontal')}
@@ -191,12 +192,25 @@ function render(c){
  const hint=document.createElement('p');hint.className='canvas-hint';hint.textContent='Перетаскивайте фон · Ctrl/⌘ + колёсико или щипок — масштаб · наведите на человека или нажмите на линию · Esc или нажатие на фон — снять выделение · разрыв линии означает, что связи не соединены';host.append(hint);
  const panel=document.createElement('div');panel.className='selection-panel';panel.setAttribute('aria-live','polite');host.append(panel);
  const edges=graphEdges(c), ports=edgePorts(edges,map), nodeElements=new Map(), edgeElements=[];let selection=null;
- const simpleRoutes=[],simpleUsed=[],simpleFallback=new Map();
+ const simpleRoutes=[],simpleUsed=[],simpleFallback=new Map(),orderedTargets=new Map();
+ for(const target of c.nodes){
+  const incoming=edges.filter(e=>e.b===target.id&&map[e.a].y+NODE_H<=target.y).sort((x,y)=>map[x.a].x-map[y.a].x||edges.indexOf(x)-edges.indexOf(y));
+  if(incoming.length<2)continue;
+  const left=Math.ceil((target.x+24)/GRID)*GRID,right=Math.floor((target.x+NODE_W-24)/GRID)*GRID,gap=Math.min(20,Math.floor((right-left)/(incoming.length-1)/GRID)*GRID);
+  const positions=incoming.map(e=>Math.max(left,Math.min(right,Math.round((map[e.a].x+NODE_W/2)/GRID)*GRID)));
+  for(let i=1;i<positions.length;i++)positions[i]=Math.max(positions[i],positions[i-1]+gap);
+  positions[positions.length-1]=Math.min(right,positions.at(-1));
+  for(let i=positions.length-2;i>=0;i--)positions[i]=Math.min(positions[i],positions[i+1]-gap);
+  incoming.forEach((e,rank)=>orderedTargets.set(e,{rank,count:incoming.length,x:positions[rank]}));
+ }
  edges.forEach((e,i)=>{
-  const a=map[e.a],b=map[e.b],incoming=edges.filter(other=>other.b===e.b&&map[other.a].y+NODE_H<=b.y).sort((x,y)=>Math.abs(map[x.a].x-b.x)-Math.abs(map[y.a].x-b.x));
-  const preferTop=incoming.length>1&&incoming[0]===e;
-  let path=focusRoute(a,b,c.nodes,simpleUsed,preferTop,ports[i].a,true);
-  if(!path){path=routeEdge(a,b,c.nodes,c.w,c.h,simpleFallback,ports[i]);if(path)simpleUsed.push(path)}
+  const a=map[e.a],b=map[e.b],incoming=edges.filter(other=>other.b===e.b&&map[other.a].y+NODE_H<=b.y);
+  const nearest=[...incoming].sort((x,y)=>Math.abs(map[x.a].x-b.x)-Math.abs(map[y.a].x-b.x));
+  const targetPlacement=orderedTargets.get(e)||null;
+  const preferTop=incoming.length>1&&nearest[0]===e;
+  let path=focusRoute(a,b,c.nodes,simpleUsed,preferTop,ports[i].a,true,targetPlacement);
+  const fallbackPorts=targetPlacement?{...ports[i],b:targetPlacement.x}:ports[i];
+  if(!path){path=routeEdge(a,b,c.nodes,c.w,c.h,simpleFallback,fallbackPorts);if(path)simpleUsed.push(path)}
   simpleRoutes.push(path);
  });
  function clear(){selection=null;panel.replaceChildren();const message=document.createElement('span');message.textContent='Выберите человека или связь, чтобы увидеть связанных людей.';panel.append(message);nodeElements.forEach(el=>el.classList.remove('is-dim','is-selected','is-related'));edgeElements.forEach(el=>el.group.classList.remove('is-dim','is-selected'))}

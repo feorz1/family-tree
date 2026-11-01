@@ -92,3 +92,18 @@ const oldPath=efMisha.attrs.d;katyaCard.handlers.pointerenter({pointerType:'touc
 if(efMisha.attrs.d!==oldPath)throw Error('Touch should not trigger hover');
 if(/\.edge\.is-selected\s+\.edge-line\s*\{[^}]*stroke-width/.test(file)||/\.node\.is-(selected|related)\s*\{[^}]*box-shadow/.test(file)||/\.node:hover\s*\{/.test(file))throw Error('Highlighting must not thicken outlines');
 console.log('Hover and click preserve routes and outlines while dimming unrelated elements.');
+// Incoming links must meet a child in the same left-to-right order as their sources.
+let orderedPairs=0;
+for(const c of charts){
+ const subtree=walk(roots['#chart-'+c.id]),svg=subtree.find(x=>x.tag==='svg'),groups=[...new Set(svg.children)],edges=graph(c),map=Object.fromEntries(c.nodes.map(n=>[n.id,n]));
+ for(const child of c.nodes){
+  const incoming=edges.map((edge,index)=>({edge,index})).filter(({edge})=>edge.b===child.id&&map[edge.a].y+96<=child.y).sort((x,y)=>map[x.edge.a].x-map[y.edge.a].x);
+  for(let i=1;i<incoming.length;i++){
+   const left=incoming[i-1],right=incoming[i];if(map[left.edge.a].x===map[right.edge.a].x)continue;
+   const endpoint=item=>{const hit=groups[item.index].children.find(e=>e.classList.contains('link-hit')),p=points(hit);return p[p.length-2]};
+   if(endpoint(left)>=endpoint(right))throw Error(`${c.id}: ${left.edge.a} must meet ${child.id} left of ${right.edge.a}`);
+   orderedPairs++;
+  }
+ }
+}
+console.log(`Left-to-right entry order checked for ${orderedPairs} source pairs.`);
