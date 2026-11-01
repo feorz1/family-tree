@@ -127,3 +127,25 @@ for(const c of charts){
  }
 }
 console.log(`Verified ${separatedPairs} pairs of incoming connections do not cross.`);
+// The actual visible attachment points must have an even spacing on every card side.
+let evenSides=0;
+for(const c of charts){
+ const subtree=walk(roots['#chart-'+c.id]),svg=subtree.find(x=>x.tag==='svg'),groups=[...new Set(svg.children)],edges=graph(c);
+ for(const person of c.nodes){const sides={top:[],bottom:[],left:[],right:[]};
+  edges.forEach((edge,i)=>{if(edge.a!==person.id&&edge.b!==person.id)return;
+   const hit=groups[i].children.find(e=>e.classList.contains('link-hit')),coords=points(hit),ends=[[coords[0],coords[1]],[coords.at(-2),coords.at(-1)]];
+   for(const [x,y] of ends){
+    if(x<person.x-.01||x>person.x+174.01||y<person.y-.01||y>person.y+96.01)continue;
+    if(Math.abs(y-person.y)<.01)sides.top.push(x);
+    else if(Math.abs(y-person.y-96)<.01)sides.bottom.push(x);
+    else if(Math.abs(x-person.x)<.01)sides.left.push(y);
+    else if(Math.abs(x-person.x-174)<.01)sides.right.push(y);
+   }
+  });
+  for(const [side,slots] of Object.entries(sides)){if(slots.length<3)continue;slots.sort((a,b)=>a-b);const step=slots[1]-slots[0];
+   if(step<.01||slots.slice(2).some((x,i)=>Math.abs((x-slots[i+1])-step)>.01))throw Error(`${c.id}: ${person.id} ${side} spacing is uneven (${slots})`);
+   evenSides++;
+  }
+ }
+}
+console.log(`Even spacing verified on ${evenSides} card sides.`);
