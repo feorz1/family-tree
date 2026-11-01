@@ -162,21 +162,26 @@ for(const c of charts){
  toggle.handlers.click();document.handlers.keydown.forEach(f=>f({key:'Escape'}));if(toggle.attrs['aria-expanded']!=='false')throw Error(`${c.id}: Escape should close the timeline`);
 }
 console.log('Mobile birth-year panel opens, selects, and closes without taking chart width.');
-// Touch opens details on one tap; mouse keeps single-click highlight and double-click details.
-const modal=roots['#person-dialog'];modal.close();
-mishaCard.handlers.pointerdown({pointerType:'touch'});mishaCard.handlers.click();
-if(!modal.open||roots['#dialog-name'].textContent!=='Миша Никифоров'||!panel.children.some(e=>e.textContent==='Миша Никифоров'))throw Error('Touch should select a person and open details');
-modal.close();mishaCard.handlers.pointerdown({pointerType:'mouse'});mishaCard.handlers.click();
-if(modal.open||!panel.children.some(e=>e.textContent==='Миша Никифоров'))throw Error('A mouse click should only select the person');
-mishaCard.handlers.dblclick();if(!modal.open)throw Error('A double-click should open details');modal.close();
-mishaCard.handlers.pointerdown({pointerType:'touch'});mishaCard.handlers.pointercancel();mishaCard.handlers.click();if(modal.open)throw Error('A cancelled touch must not open details');
-console.log('Touch opens details; mouse click and double-click retain their behaviour.');
-modal.close();mishaCard.handlers.pointerdown({pointerType:'touch',clientX:10,clientY:10});mishaCard.handlers.pointermove({pointerType:'touch',clientX:35,clientY:10});mishaCard.handlers.click({detail:1});if(modal.open)throw Error('A swipe on a card must not open details');
+// One tap selects; a second tap on the same card opens details.
+const modal=roots['#person-dialog'];modal.close();let now=1000;ctx.Date={now:()=>now};
+const tap=person=>{person.handlers.pointerdown({pointerType:'touch',clientX:10,clientY:10});person.handlers.click({detail:1})};
+tap(mishaCard);
+if(modal.open||!panel.children.some(e=>e.textContent==='Миша Никифоров'))throw Error('One tap must select without opening details');
+now+=250;tap(mishaCard);
+if(!modal.open||roots['#dialog-name'].textContent!=='Миша Никифоров')throw Error('Two taps on one card must open details');modal.close();mishaCard.handlers.dblclick();if(modal.open)throw Error('Native touch double-click must not reopen details');
+now+=1000;tap(mishaCard);const more=panel.children.find(e=>e.textContent==='Подробнее');more.handlers.click();if(!modal.open)throw Error('Details button must remain available');modal.close();
+mishaCard.handlers.pointerdown({pointerType:'mouse'});mishaCard.handlers.click({detail:1});if(modal.open)throw Error('Mouse single-click must only select');
+mishaCard.handlers.dblclick();if(!modal.open)throw Error('Mouse double-click must open details');modal.close();
+now+=1000;tap(mishaCard);now+=100;tap(katyaCard);now+=100;tap(mishaCard);if(modal.open)throw Error('Taps on different people must not count as a double tap');
+now+=1000;tap(mishaCard);now+=501;tap(mishaCard);if(modal.open)throw Error('Taps outside the time window must remain single');
+now+=250;tap(mishaCard);if(!modal.open)throw Error('A quick second tap should open details');modal.close();
+now+=1000;tap(mishaCard);now+=100;mishaCard.handlers.pointerdown({pointerType:'touch',clientX:10,clientY:10});mishaCard.handlers.pointermove({pointerType:'touch',clientX:35,clientY:10});mishaCard.handlers.click({detail:1});now+=100;tap(mishaCard);if(modal.open)throw Error('A swipe must interrupt the double-tap sequence');
+now+=1000;tap(mishaCard);now+=100;mishaCard.handlers.pointerdown({pointerType:'touch',clientX:10,clientY:10});mishaCard.handlers.pointercancel();now+=100;tap(mishaCard);if(modal.open)throw Error('A cancelled touch must interrupt the double-tap sequence');
 mishaCard.handlers.pointerdown({pointerType:'touch',clientX:10,clientY:10});mishaCard.handlers.click({detail:0});if(modal.open)throw Error('Keyboard activation must not be treated as a touch');
-mishaCard.handlers.pointerdown({pointerType:'touch',clientX:10,clientY:10});mishaCard.handlers.click({detail:1});mishaCard.handlers.dblclick();if(!modal.open)throw Error('Repeated activation should keep details open');modal.close();
-console.log('Swipes and keyboard activation do not accidentally open touch details.');
-const tatiana=card('Татьяна Перикова'),tatianaData=charts[0].nodes.find(n=>n.id==='tan');tatiana.handlers.pointerdown({pointerType:'touch',clientX:5,clientY:5});tatiana.handlers.click({detail:1});
-if(!modal.open||roots['#dialog-description'].textContent!==tatianaData.info)throw Error('Touch details must contain the person’s story');modal.close();
-const archiveTree=charts.find(c=>c.id==='perikov'),archivePerson=archiveTree.nodes.find(n=>n.id==='io'),archiveCard=walk(roots['#chart-perikov']).find(e=>e.tag==='button'&&e.attrs['aria-label']?.startsWith(archivePerson.name+','));archiveCard.handlers.pointerdown({pointerType:'touch',clientX:5,clientY:5});archiveCard.handlers.click({detail:1});
-if(!modal.open||!roots['#dialog-links'].children.some(e=>e.href===archivePerson.source))throw Error('Touch details must retain archive sources');modal.close();
-console.log('Touch details contain the person’s story and source links.');
+now+=1000;tap(mishaCard);now+=100;view.handlers.pointerdown({pointerType:'touch',button:0,pointerId:99,clientX:50,clientY:50,target:{closest:()=>false}});view.handlers.pointerup({pointerId:99});now+=100;tap(mishaCard);if(modal.open)throw Error('Touching the background must interrupt the double-tap sequence');
+const tatiana=card('Татьяна Перикова'),tatianaData=charts[0].nodes.find(n=>n.id==='tan');now+=1000;tap(tatiana);now+=200;tap(tatiana);
+if(!modal.open||roots['#dialog-description'].textContent!==tatianaData.info)throw Error('Double-tap details must contain the person’s story');modal.close();
+const archiveTree=charts.find(c=>c.id==='perikov'),archivePerson=archiveTree.nodes.find(n=>n.id==='io'),archiveCard=walk(roots['#chart-perikov']).find(e=>e.tag==='button'&&e.attrs['aria-label']?.startsWith(archivePerson.name+','));
+now+=1000;tap(archiveCard);now+=200;tap(archiveCard);if(!modal.open||!roots['#dialog-links'].children.some(e=>e.href===archivePerson.source))throw Error('Double-tap details must retain archive sources');modal.close();
+now+=1000;tap(mishaCard);now+=100;tap(archiveCard);now+=100;tap(mishaCard);if(modal.open)throw Error('Taps in different branches must not count as a double tap');
+console.log('One tap selects; two taps open details. Other inputs do not cause accidental openings.');
