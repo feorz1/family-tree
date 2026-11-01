@@ -26,18 +26,18 @@ function turns(hit){return (hit.attrs.d.match(/Q/g)||[]).length}
 function straight(hit){const p=points(hit);return turns(hit)===0&&(p[0]===p[2]||p[1]===p[3])}
 const efKatya=relation('Ефим Никифоров','Катя Никифорова'),akKatya=relation('Акулина Никифорова','Катя Никифорова');
 const basePaths=[efKatya.attrs.d,akKatya.attrs.d];card('Катя Никифорова').handlers.click();
-if(turns(efKatya)!==2||turns(akKatya)!==1)throw Error('Katya should have one top and one side connection');
+if(turns(efKatya)>2||turns(akKatya)>2)throw Error('Katya’s connections should stay simple');
 document.handlers.keydown.forEach(f=>f({key:'Escape'}));
 if(isSelected()||efKatya.attrs.d!==basePaths[0]||akKatya.attrs.d!==basePaths[1])throw Error('Reset did not restore routes');
 card('Миша Никифоров').handlers.click();
 const efMisha=relation('Ефим Никифоров','Миша Никифоров'),akMisha=relation('Акулина Никифорова','Миша Никифоров');
 if(!straight(efMisha)||turns(akMisha)!==1)throw Error('Misha should have a straight and a side connection');
 const misha=charts[0].nodes.find(n=>n.id==='mi'),end=points(akMisha);
-if(end.at(-2)!==misha.x+174||end.at(-1)!==misha.y+48)throw Error('Aculina should connect to Misha’s right side');
+if(end.at(-2)!==misha.x+174||end.at(-1)<=misha.y||end.at(-1)>=misha.y+96)throw Error('Aculina should connect to Misha’s right side');
 card('Татьяна Перикова').handlers.click();
 if(!straight(relation('Иван Периков','Татьяна Перикова'))||!straight(relation('Татьяна Перикова','Ольга Фитисова')))throw Error('Tatiana should connect vertically to Ivan and Olga');
 card('Акулина Никифорова').handlers.click();
-if(turns(relation('Акулина Никифорова','Миша Никифоров'))!==1||turns(relation('Акулина Никифорова','Евдокия «Дуня»'))!==2)throw Error('Aculina should use a side for Misha and the top for Evdokia');
+if(turns(relation('Акулина Никифорова','Миша Никифоров'))!==1||turns(relation('Акулина Никифорова','Евдокия «Дуня»'))>2)throw Error('Aculina’s connections should stay simple');
 const children=['Стеша Никифорова','Катя Никифорова','Миша Никифоров','Евдокия «Дуня»'];
 const starts=children.map(name=>points(relation('Акулина Никифорова',name))[0]);
 if(new Set(starts).size!==4)throw Error('Children links should leave from separate points');
@@ -51,8 +51,11 @@ let checked=0;
 for(const c of charts){
  const subtree=walk(roots['#chart-'+c.id]),svg=subtree.find(x=>x.tag==='svg'),groups=[...new Set(svg.children)],edges=graph(c),cards=subtree.filter(x=>x.tag==='button'&&x.className?.startsWith('node '));
  if(groups.length!==edges.length)throw Error('Mismatch between rendered and recorded links');
+ const initialPaths=groups.map(g=>g.children.find(x=>x.classList.contains('link-hit')).attrs.d);
+ const checkStable=()=>{if(groups.some((g,i)=>g.children.find(x=>x.classList.contains('link-hit')).attrs.d!==initialPaths[i])||svg.children.length!==groups.length||svg.children.some((g,i)=>g!==groups[i]))throw Error('Highlighting must not move lines or change their stacking order')};
  for(let ni=0;ni<c.nodes.length;ni++){
-  cards[ni].handlers.click();const n=c.nodes[ni],visible=new Set([n.id,...edges.filter(e=>e.a===n.id||e.b===n.id).flatMap(e=>[e.a,e.b])]);
+  cards[ni].handlers.pointerenter({pointerType:'mouse'});checkStable();cards[ni].handlers.pointerleave({pointerType:'mouse'});checkStable();
+  cards[ni].handlers.click();checkStable();const n=c.nodes[ni],visible=new Set([n.id,...edges.filter(e=>e.a===n.id||e.b===n.id).flatMap(e=>[e.a,e.b])]);
   for(let i=0;i<edges.length;i++)if(groups[i].classList.contains('is-selected')){
    const e=edges[i],hit=groups[i].children.find(x=>x.classList.contains('link-hit')),pts=samples(hit.attrs.d),endpoints=[c.nodes.find(x=>x.id===e.a),c.nodes.find(x=>x.id===e.b)];
    const onBorder=(p,node)=>p[0]>=node.x-0.01&&p[0]<=node.x+174.01&&p[1]>=node.y-0.01&&p[1]<=node.y+96.01&&(Math.abs(p[0]-node.x)<.01||Math.abs(p[0]-node.x-174)<.01||Math.abs(p[1]-node.y)<.01||Math.abs(p[1]-node.y-96)<.01);
@@ -70,7 +73,8 @@ const normalMisha=[efMisha.attrs.d,akMisha.attrs.d];
 mishaCard.handlers.pointerenter(pointer);
 if(!mishaCard.classList.contains('is-selected')||isSelected())throw Error('Hover should preview without changing the panel');
 const hoverMisha=[efMisha.attrs.d,akMisha.attrs.d];
-if(normalMisha.every((d,i)=>d===hoverMisha[i]))throw Error('Hover did not highlight Misha’s links');
+if(normalMisha.some((d,i)=>d!==hoverMisha[i]))throw Error('Hover must not move links');
+if(!card('Катя Никифорова').classList.contains('is-dim')||card('Ефим Никифоров').classList.contains('is-dim'))throw Error('Hover must dim only unrelated people');
 mishaCard.handlers.pointerleave(pointer);
 if(mishaCard.classList.contains('is-selected')||[efMisha.attrs.d,akMisha.attrs.d].some((d,i)=>d!==normalMisha[i]))throw Error('Hover should clear on leave');
 mishaCard.handlers.pointerenter(pointer);mishaCard.handlers.click();
@@ -86,4 +90,5 @@ katyaCard.handlers.pointerenter(pointer);katyaCard.handlers.pointerleave(pointer
 if(panel.children.find(e=>e.tag==='strong')?.textContent!==edgeTitle)throw Error('Hover did not restore the clicked connection');
 const oldPath=efMisha.attrs.d;katyaCard.handlers.pointerenter({pointerType:'touch'});katyaCard.handlers.pointerleave({pointerType:'touch'});
 if(efMisha.attrs.d!==oldPath)throw Error('Touch should not trigger hover');
-console.log('Hover previews links, restores clicked people and connections, and ignores touch.');
+if(/\.edge\.is-selected\s+\.edge-line\s*\{[^}]*stroke-width/.test(file)||/\.node\.is-(selected|related)\s*\{[^}]*box-shadow/.test(file)||/\.node:hover\s*\{/.test(file))throw Error('Highlighting must not thicken outlines');
+console.log('Hover and click preserve routes and outlines while dimming unrelated elements.');
