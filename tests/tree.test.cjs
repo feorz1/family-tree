@@ -62,24 +62,28 @@ for(const c of charts){
  }
 }
 console.log(`Checked ${checked} focused connections and their visible cards.`);
-// Both modes apply to every tree, retain the view, and keep their original paths on reset.
+// Hover previews the same links as a click, then restores the last explicit choice.
 document.handlers.keydown.forEach(f=>f({key:'Escape'}));
-const simpleButton=roots['#lines-simple'],complexButton=roots['#lines-complex'];
-function modePaths(c){const svg=walk(roots['#chart-'+c.id]).find(x=>x.tag==='svg');return [...new Set(svg.children)].map(g=>g.children.find(x=>x.classList.contains('link-hit')).attrs.d)}
-const simplePaths=charts.map(modePaths);
-if(simpleButton.attrs['aria-pressed']!==undefined&&simpleButton.attrs['aria-pressed']!=='true')throw Error('Simple must be the default');
-for(let ci=0;ci<charts.length;ci++)for(const d of simplePaths[ci])for(const node of charts[ci].nodes){
- if(samples(d).some(([x,y])=>x>node.x+.05&&x<node.x+173.95&&y>node.y+.05&&y<node.y+95.95))throw Error(`Simple mode crosses ${node.name}`);
-}
-complexButton.handlers.click();
-if(complexButton.attrs['aria-pressed']!=='true'||simpleButton.attrs['aria-pressed']!=='false')throw Error('Complex toggle state');
-const complexPaths=charts.map(modePaths);
-for(let i=0;i<charts.length;i++)if(!simplePaths[i].some((d,j)=>d!==complexPaths[i][j]))throw Error(`Mode switch did not update ${charts[i].id}`);
-simpleButton.handlers.click();
-if(simpleButton.attrs['aria-pressed']!=='true'||complexButton.attrs['aria-pressed']!=='false')throw Error('Simple toggle state');
-if(charts.some((c,i)=>modePaths(c).some((d,j)=>d!==simplePaths[i][j])))throw Error('Simple mode did not restore its paths');
-card('Миша Никифоров').handlers.click();view.scrollLeft=225;const currentZoom=output.textContent;complexButton.handlers.click();
-if(!isSelected()||!panel.children.some(e=>e.textContent==='Миша Никифоров')||view.scrollLeft!==225||output.textContent!==currentZoom)throw Error('Switch should preserve selection and view');
-simpleButton.handlers.click();
-if(!isSelected()||view.scrollLeft!==225||output.textContent!==currentZoom)throw Error('Switch back should preserve selection and view');
-console.log('Simple and complex modes update all branches without losing selection or zoom.');
+const mishaCard=card('Миша Никифоров'),katyaCard=card('Катя Никифорова'),pointer={pointerType:'mouse'};
+if(file.includes('lines-simple')||file.includes('lines-complex'))throw Error('Line mode switch should be removed');
+const normalMisha=[efMisha.attrs.d,akMisha.attrs.d];
+mishaCard.handlers.pointerenter(pointer);
+if(!mishaCard.classList.contains('is-selected')||isSelected())throw Error('Hover should preview without changing the panel');
+const hoverMisha=[efMisha.attrs.d,akMisha.attrs.d];
+if(normalMisha.every((d,i)=>d===hoverMisha[i]))throw Error('Hover did not highlight Misha’s links');
+mishaCard.handlers.pointerleave(pointer);
+if(mishaCard.classList.contains('is-selected')||[efMisha.attrs.d,akMisha.attrs.d].some((d,i)=>d!==normalMisha[i]))throw Error('Hover should clear on leave');
+mishaCard.handlers.pointerenter(pointer);mishaCard.handlers.click();
+if([efMisha.attrs.d,akMisha.attrs.d].some((d,i)=>d!==hoverMisha[i]))throw Error('Hover and click should display the same paths');
+mishaCard.handlers.pointerleave(pointer);
+if(!mishaCard.classList.contains('is-selected')||!panel.children.some(e=>e.textContent==='Миша Никифоров'))throw Error('Click selection was lost on leave');
+katyaCard.handlers.pointerenter(pointer);
+if(!katyaCard.classList.contains('is-selected')||!panel.children.some(e=>e.textContent==='Миша Никифоров'))throw Error('Hover should not replace the saved selection');
+katyaCard.handlers.pointerleave(pointer);
+if(!mishaCard.classList.contains('is-selected')||!panel.children.some(e=>e.textContent==='Миша Никифоров'))throw Error('Hover did not restore the clicked person');
+edgeHit.handlers.click({stopPropagation(){}});const edgeTitle=panel.children.find(e=>e.tag==='strong')?.textContent;
+katyaCard.handlers.pointerenter(pointer);katyaCard.handlers.pointerleave(pointer);
+if(panel.children.find(e=>e.tag==='strong')?.textContent!==edgeTitle)throw Error('Hover did not restore the clicked connection');
+const oldPath=efMisha.attrs.d;katyaCard.handlers.pointerenter({pointerType:'touch'});katyaCard.handlers.pointerleave({pointerType:'touch'});
+if(efMisha.attrs.d!==oldPath)throw Error('Touch should not trigger hover');
+console.log('Hover previews links, restores clicked people and connections, and ignores touch.');
