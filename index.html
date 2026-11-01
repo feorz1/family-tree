@@ -60,7 +60,26 @@ function graphEdges(c){
  for(const e of c.extra||[])add(e.a,e.b,e.label,e.kind||'');
  return edges;
 }
-function routeEdge(a,b,nodes,width,height,occupied){
+// Allocate separate connection points along a card, ordered toward the other person.
+function edgePorts(edges,map){
+ const groups=new Map(),result=edges.map(()=>({}));
+ edges.forEach((e,i)=>{
+  const a=map[e.a],b=map[e.b],vertical=Math.abs((b.y+NODE_H/2)-(a.y+NODE_H/2))>NODE_H+15;
+  for(const [key,n,other] of [['a',a,b],['b',b,a]]){
+   const side=vertical?(other.y>n.y?'bottom':'top'):(other.x>n.x?'right':'left');
+   const groupKey=n.id+':'+side;if(!groups.has(groupKey))groups.set(groupKey,[]);
+   groups.get(groupKey).push({i,key,n,vertical,order:vertical?other.x:other.y});
+  }
+ });
+ for(const entries of groups.values()){
+  entries.sort((a,b)=>a.order-b.order||a.i-b.i);
+  const {n,vertical}=entries[0],start=vertical?n.x:n.y,length=vertical?NODE_W:NODE_H;
+  const slots=[];for(let v=Math.ceil((start+12)/GRID)*GRID;v<=start+length-12;v+=GRID)slots.push(v);
+  entries.forEach((entry,i)=>{const index=entries.length===1?Math.floor((slots.length-1)/2):Math.round(i*(slots.length-1)/(entries.length-1));result[entry.i][entry.key]=slots[index]});
+ }
+ return result;
+}
+function routeEdge(a,b,nodes,width,height,occupied,assigned={}){
  const grid=GRID, cols=Math.ceil(width/grid)+1, rows=Math.ceil(height/grid)+1;
  const clamp=(v,max)=>Math.max(0,Math.min(max,v));
  const coord=(v,max)=>clamp(Math.round(v/grid),max);
@@ -68,25 +87,27 @@ function routeEdge(a,b,nodes,width,height,occupied){
  const vertical=Math.abs(ydir)>NODE_H+15;
  function port(n,which){
   let x,y,sx,sy;
-  if(vertical){const down=(ydir>0)===(which==='a');x=n.x+NODE_W/2;y=down?n.y+NODE_H:n.y;sx=coord(x,cols-1);sy=down?Math.ceil((y+8)/grid):Math.floor((y-8)/grid)}
-  else{const right=(xdir>0)===(which==='a');x=right?n.x+NODE_W:n.x;y=n.y+NODE_H/2;sx=right?Math.ceil((x+8)/grid):Math.floor((x-8)/grid);sy=coord(y,rows-1)}
+  if(vertical){const down=(ydir>0)===(which==='a');x=assigned[which]??Math.round((n.x+NODE_W/2)/grid)*grid;y=down?n.y+NODE_H:n.y;sx=coord(x,cols-1);sy=down?Math.ceil((y+8)/grid):Math.floor((y-8)/grid)}
+  else{const right=(xdir>0)===(which==='a');x=right?n.x+NODE_W:n.x;y=assigned[which]??Math.round((n.y+NODE_H/2)/grid)*grid;sx=right?Math.ceil((x+8)/grid):Math.floor((x-8)/grid);sy=coord(y,rows-1)}
   return {x,y,gx:clamp(sx,cols-1),gy:clamp(sy,rows-1)};
  }
- const start=port(a,'a'), end=port(b,'b');
- const blocked=new Uint8Array(cols*rows);
+ const start=port(a,'a'),end=port(b,'b'),blocked=new Uint8Array(cols*rows);
  for(const n of nodes){const left=Math.max(0,Math.ceil((n.x-5)/grid)),right=Math.min(cols-1,Math.floor((n.x+NODE_W+5)/grid)),top=Math.max(0,Math.ceil((n.y-5)/grid)),bottom=Math.min(rows-1,Math.floor((n.y+NODE_H+5)/grid));for(let yy=top;yy<=bottom;yy++)for(let xx=left;xx<=right;xx++)blocked[yy*cols+xx]=1}
  const S=start.gy*cols+start.gx,T=end.gy*cols+end.gx;blocked[S]=blocked[T]=0;
- const cost=new Float64Array(cols*rows);cost.fill(Infinity);const prev=new Int32Array(cols*rows);prev.fill(-1);let heap=[];
- const push=(n,p)=>{let i=heap.length;heap.push({n,p});while(i){let j=(i-1)>>1;if(heap[j].p<=p)break;heap[i]=heap[j];i=j}heap[i]={n,p}};
- const pop=()=>{const first=heap[0],last=heap.pop();if(heap.length){let i=0;while(true){let l=i*2+1;if(l>=heap.length)break;let r=l+1,j=r<heap.length&&heap[r].p<heap[l].p?r:l;if(heap[j].p>=last.p)break;heap[i]=heap[j];i=j}heap[i]=last}return first};
- cost[S]=0;push(S,0);const dirs=[[1,0],[-1,0],[0,1],[0,-1]];
- while(heap.length){let cur=pop(),v=cur.n;if(v===T)break;let x=v%cols,y=Math.floor(v/cols);for(const [dx,dy] of dirs){let nx=x+dx,ny=y+dy;if(nx<0||ny<0||nx>=cols||ny>=rows)continue;let next=ny*cols+nx;if(blocked[next])continue;let k=v<next?v+':'+next:next+':'+v;let step=1+(occupied.get(k)||0)*1.2;let newCost=cost[v]+step;if(newCost>=cost[next])continue;cost[next]=newCost;prev[next]=v;push(next,newCost+Math.abs(nx-end.gx)+Math.abs(ny-end.gy))}}
- if(!Number.isFinite(cost[T]))return null;
- let seq=[];for(let n=T;n!==-1;n=prev[n])seq.push(n);seq.reverse();for(let i=1;i<seq.length;i++){let x=seq[i-1],y=seq[i],k=x<y?x+':'+y:y+':'+x;occupied.set(k,(occupied.get(k)||0)+1)}
- let points=[[start.x,start.y],[start.gx*grid,start.gy*grid],...seq.slice(1,-1).map(n=>[(n%cols)*grid,Math.floor(n/cols)*grid]),[end.gx*grid,end.gy*grid],[end.x,end.y]];
- // Keep the short approach segments orthogonal even when card centres are off-grid.
- if(vertical){points.splice(1,0,[start.x,start.gy*grid]);points.splice(points.length-1,0,[end.x,end.gy*grid])}
- else{points.splice(1,0,[start.gx*grid,start.y]);points.splice(points.length-1,0,[end.gx*grid,end.y])}
+ // A direction is part of the state: each bend has a cost, so long straight runs win.
+ const count=cols*rows*5,cost=new Float64Array(count);cost.fill(Infinity);const prev=new Int32Array(count);prev.fill(-1);let heap=[];
+ const push=(state,p,g)=>{let i=heap.length;heap.push({state,p,g});while(i){const j=(i-1)>>1;if(heap[j].p<=p)break;heap[i]=heap[j];i=j}heap[i]={state,p,g}};
+ const pop=()=>{const first=heap[0],last=heap.pop();if(heap.length){let i=0;while(true){const l=i*2+1;if(l>=heap.length)break;const r=l+1,j=r<heap.length&&heap[r].p<heap[l].p?r:l;if(heap[j].p>=last.p)break;heap[i]=heap[j];i=j}heap[i]=last}return first};
+ const initial=S*5+4;cost[initial]=0;push(initial,0,0);const dirs=[[1,0],[-1,0],[0,1],[0,-1]];let final=-1;
+ while(heap.length){const cur=pop();if(cur.g!==cost[cur.state])continue;const v=Math.floor(cur.state/5),oldDir=cur.state%5;if(v===T){final=cur.state;break}const x=v%cols,y=Math.floor(v/cols);
+  for(let dir=0;dir<4;dir++){const [dx,dy]=dirs[dir],nx=x+dx,ny=y+dy;if(nx<0||ny<0||nx>=cols||ny>=rows)continue;const next=ny*cols+nx;if(blocked[next])continue;const k=v<next?v+':'+next:next+':'+v;
+   const step=1+(oldDir!==4&&oldDir!==dir?4:0)+(occupied.get(k)||0)*7+(occupied.get('cell:'+next)||0)*1.5;
+   const state=next*5+dir,newCost=cur.g+step;if(newCost>=cost[state])continue;cost[state]=newCost;prev[state]=cur.state;push(state,newCost+Math.abs(nx-end.gx)+Math.abs(ny-end.gy),newCost);
+  }
+ }
+ if(final<0)return null;
+ const seq=[];for(let s=final;s!==-1;s=prev[s])seq.push(Math.floor(s/5));seq.reverse();for(let i=1;i<seq.length;i++){const x=seq[i-1],y=seq[i],k=x<y?x+':'+y:y+':'+x;occupied.set(k,(occupied.get(k)||0)+1);if(i<seq.length-1)occupied.set('cell:'+y,(occupied.get('cell:'+y)||0)+1)}
+ let points=[[start.x,start.y],...seq.map(n=>[(n%cols)*grid,Math.floor(n/cols)*grid]),[end.x,end.y]];
  points=points.filter((p,i)=>i===0||p[0]!==points[i-1][0]||p[1]!==points[i-1][1]);
  const simplified=[];for(const p of points){while(simplified.length>=2){const x=simplified[simplified.length-2],y=simplified[simplified.length-1];if((x[0]===y[0]&&y[0]===p[0])||(x[1]===y[1]&&y[1]===p[1]))simplified.pop();else break}simplified.push(p)}
  return simplified;
@@ -110,24 +131,26 @@ function render(c){
  const control=(title,text,action)=>{const b=document.createElement('button');b.type='button';b.title=title;b.setAttribute('aria-label',title);b.textContent=text;b.addEventListener('click',action);toolbar.append(b)};
  control('Уменьшить масштаб','−',()=>zoom(1/1.2));toolbar.append(out);control('Увеличить масштаб','+',()=>zoom(1.2));control('Подогнать по ширине','По ширине',()=>{scale=Math.max(.4,Math.min(1,view.clientWidth/c.w));resize();view.scrollLeft=0;view.scrollTop=0});control('Масштаб 100 процентов','100%',()=>{scale=1;resize()});
  workspace.append(view,toolbar);shell.append(timeline,workspace);host.append(shell);
- const hint=document.createElement('p');hint.className='canvas-hint';hint.textContent='Перетаскивайте фон · Ctrl/⌘ + колёсико или щипок — масштаб · нажмите на линию или человека';host.append(hint);
+ const hint=document.createElement('p');hint.className='canvas-hint';hint.textContent='Перетаскивайте фон · Ctrl/⌘ + колёсико или щипок — масштаб · нажмите на линию или человека · Esc или нажатие на фон — снять выделение';host.append(hint);
  const panel=document.createElement('div');panel.className='selection-panel';panel.setAttribute('aria-live','polite');host.append(panel);
- const edges=graphEdges(c), occupied=new Map(), nodeElements=new Map(), edgeElements=[];let selection=null;
+ const edges=graphEdges(c), ports=edgePorts(edges,map), occupied=new Map(), nodeElements=new Map(), edgeElements=[];let selection=null;
  function clear(){selection=null;panel.replaceChildren();const message=document.createElement('span');message.textContent='Выберите человека или связь, чтобы увидеть связанных людей.';panel.append(message);nodeElements.forEach(el=>el.classList.remove('is-dim','is-selected','is-related'));edgeElements.forEach(el=>{el.group.classList.remove('is-dim','is-selected')})}
  function focusPeople(ids, edgeIndex=null){const set=new Set(ids);nodeElements.forEach((el,id)=>{el.classList.toggle('is-dim',!set.has(id));el.classList.toggle('is-selected',id===ids[0]);el.classList.toggle('is-related',set.has(id)&&id!==ids[0])});edgeElements.forEach((el,i)=>{const selected=edgeIndex===null?(el.edge.a===ids[0]||el.edge.b===ids[0]):i===edgeIndex;el.group.classList.toggle('is-dim',!selected);el.group.classList.toggle('is-selected',selected)})}
  function button(name,fn,cls=''){const el=document.createElement('button');el.type='button';el.textContent=name;el.className=cls;el.addEventListener('click',fn);return el}
  function showPerson(id){selection={person:id};const near=edges.map((e,i)=>({e,i})).filter(x=>x.e.a===id||x.e.b===id);const related=[...new Set(near.map(({e})=>e.a===id?e.b:e.a))];focusPeople([id,...related]);panel.replaceChildren();const title=document.createElement('strong');title.textContent=map[id].name;panel.append(title);panel.append(button('Подробнее',()=>personInfo(map[id]),'detail-button'));panel.append(button('Показать всё',clear,'clear-button'));const items=document.createElement('div');items.className='related-list';if(!near.length)items.textContent='Связанные люди пока не установлены.';for(const {e} of near){const other=e.a===id?e.b:e.a;const b=button(map[other].name+' · '+e.label,()=>showEdge(edges.indexOf(e)),'related-item'+(e.kind==='red'?' is-uncertain':''));items.append(b)}panel.append(items)}
  function showEdge(i){const e=edges[i];selection={edge:i};focusPeople([e.a,e.b],i);panel.replaceChildren();const title=document.createElement('strong');title.textContent=e.label+(e.kind==='red'?' · требует проверки':'');panel.append(title);panel.append(button('Показать всё',clear,'clear-button'));const items=document.createElement('div');items.className='related-list';for(const id of [e.a,e.b])items.append(button(map[id].name,()=>showPerson(id),'related-item'));panel.append(items)}
- for(const e of edges){const path=routeEdge(map[e.a],map[e.b],c.nodes,c.w,c.h,occupied);if(!path){console.warn('Не удалось провести связь',c.id,e.a,e.b);continue}const d=path.map((v,i)=>(i?'L':'M')+v[0]+' '+v[1]).join(' ');const group=document.createElementNS(SVG,'g');group.classList.add('edge');if(e.kind)group.classList.add('edge-'+e.kind);const visible=document.createElementNS(SVG,'path');visible.setAttribute('d',d);visible.classList.add('edge-line');const hit=document.createElementNS(SVG,'path');hit.setAttribute('d',d);hit.classList.add('link-hit');hit.setAttribute('tabindex','0');hit.setAttribute('role','button');hit.setAttribute('aria-label',map[e.a].name+' — '+map[e.b].name+': '+e.label);const idx=edges.indexOf(e);hit.addEventListener('click',ev=>{ev.stopPropagation();showEdge(idx)});hit.addEventListener('keydown',ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();showEdge(idx)}});group.append(visible,hit);svg.append(group);edgeElements.push({group,edge:e})}
+ for(const e of edges){const path=routeEdge(map[e.a],map[e.b],c.nodes,c.w,c.h,occupied,ports[edges.indexOf(e)]);if(!path){console.warn('Не удалось провести связь',c.id,e.a,e.b);continue}const d=path.map((v,i)=>(i?'L':'M')+v[0]+' '+v[1]).join(' ');const group=document.createElementNS(SVG,'g');group.classList.add('edge');if(e.kind)group.classList.add('edge-'+e.kind);const visible=document.createElementNS(SVG,'path');visible.setAttribute('d',d);visible.classList.add('edge-line');const hit=document.createElementNS(SVG,'path');hit.setAttribute('d',d);hit.classList.add('link-hit');hit.setAttribute('tabindex','0');hit.setAttribute('role','button');hit.setAttribute('aria-label',map[e.a].name+' — '+map[e.b].name+': '+e.label);const idx=edges.indexOf(e);hit.addEventListener('click',ev=>{ev.stopPropagation();showEdge(idx)});hit.addEventListener('keydown',ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();showEdge(idx)}});group.append(visible,hit);svg.append(group);edgeElements.push({group,edge:e})}
  for(const n of c.nodes){const b=document.createElement('button');b.type='button';b.className='node '+(n.kind||'');b.style.left=n.x+'px';b.style.top=n.y+'px';const d=(births[c.id]||{})[n.id];b.setAttribute('aria-label',n.name+', '+n.sub+(d?', '+d[0]:'')+(n.kind==='uncertain'?', связь требует проверки':''));const name=document.createElement('strong');name.textContent=n.name;const sub=document.createElement('small');sub.textContent=d?n.sub.replace(d[0],'').replace(/^\s*[·—]\s*/,''):n.sub;b.append(name,sub);if(d){const date=document.createElement('span');date.className='node-date';date.textContent=d[0];b.append(date)}if(n.kind==='uncertain'){const flag=document.createElement('span');flag.className='flag';flag.textContent='Связь проверяется';b.append(flag)}b.addEventListener('click',()=>showPerson(n.id));b.addEventListener('dblclick',()=>personInfo(n));canvas.append(b);nodeElements.set(n.id,b)}
  const dated=c.nodes.filter(n=>(births[c.id]||{})[n.id]).sort((a,b)=>Number(births[c.id][a.id][1])-Number(births[c.id][b.id][1]));
  if(!dated.length){const empty=document.createElement('p');empty.className='timeline-empty';empty.textContent='Даты рождения пока уточняются';timelineList.append(empty)}
  for(const n of dated){const item=document.createElement('button');item.type='button';item.className='timeline-item';const year=document.createElement('b');year.textContent=births[c.id][n.id][1];const name=document.createElement('span');name.textContent=n.name;item.append(year,name);item.addEventListener('click',()=>{showPerson(n.id);view.scrollLeft=Math.max(0,(n.x+NODE_W/2)*scale-view.clientWidth/2);view.scrollTop=Math.max(0,(n.y+NODE_H/2)*scale-view.clientHeight/2)});timelineList.append(item)}
  view.addEventListener('wheel',e=>{if(!e.ctrlKey&&!e.metaKey)return;e.preventDefault();const rect=view.getBoundingClientRect();zoom(Math.exp(-e.deltaY*.003),e.clientX-rect.left,e.clientY-rect.top)},{passive:false});
- const pointers=new Map();let drag=null,pinch=null;const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
- view.addEventListener('pointerdown',e=>{if(e.button!==0||e.target.closest('.node,.link-hit,.floating-controls'))return;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});view.setPointerCapture(e.pointerId);if(pointers.size===1){drag={x:e.clientX,y:e.clientY,left:view.scrollLeft,top:view.scrollTop};view.classList.add('dragging')}else if(pointers.size===2){const [a,b]=[...pointers.values()];pinch={distance:distance(a,b),scale};drag=null}});
- view.addEventListener('pointermove',e=>{if(!pointers.has(e.pointerId))return;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pinch&&pointers.size>=2){const [a,b]=[...pointers.values()],rect=view.getBoundingClientRect(),next=pinch.scale*distance(a,b)/Math.max(1,pinch.distance);zoom(next/scale,(a.x+b.x)/2-rect.left,(a.y+b.y)/2-rect.top)}else if(drag&&pointers.size===1){view.scrollLeft=drag.left-(e.clientX-drag.x);view.scrollTop=drag.top-(e.clientY-drag.y)}});
+ const pointers=new Map();let drag=null,pinch=null,suppressClick=false;const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+ view.addEventListener('pointerdown',e=>{if(e.button!==0||e.target.closest('.node,.link-hit,.floating-controls'))return;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===1)suppressClick=false;view.setPointerCapture(e.pointerId);if(pointers.size===1){drag={x:e.clientX,y:e.clientY,left:view.scrollLeft,top:view.scrollTop};view.classList.add('dragging')}else if(pointers.size===2){suppressClick=true;const [a,b]=[...pointers.values()];pinch={distance:distance(a,b),scale};drag=null}});
+ view.addEventListener('pointermove',e=>{if(!pointers.has(e.pointerId))return;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pinch&&pointers.size>=2){const [a,b]=[...pointers.values()],rect=view.getBoundingClientRect(),next=pinch.scale*distance(a,b)/Math.max(1,pinch.distance);zoom(next/scale,(a.x+b.x)/2-rect.left,(a.y+b.y)/2-rect.top)}else if(drag&&pointers.size===1){if(Math.hypot(e.clientX-drag.x,e.clientY-drag.y)>5)suppressClick=true;view.scrollLeft=drag.left-(e.clientX-drag.x);view.scrollTop=drag.top-(e.clientY-drag.y)}});
  const stopPointer=e=>{pointers.delete(e.pointerId);pinch=null;if(pointers.size===1){const [remaining]=pointers.values();drag={x:remaining.x,y:remaining.y,left:view.scrollLeft,top:view.scrollTop}}else{drag=null;view.classList.remove('dragging')}};for(const ev of ['pointerup','pointercancel','lostpointercapture'])view.addEventListener(ev,stopPointer);
+ view.addEventListener('click',e=>{if(suppressClick){suppressClick=false;return}if(!e.target.closest('.node,.link-hit'))clear()});
+ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&selection&&!dlg.open)clear()});
  clear();resize();
 }
 charts.forEach(render);
