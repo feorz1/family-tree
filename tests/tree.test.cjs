@@ -17,20 +17,48 @@ edgeHit.handlers.click({stopPropagation(){}});view.handlers.pointerdown({button:
 edgeHit.handlers.click({stopPropagation(){}});view.handlers.pointerdown({button:0,pointerId:4,clientX:100,clientY:100,target});view.handlers.pointermove({pointerId:4,clientX:150,clientY:100});view.handlers.pointerup({pointerId:4});view.handlers.click({target:{closest:()=>false}});if(!isSelected())throw Error('drag cleared selection');
 console.log('Escape and background clear selection; dragging preserves selection.');
 
-// Katya's two parent links should be simple, rounded and stay between generations.
+// The user's examples: use a straight line when cards align, otherwise the nearest side.
 document.handlers.keydown.forEach(f=>f({key:'Escape'}));
-const katya=all.find(e=>e.tag==='button' && e.attrs['aria-label']?.startsWith('Катя Никифорова,'));
-if(!katya)throw Error('Katya card missing');
-const parentHits=[...new Set(all.filter(e=>e.classList.contains('link-hit') && /^(Ефим|Акулина) Никифоров/.test(e.attrs['aria-label']||'') && e.attrs['aria-label'].includes('Катя Никифорова')))];
-if(parentHits.length!==2)throw Error('Katya must have two parent links');
-const basePaths=parentHits.map(hit=>hit.attrs.d);
-katya.handlers.click();
-for(const hit of parentHits){
- const d=hit.attrs.d,turns=(d.match(/Q/g)||[]).length;if(turns!==2)throw Error(`Katya parent route has ${turns} bends: ${d}`);
- const nums=d.match(/-?\d+(?:\.\d+)?/g).map(Number),ys=nums.filter((_,i)=>i%2===1);
- if(ys.some(y=>y<Math.min(ys[0],ys.at(-1))||y>Math.max(ys[0],ys.at(-1))))throw Error(`Katya parent route takes a detour: ${d}`);
+function card(name){const item=all.find(e=>e.tag==='button' && e.attrs['aria-label']?.startsWith(name+','));if(!item)throw Error(`Missing card ${name}`);return item}
+function relation(from,to){const hits=[...new Set(all.filter(e=>e.classList.contains('link-hit')&&e.attrs['aria-label']?.startsWith(from+' — '+to+':')))];if(hits.length!==1)throw Error(`Missing relation ${from} — ${to}`);return hits[0]}
+function points(hit){return hit.attrs.d.match(/-?\d+(?:\.\d+)?/g).map(Number)}
+function turns(hit){return (hit.attrs.d.match(/Q/g)||[]).length}
+function straight(hit){const p=points(hit);return turns(hit)===0&&(p[0]===p[2]||p[1]===p[3])}
+const efKatya=relation('Ефим Никифоров','Катя Никифорова'),akKatya=relation('Акулина Никифорова','Катя Никифорова');
+const basePaths=[efKatya.attrs.d,akKatya.attrs.d];card('Катя Никифорова').handlers.click();
+if(turns(efKatya)!==2||turns(akKatya)!==1)throw Error('Katya should have one top and one side connection');
+document.handlers.keydown.forEach(f=>f({key:'Escape'}));
+if(isSelected()||efKatya.attrs.d!==basePaths[0]||akKatya.attrs.d!==basePaths[1])throw Error('Reset did not restore routes');
+card('Миша Никифоров').handlers.click();
+const efMisha=relation('Ефим Никифоров','Миша Никифоров'),akMisha=relation('Акулина Никифорова','Миша Никифоров');
+if(!straight(efMisha)||turns(akMisha)!==1)throw Error('Misha should have a straight and a side connection');
+const misha=charts[0].nodes.find(n=>n.id==='mi'),end=points(akMisha);
+if(end.at(-2)!==misha.x+174||end.at(-1)!==misha.y+48)throw Error('Aculina should connect to Misha’s right side');
+card('Татьяна Перикова').handlers.click();
+if(!straight(relation('Иван Периков','Татьяна Перикова'))||!straight(relation('Татьяна Перикова','Ольга Фитисова')))throw Error('Tatiana should connect vertically to Ivan and Olga');
+card('Акулина Никифорова').handlers.click();
+if(turns(relation('Акулина Никифорова','Миша Никифоров'))!==1||turns(relation('Акулина Никифорова','Евдокия «Дуня»'))!==2)throw Error('Aculina should use a side for Misha and the top for Evdokia');
+const children=['Стеша Никифорова','Катя Никифорова','Миша Никифоров','Евдокия «Дуня»'];
+const starts=children.map(name=>points(relation('Акулина Никифорова',name))[0]);
+if(new Set(starts).size!==4)throw Error('Children links should leave from separate points');
+console.log('Reference examples: direct, top and side connections, with separate sibling lines.');
+// Every focused line must connect its two people and avoid the other highlighted cards.
+function samples(d){
+ const tokens=d.match(/[MLQ]|-?\d+(?:\.\d+)?/g),out=[];let x=0,y=0;
+ for(let i=0;i<tokens.length;){const op=tokens[i++];if(op==='M'){x=+tokens[i++];y=+tokens[i++];out.push([x,y])}else if(op==='L'){const nx=+tokens[i++],ny=+tokens[i++];for(let k=1;k<=12;k++)out.push([x+(nx-x)*k/12,y+(ny-y)*k/12]);x=nx;y=ny}else if(op==='Q'){const cx=+tokens[i++],cy=+tokens[i++],nx=+tokens[i++],ny=+tokens[i++];for(let k=1;k<=12;k++){const t=k/12;out.push([(1-t)**2*x+2*(1-t)*t*cx+t*t*nx,(1-t)**2*y+2*(1-t)*t*cy+t*t*ny])}x=nx;y=ny}else throw Error('Unknown path command '+op)}return out;
 }
-document.handlers.keydown.forEach(f=>f({key:'Escape'}));
-if(isSelected())throw Error('Escape did not clear Katya selection');
-if(parentHits.some((hit,i)=>hit.attrs.d!==basePaths[i]))throw Error('Reset should restore the original routes');
-console.log('Katya parent routes have two rounded bends and stay between generations.');
+let checked=0;
+for(const c of charts){
+ const subtree=walk(roots['#chart-'+c.id]),svg=subtree.find(x=>x.tag==='svg'),groups=[...new Set(svg.children)],edges=graph(c),cards=subtree.filter(x=>x.tag==='button'&&x.className?.startsWith('node '));
+ if(groups.length!==edges.length)throw Error('Mismatch between rendered and recorded links');
+ for(let ni=0;ni<c.nodes.length;ni++){
+  cards[ni].handlers.click();const n=c.nodes[ni],visible=new Set([n.id,...edges.filter(e=>e.a===n.id||e.b===n.id).flatMap(e=>[e.a,e.b])]);
+  for(let i=0;i<edges.length;i++)if(groups[i].classList.contains('is-selected')){
+   const e=edges[i],hit=groups[i].children.find(x=>x.classList.contains('link-hit')),pts=samples(hit.attrs.d),endpoints=[c.nodes.find(x=>x.id===e.a),c.nodes.find(x=>x.id===e.b)];
+   const onBorder=(p,node)=>p[0]>=node.x-0.01&&p[0]<=node.x+174.01&&p[1]>=node.y-0.01&&p[1]<=node.y+96.01&&(Math.abs(p[0]-node.x)<.01||Math.abs(p[0]-node.x-174)<.01||Math.abs(p[1]-node.y)<.01||Math.abs(p[1]-node.y-96)<.01);
+   if(!((onBorder(pts[0],endpoints[0])&&onBorder(pts.at(-1),endpoints[1]))||(onBorder(pts[0],endpoints[1])&&onBorder(pts.at(-1),endpoints[0]))))throw Error(`Focused link has wrong endpoints: ${e.a} ${e.b}`);
+   for(const id of visible){const node=c.nodes.find(n=>n.id===id);if(pts.some(([x,y])=>x>node.x+.05&&x<node.x+173.95&&y>node.y+.05&&y<node.y+95.95))throw Error(`Focused link ${e.a} ${e.b} crosses visible ${id}`)}checked++;
+  }
+ }
+}
+console.log(`Checked ${checked} focused connections and their visible cards.`);

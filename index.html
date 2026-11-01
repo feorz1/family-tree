@@ -124,6 +124,47 @@ function roundedPath(points,radius=8){
  }
  const end=points[points.length-1];return d+` L ${end[0]} ${end[1]}`;
 }
+// In focus mode use the fewest natural turns and allow every card side.
+// Only highlighted cards are obstacles; faded cards should not force long detours.
+function focusRoute(a,b,visibleNodes,usedPaths,preferTop=false,preferredStart=null){
+ const pad=24,centrex=n=>n.x+NODE_W/2,centrey=n=>n.y+NODE_H/2;
+ const candidates=[];
+ const push=(pts,style)=>{
+  pts=pts.filter((p,i)=>!i||p[0]!==pts[i-1][0]||p[1]!==pts[i-1][1]);
+  for(let i=1;i<pts.length;i++)for(const n of visibleNodes){
+   const [x1,y1]=pts[i-1],[x2,y2]=pts[i],l=n.x,r=n.x+NODE_W,t=n.y,bt=n.y+NODE_H;
+   const hits=x1===x2?x1>l&&x1<r&&Math.max(y1,y2)>t&&Math.min(y1,y2)<bt:y1>t&&y1<bt&&Math.max(x1,x2)>l&&Math.min(x1,x2)<r;
+   if(hits)return;
+  }
+  let length=0,intersections=0;for(let i=1;i<pts.length;i++){
+   const [x1,y1]=pts[i-1],[x2,y2]=pts[i];length+=Math.abs(x2-x1)+Math.abs(y2-y1);
+   for(const path of usedPaths)for(let j=1;j<path.length;j++){
+    const [u1,v1]=path[j-1],[u2,v2]=path[j],h=y1===y2,k=v1===v2;
+    if(h!==k){const horizontal=h?[x1,y1,x2,y2]:[u1,v1,u2,v2],vertical=h?[u1,v1,u2,v2]:[x1,y1,x2,y2];
+     if(vertical[0]>Math.min(horizontal[0],horizontal[2])&&vertical[0]<Math.max(horizontal[0],horizontal[2])&&horizontal[1]>Math.min(vertical[1],vertical[3])&&horizontal[1]<Math.max(vertical[1],vertical[3]))intersections++;
+    }else if(h&&y1===v1&&Math.min(Math.max(x1,x2),Math.max(u1,u2))>Math.max(Math.min(x1,x2),Math.min(u1,u2))||!h&&x1===u1&&Math.min(Math.max(y1,y2),Math.max(v1,v2))>Math.max(Math.min(y1,y2),Math.min(v1,v2)))intersections++;
+   }
+  }
+  const turns=pts.length-2,stylePenalty=preferTop&&style==='side'?1500:0;
+  candidates.push({points:pts,score:intersections*10000+turns*500+length+stylePenalty});
+ };
+ const xlo=Math.max(a.x+pad,b.x+pad),xhi=Math.min(a.x+NODE_W-pad,b.x+NODE_W-pad);
+ const ylo=Math.max(a.y+pad,b.y+pad),yhi=Math.min(a.y+NODE_H-pad,b.y+NODE_H-pad);
+ if(a.y+NODE_H<=b.y||b.y+NODE_H<=a.y){
+  const top=a.y<b.y?a:b,bottom=top===a?b:a,yt=top.y+NODE_H,yb=bottom.y;
+  const sx=top===a&&preferredStart!==null?preferredStart:centrex(top),tx=centrex(bottom);
+  if(xlo<=xhi){const x=Math.max(xlo,Math.min(xhi,sx));push([[x,yt],[x,yb]],'top')}
+  for(const fraction of [.3,.45,.6,.75]){const mid=yt+(yb-yt)*fraction;push([[sx,yt],[sx,mid],[tx,mid],[tx,yb]],'top')}
+  const side=centrex(top)<centrex(bottom)?bottom.x:bottom.x+NODE_W;
+  if((side===bottom.x&&sx<side)||(side!==bottom.x&&sx>side))push([[sx,yt],[sx,centrey(bottom)],[side,centrey(bottom)]],'side');
+ }else if(a.x+NODE_W<=b.x||b.x+NODE_W<=a.x){
+  const left=a.x<b.x?a:b,right=left===a?b:a,xl=left.x+NODE_W,xr=right.x;
+  if(ylo<=yhi){const y=Math.max(ylo,Math.min(yhi,centrey(left)));push([[xl,y],[xr,y]],'horizontal')}
+  const mid=(xl+xr)/2;push([[xl,centrey(left)],[mid,centrey(left)],[mid,centrey(right)],[xr,centrey(right)]],'horizontal');
+ }
+ candidates.sort((x,y)=>x.score-y.score);if(!candidates.length)return null;
+ const points=candidates[0].points;usedPaths.push(points);return points;
+}
 function render(c){
  // Give routes enough space to pass cards and each other.
  for(const n of c.nodes){n.x=80+Math.round(n.x*1.4);n.y=60+Math.round(n.y*1.4)}c.w=160+Math.round(c.w*1.4);c.h=120+Math.round(c.h*1.4);
@@ -150,7 +191,18 @@ function render(c){
  const edges=graphEdges(c), ports=edgePorts(edges,map), occupied=new Map(), nodeElements=new Map(), edgeElements=[];let selection=null;
  function setShape(el,d){for(const path of el.paths)path.setAttribute('d',d)}
  function clear(){selection=null;panel.replaceChildren();const message=document.createElement('span');message.textContent='Выберите человека или связь, чтобы увидеть связанных людей.';panel.append(message);nodeElements.forEach(el=>el.classList.remove('is-dim','is-selected','is-related'));edgeElements.forEach(el=>{el.group.classList.remove('is-dim','is-selected');setShape(el,el.baseD);svg.append(el.group)})}
- function focusPeople(ids, edgeIndex=null){const set=new Set(ids),selectedRoutes=new Map();nodeElements.forEach((el,id)=>{el.classList.toggle('is-dim',!set.has(id));el.classList.toggle('is-selected',id===ids[0]);el.classList.toggle('is-related',set.has(id)&&id!==ids[0])});edgeElements.forEach(el=>{const selected=edgeIndex===null?(el.edge.a===ids[0]||el.edge.b===ids[0]):el.index===edgeIndex;el.group.classList.toggle('is-dim',!selected);el.group.classList.toggle('is-selected',selected);if(selected){const e=el.edge,path=routeEdge(map[e.a],map[e.b],c.nodes,c.w,c.h,selectedRoutes,ports[el.index]);setShape(el,path?roundedPath(path):el.baseD);svg.append(el.group)}else setShape(el,el.baseD)})}
+ function focusPeople(ids, edgeIndex=null){
+  const set=new Set(ids),visible=c.nodes.filter(n=>set.has(n.id)),usedPaths=[];
+  const incoming=edgeIndex===null?edgeElements.filter(el=>el.edge.b===ids[0]&&map[el.edge.a].y+NODE_H<=map[ids[0]].y):[];
+  incoming.sort((x,y)=>Math.abs(map[x.edge.a].x-map[ids[0]].x)-Math.abs(map[y.edge.a].x-map[ids[0]].x));
+  const nearest=incoming.length>1?incoming[0]:null;
+  const outgoing=edgeIndex===null?edgeElements.filter(el=>el.edge.a===ids[0]&&map[ids[0]].y+NODE_H<=map[el.edge.b].y).sort((x,y)=>map[x.edge.b].x-map[y.edge.b].x):[];
+  const starts=new Map();if(outgoing.length>1)outgoing.forEach((el,i)=>starts.set(el,map[ids[0]].x+24+i*(NODE_W-48)/(outgoing.length-1)));
+  nodeElements.forEach((el,id)=>{el.classList.toggle('is-dim',!set.has(id));el.classList.toggle('is-selected',id===ids[0]);el.classList.toggle('is-related',set.has(id)&&id!==ids[0])});
+  edgeElements.forEach(el=>{const selected=edgeIndex===null?(el.edge.a===ids[0]||el.edge.b===ids[0]):el.index===edgeIndex;el.group.classList.toggle('is-dim',!selected);el.group.classList.toggle('is-selected',selected);
+   if(selected){const e=el.edge,path=focusRoute(map[e.a],map[e.b],visible,usedPaths,el===nearest||(outgoing.length>1&&map[e.b].x>map[e.a].x+NODE_W),starts.get(el)??null)||routeEdge(map[e.a],map[e.b],visible,c.w,c.h,new Map(),ports[el.index]);setShape(el,path?roundedPath(path):el.baseD);svg.append(el.group)}else setShape(el,el.baseD)
+  })
+ }
  function button(name,fn,cls=''){const el=document.createElement('button');el.type='button';el.textContent=name;el.className=cls;el.addEventListener('click',fn);return el}
  function showPerson(id){selection={person:id};const near=edges.map((e,i)=>({e,i})).filter(x=>x.e.a===id||x.e.b===id);const related=[...new Set(near.map(({e})=>e.a===id?e.b:e.a))];focusPeople([id,...related]);panel.replaceChildren();const title=document.createElement('strong');title.textContent=map[id].name;panel.append(title);panel.append(button('Подробнее',()=>personInfo(map[id]),'detail-button'));panel.append(button('Показать всё',clear,'clear-button'));const items=document.createElement('div');items.className='related-list';if(!near.length)items.textContent='Связанные люди пока не установлены.';for(const {e} of near){const other=e.a===id?e.b:e.a;const b=button(map[other].name+' · '+e.label,()=>showEdge(edges.indexOf(e)),'related-item'+(e.kind==='red'?' is-uncertain':''));items.append(b)}panel.append(items)}
  function showEdge(i){const e=edges[i];selection={edge:i};focusPeople([e.a,e.b],i);panel.replaceChildren();const title=document.createElement('strong');title.textContent=e.label+(e.kind==='red'?' · требует проверки':'');panel.append(title);panel.append(button('Показать всё',clear,'clear-button'));const items=document.createElement('div');items.className='related-list';for(const id of [e.a,e.b])items.append(button(map[id].name,()=>showPerson(id),'related-item'));panel.append(items)}
