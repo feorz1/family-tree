@@ -62,3 +62,24 @@ for(const c of charts){
  }
 }
 console.log(`Checked ${checked} focused connections and their visible cards.`);
+// Both modes apply to every tree, retain the view, and keep their original paths on reset.
+document.handlers.keydown.forEach(f=>f({key:'Escape'}));
+const simpleButton=roots['#lines-simple'],complexButton=roots['#lines-complex'];
+function modePaths(c){const svg=walk(roots['#chart-'+c.id]).find(x=>x.tag==='svg');return [...new Set(svg.children)].map(g=>g.children.find(x=>x.classList.contains('link-hit')).attrs.d)}
+const simplePaths=charts.map(modePaths);
+if(simpleButton.attrs['aria-pressed']!==undefined&&simpleButton.attrs['aria-pressed']!=='true')throw Error('Simple must be the default');
+for(let ci=0;ci<charts.length;ci++)for(const d of simplePaths[ci])for(const node of charts[ci].nodes){
+ if(samples(d).some(([x,y])=>x>node.x+.05&&x<node.x+173.95&&y>node.y+.05&&y<node.y+95.95))throw Error(`Simple mode crosses ${node.name}`);
+}
+complexButton.handlers.click();
+if(complexButton.attrs['aria-pressed']!=='true'||simpleButton.attrs['aria-pressed']!=='false')throw Error('Complex toggle state');
+const complexPaths=charts.map(modePaths);
+for(let i=0;i<charts.length;i++)if(!simplePaths[i].some((d,j)=>d!==complexPaths[i][j]))throw Error(`Mode switch did not update ${charts[i].id}`);
+simpleButton.handlers.click();
+if(simpleButton.attrs['aria-pressed']!=='true'||complexButton.attrs['aria-pressed']!=='false')throw Error('Simple toggle state');
+if(charts.some((c,i)=>modePaths(c).some((d,j)=>d!==simplePaths[i][j])))throw Error('Simple mode did not restore its paths');
+card('Миша Никифоров').handlers.click();view.scrollLeft=225;const currentZoom=output.textContent;complexButton.handlers.click();
+if(!isSelected()||!panel.children.some(e=>e.textContent==='Миша Никифоров')||view.scrollLeft!==225||output.textContent!==currentZoom)throw Error('Switch should preserve selection and view');
+simpleButton.handlers.click();
+if(!isSelected()||view.scrollLeft!==225||output.textContent!==currentZoom)throw Error('Switch back should preserve selection and view');
+console.log('Simple and complex modes update all branches without losing selection or zoom.');
