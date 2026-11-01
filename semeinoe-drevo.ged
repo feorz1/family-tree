@@ -1,0 +1,278 @@
+0 HEAD
+1 SOUR FAMILY_TREE
+2 NAME Семейная родословная
+1 GEDC
+2 VERS 5.5.1
+2 FORM LINEAGE-LINKED
+1 CHAR UTF-8
+1 LANG Russian
+1 NOTE Рабочее древо. Связи основаны на семейных сообщениях и подлежат проверке.
+0 @S1@ SOUR
+1 TITL Семейный рассказ сестры и сообщения пользователя
+1 NOTE Документ сестры составлен по рассказам бабушки Тани.
+0 @S2@ SOUR
+1 TITL Фотография памятной надписи Андрея Николаевича Храмова
+1 NOTE Снимок предоставлен пользователем.
+0 @I_efim@ INDI
+1 NAME Ефим /Никифоров/
+1 SOUR @S1@
+1 NOTE Форма имени в метрике: Евфимий Алексеев; отождествление требует проверки.
+1 FAMS @F_n1@
+0 @I_ak@ INDI
+1 NAME Акулина /Никифорова/
+1 SOUR @S1@
+1 NOTE В метрике: Акилина Феодотова; девичья фамилия неизвестна.
+1 FAMS @F_n1@
+0 @I_du@ INDI
+1 NAME Евдокия /Никифорова/
+1 SOUR @S1@
+1 NOTE Дуня; в браке Перикова. Дата 10.03.1910 в семейном файле указана как неверная.
+1 FAMC @F_n1@
+1 FAMS @F_n3@
+0 @I_stesha@ INDI
+1 NAME Стеша /Никифорова/
+1 SOUR @S1@
+1 NOTE По семейному рассказу сестра Дуни; полное имя неизвестно.
+1 FAMC @F_n1@
+0 @I_katya@ INDI
+1 NAME Катя /Никифорова/
+1 SOUR @S1@
+1 NOTE По семейному рассказу сестра Дуни; полное имя неизвестно.
+1 FAMC @F_n1@
+0 @I_misha@ INDI
+1 NAME Миша /Никифоров/
+1 SOUR @S1@
+1 NOTE По семейному рассказу брат Дуни; полное имя неизвестно.
+1 FAMC @F_n1@
+0 @I_ant_candidate@ INDI
+1 NAME Антонина /Никифорова/
+1 SOUR @S1@
+1 NOTE Близнец Евдокии в метрике; связь этой записи с Дуней из семейного рассказа требует проверки.
+0 @I_niki@ INDI
+1 NAME Никита /Периков/
+1 SOUR @S1@
+1 NOTE По семейному рассказу отец Ивана.
+1 FAMS @F_n2@
+0 @I_nat@ INDI
+1 NAME Наталья //
+1 SOUR @S1@
+1 NOTE По семейному рассказу мать Ивана; девичья фамилия неизвестна.
+1 FAMS @F_n2@
+0 @I_ivan@ INDI
+1 NAME Иван /Периков/
+1 SOUR @S1@
+1 NOTE По семейному рассказу муж Евдокии.
+1 FAMC @F_n2@
+1 FAMS @F_n3@
+0 @I_anat@ INDI
+1 NAME Анатолий /Периков/
+1 SOUR @S1@
+1 FAMC @F_n3@
+0 @I_mih@ INDI
+1 NAME Михаил /Периков/
+1 SOUR @S1@
+1 NOTE Жил в Гае; по семейному рассказу умер в 41 год.
+1 FAMC @F_n3@
+1 FAMS @F_n4@
+0 @I_tam@ INDI
+1 NAME Тамара /Перикова/
+1 SOUR @S1@
+1 NOTE В браке Васильева.
+1 FAMC @F_n3@
+0 @I_yur@ INDI
+1 NAME Юрий /Периков/
+1 SOUR @S1@
+1 NOTE По семейному рассказу таксист.
+1 FAMC @F_n3@
+1 FAMS @F_n5@
+0 @I_evg@ INDI
+1 NAME Евгений /Периков/
+1 SOUR @S1@
+1 NOTE По семейному рассказу умер в 5 лет.
+1 FAMC @F_n3@
+0 @I_tan@ INDI
+1 NAME Татьяна /Перикова/
+1 SOUR @S1@
+1 BIRT
+2 DATE 28 MAY 1950
+1 NOTE Орск; в браке Фитисова.
+1 FAMC @F_n3@
+1 FAMS @F_n6@
+0 @I_val@ INDI
+1 NAME Валентин /Фетисов/
+1 SOUR @S1@
+1 NOTE По семейному рассказу из деревни Долина; фамилия также Фитисов.
+1 FAMS @F_n6@
+0 @I_sve@ INDI
+1 NAME Света /Перикова/
+1 SOUR @S1@
+1 FAMC @F_n4@
+0 @I_ser@ INDI
+1 NAME Серёжа /Периков/
+1 SOUR @S1@
+1 FAMC @F_n4@
+0 @I_iri@ INDI
+1 NAME Ирина //
+1 SOUR @S1@
+1 NOTE Дочь Юрия.
+1 FAMC @F_n5@
+0 @I_ann@ INDI
+1 NAME Анна //
+1 SOUR @S1@
+1 NOTE Дочь Юрия.
+1 FAMC @F_n5@
+0 @I_ol@ INDI
+1 NAME Ольга Валентиновна /Фитисова/
+1 SOUR @S1@
+1 BIRT
+2 DATE 4 AUG 1977
+1 NOTE Орск; по семейному рассказу дочь Татьяны и Валентина.
+1 FAMC @F_n6@
+1 FAMS @F_n7@
+1 FAMS @F_n8@
+0 @I_and@ INDI
+1 NAME Андрей Николаевич /Храмов/
+1 SOUR @S1@
+1 BIRT
+2 DATE 11 JUL 1974
+1 DEAT
+2 DATE 2 AUG 2015
+2 SOUR @S2@
+1 NOTE На памятной надписи дата смерти 02.08.2015.
+1 FAMS @F_n7@
+0 @I_user@ INDI
+1 NAME Имя не указано /Храмов/
+1 SOUR @S1@
+1 BIRT
+2 DATE 3 MAR 1997
+1 NOTE Орск. Исходная фамилия Храмов, позднее Бойко; имя не предоставлено.
+1 FAMC @F_n7@
+1 FAMC @F_n9@
+2 PEDI adopted
+0 @I_sergei@ INDI
+1 NAME Сергей Алексеевич /Бойко/
+1 SOUR @S1@
+1 BIRT
+2 DATE 16 SEP 1973
+1 NOTE Орск; данные о его происхождении из семейного рассказа.
+1 FAMS @F_n8@
+1 FAMS @F_n9@
+1 FAMC @F_n10@
+1 FAMC @F_n11@
+2 PEDI adopted
+0 @I_nast@ INDI
+1 NAME Анастасия Сергеевна /Бойко/
+1 SOUR @S1@
+1 BIRT
+2 DATE 8 SEP 2002
+1 NOTE Орск; в браке Видянова.
+1 FAMC @F_n8@
+0 @I_kid@ INDI
+1 NAME Тамара /Кидяева/
+1 SOUR @S1@
+1 NOTE По семейному рассказу биологическая мать Сергея; примерно 1958–2011.
+1 FAMS @F_n10@
+0 @I_al@ INDI
+1 NAME Алексей /Бойко/
+1 SOUR @S1@
+1 NOTE По семейному рассказу усыновитель Сергея.
+1 FAMS @F_n11@
+0 @I_nin@ INDI
+1 NAME Нина Анатольевна /Попова/
+1 SOUR @S1@
+1 BIRT
+2 DATE 7 MAY 1946
+1 DEAT
+2 DATE 16 MAR 2024
+1 NOTE В браке Бойко. По семейному рассказу усыновительница Сергея.
+1 FAMS @F_n11@
+1 NOTE Сестра Людмила Попова; связь основана на семейном рассказе.
+0 @I_lud@ INDI
+1 NAME Людмила /Попова/
+1 SOUR @S1@
+1 NOTE Сестра Нины; муж Геннадий Феттер.
+1 FAMS @F_n12@
+1 NOTE Сестра Нина Анатольевна Попова; связь основана на семейном рассказе.
+0 @I_gen@ INDI
+1 NAME Геннадий /Феттер/
+1 SOUR @S1@
+1 NOTE Муж Людмилы.
+1 FAMS @F_n12@
+0 @F_n1@ FAM
+1 HUSB @I_efim@
+1 WIFE @I_ak@
+1 CHIL @I_du@
+1 CHIL @I_stesha@
+1 CHIL @I_katya@
+1 CHIL @I_misha@
+1 SOUR @S1@
+1 NOTE Семейный рассказ. Отождествление с близнецами из метрики требует проверки.
+0 @F_n2@ FAM
+1 HUSB @I_niki@
+1 WIFE @I_nat@
+1 CHIL @I_ivan@
+1 SOUR @S1@
+1 NOTE Семейный рассказ.
+0 @F_n3@ FAM
+1 HUSB @I_ivan@
+1 WIFE @I_du@
+1 CHIL @I_anat@
+1 CHIL @I_mih@
+1 CHIL @I_tam@
+1 CHIL @I_yur@
+1 CHIL @I_evg@
+1 CHIL @I_tan@
+1 SOUR @S1@
+1 NOTE Семейный рассказ.
+0 @F_n4@ FAM
+1 HUSB @I_mih@
+1 CHIL @I_sve@
+1 CHIL @I_ser@
+1 SOUR @S1@
+1 NOTE Семейный рассказ. Другой родитель неизвестен.
+0 @F_n5@ FAM
+1 HUSB @I_yur@
+1 CHIL @I_iri@
+1 CHIL @I_ann@
+1 SOUR @S1@
+1 NOTE Семейный рассказ. Другой родитель неизвестен.
+0 @F_n6@ FAM
+1 HUSB @I_val@
+1 WIFE @I_tan@
+1 CHIL @I_ol@
+1 SOUR @S1@
+1 NOTE Семейный рассказ.
+0 @F_n7@ FAM
+1 HUSB @I_and@
+1 WIFE @I_ol@
+1 CHIL @I_user@
+1 SOUR @S1@
+1 NOTE Сведения пользователя. Брак не утверждается.
+0 @F_n8@ FAM
+1 HUSB @I_sergei@
+1 WIFE @I_ol@
+1 CHIL @I_nast@
+1 SOUR @S1@
+1 NOTE Семейный рассказ и сведения пользователя.
+0 @F_n9@ FAM
+1 HUSB @I_sergei@
+1 CHIL @I_user@
+1 SOUR @S1@
+1 NOTE Усыновление по сообщению пользователя; оформление требует проверки.
+0 @F_n10@ FAM
+1 WIFE @I_kid@
+1 CHIL @I_sergei@
+1 SOUR @S1@
+1 NOTE Биологическая материнская линия Сергея согласно семейному рассказу.
+0 @F_n11@ FAM
+1 HUSB @I_al@
+1 WIFE @I_nin@
+1 CHIL @I_sergei@
+1 SOUR @S1@
+1 NOTE Усыновление Сергея согласно семейному рассказу.
+0 @F_n12@ FAM
+1 HUSB @I_gen@
+1 WIFE @I_lud@
+1 SOUR @S1@
+1 NOTE Брак согласно семейному рассказу.
+0 TRLR
