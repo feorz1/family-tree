@@ -131,6 +131,7 @@ function focusRoute(a,b,visibleNodes,usedPaths,preferTop=false,preferredStart=nu
  const candidates=[];
  const push=(pts,style)=>{
   pts=pts.filter((p,i)=>!i||p[0]!==pts[i-1][0]||p[1]!==pts[i-1][1]);
+  const simplified=[];for(const p of pts){while(simplified.length>=2){const a=simplified.at(-2),b=simplified.at(-1);if((a[0]===b[0]&&b[0]===p[0]&&(b[1]-a[1])*(p[1]-b[1])>=0)||(a[1]===b[1]&&b[1]===p[1]&&(b[0]-a[0])*(p[0]-b[0])>=0))simplified.pop();else break}simplified.push(p)}pts=simplified;
   for(let i=1;i<pts.length;i++)for(const n of visibleNodes){
    const [x1,y1]=pts[i-1],[x2,y2]=pts[i],l=n.x,r=n.x+NODE_W,t=n.y,bt=n.y+NODE_H;
    const hits=x1===x2?x1>l&&x1<r&&Math.max(y1,y2)>t&&Math.min(y1,y2)<bt:y1>t&&y1<bt&&Math.max(x1,x2)>l&&Math.min(x1,x2)<r;
@@ -192,7 +193,7 @@ function render(c){
  const hint=document.createElement('p');hint.className='canvas-hint';hint.textContent='Перетаскивайте фон · Ctrl/⌘ + колёсико или щипок — масштаб · наведите на человека или нажмите на линию · Esc или нажатие на фон — снять выделение · разрыв линии означает, что связи не соединены';host.append(hint);
  const panel=document.createElement('div');panel.className='selection-panel';panel.setAttribute('aria-live','polite');host.append(panel);
  const edges=graphEdges(c), ports=edgePorts(edges,map), nodeElements=new Map(), edgeElements=[];let selection=null;
- const simpleRoutes=[],simpleUsed=[],simpleFallback=new Map(),orderedTargets=new Map();
+ const simpleRoutes=new Array(edges.length),simpleUsed=[],simpleFallback=new Map(),orderedTargets=new Map(),incomingGroups=new Map();
  for(const target of c.nodes){
   const incoming=edges.filter(e=>e.b===target.id&&map[e.a].y+NODE_H<=target.y).sort((x,y)=>map[x.a].x-map[y.a].x||edges.indexOf(x)-edges.indexOf(y));
   if(incoming.length<2)continue;
@@ -202,16 +203,21 @@ function render(c){
   positions[positions.length-1]=Math.min(right,positions.at(-1));
   for(let i=positions.length-2;i>=0;i--)positions[i]=Math.min(positions[i],positions[i+1]-gap);
   incoming.forEach((e,rank)=>orderedTargets.set(e,{rank,count:incoming.length,x:positions[rank]}));
+  // Route the nearer parent first, so the farther line can pass below it.
+  const routeOrder=[...incoming];if(target.x>map[incoming.at(-1).a].x+NODE_W)routeOrder.reverse();
+  incomingGroups.set(target.id,routeOrder);
  }
- edges.forEach((e,i)=>{
-  const a=map[e.a],b=map[e.b],incoming=edges.filter(other=>other.b===e.b&&map[other.a].y+NODE_H<=b.y);
+ const scheduled=[],seenTargets=new Set();
+ for(const edge of edges){const group=incomingGroups.get(edge.b);if(group&&group.includes(edge)){if(seenTargets.has(edge.b))continue;seenTargets.add(edge.b);scheduled.push(...group)}else scheduled.push(edge)}
+ scheduled.forEach(e=>{
+  const i=edges.indexOf(e),a=map[e.a],b=map[e.b],incoming=edges.filter(other=>other.b===e.b&&map[other.a].y+NODE_H<=b.y);
   const nearest=[...incoming].sort((x,y)=>Math.abs(map[x.a].x-b.x)-Math.abs(map[y.a].x-b.x));
   const targetPlacement=orderedTargets.get(e)||null;
   const preferTop=incoming.length>1&&nearest[0]===e;
   let path=focusRoute(a,b,c.nodes,simpleUsed,preferTop,ports[i].a,true,targetPlacement);
   const fallbackPorts=targetPlacement?{...ports[i],b:targetPlacement.x}:ports[i];
   if(!path){path=routeEdge(a,b,c.nodes,c.w,c.h,simpleFallback,fallbackPorts);if(path)simpleUsed.push(path)}
-  simpleRoutes.push(path);
+  simpleRoutes[i]=path;
  });
  function clear(){selection=null;panel.replaceChildren();const message=document.createElement('span');message.textContent='Выберите человека или связь, чтобы увидеть связанных людей.';panel.append(message);nodeElements.forEach(el=>el.classList.remove('is-dim','is-selected','is-related'));edgeElements.forEach(el=>el.group.classList.remove('is-dim','is-selected'))}
  function focusPeople(ids, edgeIndex=null){

@@ -107,3 +107,23 @@ for(const c of charts){
  }
 }
 console.log(`Left-to-right entry order checked for ${orderedPairs} source pairs.`);
+// Parents of the same child should not have crossing or overlapping routes.
+function intersectSegments(a,b,c,d){
+ const cross=(p,q,r)=>(q[0]-p[0])*(r[1]-p[1])-(q[1]-p[1])*(r[0]-p[0]),eps=1e-6;
+ const x=cross(a,b,c),y=cross(a,b,d),z=cross(c,d,a),w=cross(c,d,b);
+ if(x*y< -eps&&z*w< -eps)return true;
+ if(Math.abs(x)<eps&&Math.abs(y)<eps&&Math.abs(z)<eps&&Math.abs(w)<eps){const axis=Math.abs(b[0]-a[0])>=Math.abs(b[1]-a[1])?0:1;return Math.min(Math.max(a[axis],b[axis]),Math.max(c[axis],d[axis]))-Math.max(Math.min(a[axis],b[axis]),Math.min(c[axis],d[axis]))>eps}
+ return false;
+}
+let separatedPairs=0;
+for(const c of charts){
+ const subtree=walk(roots['#chart-'+c.id]),svg=subtree.find(x=>x.tag==='svg'),groups=[...new Set(svg.children)],edges=graph(c),map=Object.fromEntries(c.nodes.map(n=>[n.id,n]));
+ for(const child of c.nodes){const incoming=edges.map((edge,index)=>({edge,index})).filter(({edge})=>edge.b===child.id&&map[edge.a].y+96<=child.y);
+  for(let i=0;i<incoming.length;i++)for(let j=i+1;j<incoming.length;j++){
+   const getPath=item=>samples(groups[item.index].children.find(e=>e.classList.contains('link-hit')).attrs.d),a=getPath(incoming[i]),b=getPath(incoming[j]);
+   for(let m=1;m<a.length;m++)for(let n=1;n<b.length;n++)if(intersectSegments(a[m-1],a[m],b[n-1],b[n]))throw Error(`${c.id}: lines to ${child.id} cross or overlap`);
+   separatedPairs++;
+  }
+ }
+}
+console.log(`Verified ${separatedPairs} pairs of incoming connections do not cross.`);
