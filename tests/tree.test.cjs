@@ -12,12 +12,47 @@ for(const c of charts){
  const edges=graph(c),elements=walk(roots['#chart-'+c.id]).filter(e=>e.classList.contains('edge'));
  for(const [a,b] of marriedPairs[c.id]||[]){
   const matches=edges.map((e,i)=>({e,i})).filter(({e})=>e.spouse&&((e.a===a&&e.b===b)||(e.a===b&&e.b===a)));
-  if(matches.length!==1||!elements[matches[0].i].classList.contains('edge-spouse'))throw Error(`Spouse connection missing or duplicated: ${c.id} ${a} ${b}`);
+  const name=id=>c.nodes.find(n=>n.id===id).name;
+  const visible=elements.filter(g=>g.classList.contains('edge-spouse')&&g.children.some(hit=>hit.attrs['aria-label']?.startsWith(`${name(a)} — ${name(b)}:`)));
+  if(matches.length!==1||visible.length!==1)throw Error(`Spouse connection missing or duplicated: ${c.id} ${a} ${b}`);
  }
  if(edges.some(e=>e.spouse&&!(marriedPairs[c.id]||[]).some(([a,b])=>a===e.a&&b===e.b||a===e.b&&b===e.a)))throw Error('Unverified spouse connection');
 }
 const boykoAdopters=graph(charts.find(c=>c.id==='boyko')).find(e=>e.a==='alex'&&e.b==='nina');
 if(!boykoAdopters||boykoAdopters.spouse||boykoAdopters.kind!=='blue')throw Error('Joint adoption alone must not imply marriage');
+// A family line is a continuous route from the parents' union to each actual child.
+const familyRoutes=vm.runInContext('familyRoutes',ctx);
+for(const c of charts){
+ const map=Object.fromEntries(c.nodes.map(n=>[n.id,n])),routes=familyRoutes(c,map);
+ for(const f of routes){
+  const [a,b]=f.parents.map(id=>map[id]),left=a.x<b.x?a:b,right=left===a?b:a;
+  if(f.anchor[0]<left.x+174||f.anchor[0]>right.x||f.anchor[1]!==left.y+48)throw Error(`${c.id}: family trunk must start on the parents' union`);
+  const [first,last]=[f.stem[0],f.stem.at(-1)];
+  if(first[0]!==f.anchor[0]||first[1]!==f.anchor[1])throw Error(`${c.id}: detached family stem`);
+  checkPath(f.stem,c.nodes,f.parents.join('+'),'family stem');
+  const bus=f.bus.map(s=>s.points).sort((x,y)=>x[0][0]-y[0][0]);
+  const targetIds=f.branches.map(b=>b.child);
+  if(new Set(targetIds).size!==f.children.length||f.children.some(id=>!targetIds.includes(id)))throw Error(`${c.id}: each child needs exactly one family branch`);
+  for(const branch of f.branches){
+   const child=map[branch.child],start=branch.points[0],end=branch.points.at(-1);
+   if(start[1]!==last[1]||end[0]<child.x||end[0]>child.x+174||end[1]!==child.y)throw Error(`${c.id}: disconnected child branch ${branch.child}`);
+   let reached=Math.min(last[0],start[0]);const target=Math.max(last[0],start[0]);
+   for(const segment of bus){if(segment[0][1]!==last[1]||segment[1][1]!==last[1])throw Error(`${c.id}: bus height mismatch`);if(segment[0][0]<=reached&&segment[1][0]>reached)reached=segment[1][0]}
+   if(reached<target)throw Error(`${c.id}: bus does not connect to ${branch.child}`);
+   checkPath(branch.points,c.nodes,f.parents.join('+'),branch.child);
+  }
+  for(const segment of bus)checkPath(segment,c.nodes,f.parents.join('+'),'family bus');
+ }
+}
+const familyRoutesMain=familyRoutes(charts.find(c=>c.id==='family'),Object.fromEntries(charts.find(c=>c.id==='family').nodes.map(n=>[n.id,n])));
+const fetisovFamily=familyRoutesMain.filter(f=>f.parents.includes('tan')&&f.parents.includes('val'));
+if(fetisovFamily.length!==1||['ol','ilya','svetlana','ser_fet'].some(id=>!fetisovFamily[0].children.includes(id)))throw Error('Tatiana and Valentin need one shared branch for all four children');
+const byParents=(a,b)=>familyRoutesMain.find(f=>f.parents.includes(a)&&f.parents.includes(b));
+if(!byParents('and','ol')?.children.includes('you')||byParents('and','ol')?.children.includes('nast')||!byParents('ol','ser')?.children.includes('nast')||byParents('ol','ser')?.children.includes('you'))throw Error('Children of different partnerships must remain separate');
+const adoption=graph(charts.find(c=>c.id==='family')).find(e=>e.a==='ser'&&e.b==='you');
+if(!adoption||adoption.kind!=='blue'||adoption.label!=='усыновление')throw Error('Separate adoption must remain blue and labelled');
+const archive=charts.find(c=>c.id==='nikiforov'),archiveRoutes=familyRoutes(archive,Object.fromEntries(archive.nodes.map(n=>[n.id,n])));
+if(!archiveRoutes.some(f=>f.kind==='red'&&f.children.includes('stef'))||archiveRoutes.some(f=>f.parents.includes('d1909')&&f.parents.includes('a1909')))throw Error('Uncertain family and godparent relationships must stay distinct');
 console.log('All routes avoid unrelated cards; selection, details, zoom and timelines validated.');
 const host=roots['#chart-family'];const all=walk(host),view=all.find(e=>e.className==='viewport'),output=all.find(e=>e.tag==='output');const original=output.textContent;let prevented=false;view.handlers.wheel({ctrlKey:true,metaKey:false,deltaY:-120,clientX:300,clientY:200,preventDefault(){prevented=true}});if(!prevented||output.textContent===original)throw Error('wheel zoom failed');let target={closest:()=>false};view.handlers.pointerdown({button:0,pointerId:1,clientX:200,clientY:200,target});view.handlers.pointerdown({button:0,pointerId:2,clientX:300,clientY:200,target});const beforePinch=output.textContent;view.handlers.pointermove({pointerId:2,clientX:350,clientY:200});if(output.textContent===beforePinch)throw Error('pinch zoom failed');view.handlers.pointerup({pointerId:2});view.handlers.pointerup({pointerId:1});const timeline=all.find(e=>e.className==='timeline-item');timeline.handlers.click();const panel=all.find(e=>e.className==='selection-panel');if(!panel.children.some(e=>e.tag==='strong'))throw Error('timeline focus failed');const edgeHit=all.find(e=>e.classList.contains('link-hit'));edgeHit.handlers.click({stopPropagation(){}});if(!panel.children.some(e=>e.className==='related-list'))throw Error('edge selection failed');console.log('Wheel zoom, pinch, drag, timeline focus and selected relation validated.');
 
@@ -28,145 +63,97 @@ edgeHit.handlers.click({stopPropagation(){}});view.handlers.pointerdown({button:
 edgeHit.handlers.click({stopPropagation(){}});view.handlers.pointerdown({button:0,pointerId:4,clientX:100,clientY:100,target});view.handlers.pointermove({pointerId:4,clientX:150,clientY:100});view.handlers.pointerup({pointerId:4});view.handlers.click({target:{closest:()=>false}});if(!isSelected())throw Error('drag cleared selection');
 console.log('Escape and background clear selection; dragging preserves selection.');
 
-// The user's examples: use a straight line when cards align, otherwise the nearest side.
+// Family groups retain the semantic graph, but render a single common trunk and child branches.
 document.handlers.keydown.forEach(f=>f({key:'Escape'}));
-function card(name){const item=all.find(e=>e.tag==='button' && e.attrs['aria-label']?.startsWith(name+','));if(!item)throw Error(`Missing card ${name}`);return item}
-function relation(from,to){const hits=[...new Set(all.filter(e=>e.classList.contains('link-hit')&&e.attrs['aria-label']?.startsWith(from+' — '+to+':')))];if(hits.length!==1)throw Error(`Missing relation ${from} — ${to}`);return hits[0]}
-function points(hit){return hit.attrs.d.match(/-?\d+(?:\.\d+)?/g).map(Number)}
-function turns(hit){return (hit.attrs.d.match(/Q/g)||[]).length}
-function straight(hit){const p=points(hit);return turns(hit)===0&&(p[0]===p[2]||p[1]===p[3])}
-// The four children share a generation and both parents; Olga's partners are not their children.
+function card(name){const item=all.find(e=>e.tag==='button' && e.attrs['aria-label']?.startsWith(name+','));if(!item)throw Error('Missing card '+name);return item}
 const familyChart=charts.find(c=>c.id==='family'),familyEdges=graph(familyChart);
+const nodeName=(id,c=familyChart)=>c.nodes.find(n=>n.id===id).name;
+const cardById=(id)=>card(nodeName(id));
 for(const child of ['ilya','svetlana','ser_fet','ol']){
  const n=familyChart.nodes.find(n=>n.id===child),olga=familyChart.nodes.find(n=>n.id==='ol');
  if(!n||n.y!==olga.y||!['tan','val'].every(parent=>familyEdges.some(e=>e.a===parent&&e.b===child)))throw Error('Missing child or parent link in Fetisov family');
 }
-for(const partner of ['and','ser'])if(familyEdges.some(e=>['tan','val'].includes(e.a)&&e.b===partner))throw Error('Olga’s partner must not appear as her sibling');
-const efKatya=relation('Ефим Никифоров','Катя Никифорова'),akKatya=relation('Акулина Никифорова','Катя Никифорова');
-const basePaths=[efKatya.attrs.d,akKatya.attrs.d];card('Катя Никифорова').handlers.click();
-if(turns(efKatya)>2||turns(akKatya)>2)throw Error('Katya’s connections should stay simple');
-document.handlers.keydown.forEach(f=>f({key:'Escape'}));
-if(isSelected()||efKatya.attrs.d!==basePaths[0]||akKatya.attrs.d!==basePaths[1])throw Error('Reset did not restore routes');
-card('Миша Никифоров').handlers.click();
-const efMisha=relation('Ефим Никифоров','Миша Никифоров'),akMisha=relation('Акулина Никифорова','Миша Никифоров');
-if(!straight(efMisha)||turns(akMisha)!==1)throw Error('Misha should have a straight and a side connection');
-const misha=charts[0].nodes.find(n=>n.id==='mi'),end=points(akMisha);
-if(end.at(-2)!==misha.x+174||end.at(-1)<=misha.y||end.at(-1)>=misha.y+96)throw Error('Aculina should connect to Misha’s right side');
-card('Татьяна Перикова').handlers.click();
-if(!straight(relation('Иван Периков','Татьяна Перикова'))||!straight(relation('Татьяна Перикова','Ольга Фитисова')))throw Error('Tatiana should connect vertically to Ivan and Olga');
-card('Акулина Никифорова').handlers.click();
-if(turns(relation('Акулина Никифорова','Миша Никифоров'))!==1||turns(relation('Акулина Никифорова','Евдокия «Дуня»'))>2)throw Error('Aculina’s connections should stay simple');
-const children=['Стеша Никифорова','Катя Никифорова','Миша Никифоров','Евдокия «Дуня»'];
-const starts=children.map(name=>points(relation('Акулина Никифорова',name))[0]);
-if(new Set(starts).size!==4)throw Error('Children links should leave from separate points');
-console.log('Reference examples: direct, top and side connections, with separate sibling lines.');
-// Every focused line must connect its two people and avoid the other highlighted cards.
+for(const partner of ['and','ser'])if(familyEdges.some(e=>['tan','val'].includes(e.a)&&e.b===partner))throw Error('Olga partner must not appear as her sibling');
 function samples(d){
  const tokens=d.match(/[MLQ]|-?\d+(?:\.\d+)?/g),out=[];let x=0,y=0;
  for(let i=0;i<tokens.length;){const op=tokens[i++];if(op==='M'){x=+tokens[i++];y=+tokens[i++];out.push([x,y])}else if(op==='L'){const nx=+tokens[i++],ny=+tokens[i++];for(let k=1;k<=12;k++)out.push([x+(nx-x)*k/12,y+(ny-y)*k/12]);x=nx;y=ny}else if(op==='Q'){const cx=+tokens[i++],cy=+tokens[i++],nx=+tokens[i++],ny=+tokens[i++];for(let k=1;k<=12;k++){const t=k/12;out.push([(1-t)**2*x+2*(1-t)*t*cx+t*t*nx,(1-t)**2*y+2*(1-t)*t*cy+t*t*ny])}x=nx;y=ny}else throw Error('Unknown path command '+op)}return out;
 }
-let checked=0;
+const roundedPath=vm.runInContext('roundedPath',ctx);
+function nearSegment(p,a,b){const dx=b[0]-a[0],dy=b[1]-a[1],t=Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dy)/(dx*dx+dy*dy||1)));return Math.hypot(p[0]-a[0]-t*dx,p[1]-a[1]-t*dy)<0.5}
 for(const c of charts){
- const subtree=walk(roots['#chart-'+c.id]),svg=subtree.find(x=>x.tag==='svg'),groups=[...new Set(svg.children)],edges=graph(c),cards=subtree.filter(x=>x.tag==='button'&&x.className?.startsWith('node '));
- if(groups.length!==edges.length)throw Error('Mismatch between rendered and recorded links');
- const initialPaths=groups.map(g=>g.children.find(x=>x.classList.contains('link-hit')).attrs.d);
- const checkStable=()=>{if(groups.some((g,i)=>g.children.find(x=>x.classList.contains('link-hit')).attrs.d!==initialPaths[i])||svg.children.length!==groups.length||svg.children.some((g,i)=>g!==groups[i]))throw Error('Highlighting must not move lines or change their stacking order')};
- for(let ni=0;ni<c.nodes.length;ni++){
-  cards[ni].handlers.pointerenter({pointerType:'mouse'});checkStable();cards[ni].handlers.pointerleave({pointerType:'mouse'});checkStable();
-  cards[ni].handlers.click();checkStable();const n=c.nodes[ni],visible=new Set([n.id,...edges.filter(e=>e.a===n.id||e.b===n.id).flatMap(e=>[e.a,e.b])]);
-  for(let i=0;i<edges.length;i++)if(groups[i].classList.contains('is-selected')){
-   const e=edges[i],hit=groups[i].children.find(x=>x.classList.contains('link-hit')),pts=samples(hit.attrs.d),endpoints=[c.nodes.find(x=>x.id===e.a),c.nodes.find(x=>x.id===e.b)];
-   const onBorder=(p,node)=>p[0]>=node.x-0.01&&p[0]<=node.x+174.01&&p[1]>=node.y-0.01&&p[1]<=node.y+96.01&&(Math.abs(p[0]-node.x)<.01||Math.abs(p[0]-node.x-174)<.01||Math.abs(p[1]-node.y)<.01||Math.abs(p[1]-node.y-96)<.01);
-   if(!((onBorder(pts[0],endpoints[0])&&onBorder(pts.at(-1),endpoints[1]))||(onBorder(pts[0],endpoints[1])&&onBorder(pts.at(-1),endpoints[0]))))throw Error(`Focused link has wrong endpoints: ${e.a} ${e.b}`);
-   for(const id of visible){const node=c.nodes.find(n=>n.id===id);if(pts.some(([x,y])=>x>node.x+.05&&x<node.x+173.95&&y>node.y+.05&&y<node.y+95.95))throw Error(`Focused link ${e.a} ${e.b} crosses visible ${id}`)}checked++;
+ const subtree=walk(roots['#chart-'+c.id]),map=Object.fromEntries(c.nodes.map(n=>[n.id,n])),families=familyRoutes(c,map),allHits=subtree.filter(e=>e.classList.contains('link-hit'));
+ const svg=subtree.find(e=>e.tag==='svg'),groups=[...svg.children];
+ const familyPositions=groups.map((g,i)=>g.classList.contains('family-edge')?i:-1).filter(i=>i>=0);
+ if(familyPositions.length){
+  const firstFamily=Math.min(...familyPositions),lastFamily=Math.max(...familyPositions);
+  for(const [i,g] of groups.entries()){
+   if(g.classList.contains('family-edge'))continue;
+   const hit=g.children.find(x=>x.classList.contains('link-hit'));
+   const union=families.some(f=>hit.attrs['aria-label']?.startsWith(map[f.parents[0]].name+' — '+map[f.parents[1]].name+':'));
+   if(union&&i>firstFamily||!union&&i<lastFamily)throw Error(c.id+': line layers must preserve junctions and separate unrelated crossings');
   }
  }
+ const initial=groups.map(g=>g.children.find(x=>x.classList.contains('link-hit')).attrs.d);
+ const stable=()=>{if(groups.length!==svg.children.length||groups.some((g,i)=>g!==svg.children[i]||g.children.find(x=>x.classList.contains('link-hit')).attrs.d!==initial[i]))throw Error('Highlighting must not move lines or change their stacking order')};
+ const cards=subtree.filter(e=>e.tag==='button'&&e.className?.startsWith('node '));
+ for(const button of cards){
+  button.handlers.pointerenter({pointerType:'mouse'});stable();button.handlers.pointerleave({pointerType:'mouse'});stable();button.handlers.click();stable();
+  const visibleNodes=c.nodes.filter((n,i)=>!cards[i].classList.contains('is-dim'));
+  for(const group of groups.filter(g=>g.classList.contains('is-selected'))){
+   const path=group.children.find(x=>x.classList.contains('link-hit'));
+   for(const node of visibleNodes)if(samples(path.attrs.d).some(([x,y])=>x>node.x+.05&&x<node.x+173.95&&y>node.y+.05&&y<node.y+95.95))throw Error(c.id+': selected connection crosses visible card '+node.id);
+  }
+ }
+ for(const f of families){
+  const hits=allHits.filter(h=>h.attrs['data-family']===String(f.index)&&h.attrs['data-parents']===f.parents.join(','));
+  const stems=hits.filter(h=>h.attrs['data-role']==='family-stem'),buses=hits.filter(h=>h.attrs['data-role']==='family-bus'),branches=hits.filter(h=>h.attrs['data-role']==='family-branch');
+  if(stems.length!==1||buses.length!==f.bus.length||branches.length!==f.children.length||stems[0].attrs.d!==roundedPath(f.stem))throw Error(c.id+': incorrect shared family rendering');
+  for(const branch of f.branches){const hitsForChild=branches.filter(h=>h.attrs['data-child']===branch.child);if(hitsForChild.length!==1||hitsForChild[0].attrs.d!==roundedPath(branch.points))throw Error(c.id+': incorrect child branch '+branch.child)}
+  const p0=map[f.parents[0]].name,p1=map[f.parents[1]].name,union=allHits.find(h=>h.attrs['aria-label']?.startsWith(p0+' \u2014 '+p1+':'));
+  if(!union)throw Error(c.id+': missing parents union');
+  const pts=samples(union.attrs.d);if(!pts.slice(1).some((p,i)=>nearSegment(f.anchor,pts[i],p)))throw Error(c.id+': family stem is disconnected from parents union');
+  const rendered=groups.filter(g=>g.children.some(h=>hits.includes(h)));
+  if(f.kind==='red'&&rendered.some(g=>!g.classList.contains('edge-red')))throw Error(c.id+': uncertain family must stay red');
+  if(f.kind==='blue'&&rendered.some(g=>!g.classList.contains('edge-blue')))throw Error(c.id+': adoption must stay blue');
+ }
 }
-console.log(`Checked ${checked} focused connections and their visible cards.`);
-// Hover previews the same links as a click, then restores the last explicit choice.
+const familyGroup=(role,parents,child)=>all.find(e=>e.classList.contains('link-hit')&&e.attrs['data-role']==='family-'+role&&e.attrs['data-parents']===parents&&(child===undefined||e.attrs['data-child']===child));
+const findGroup=hit=>walk(host).find(e=>e.tag==='g'&&e.children.includes(hit));
+const familyStem=familyGroup('stem','tan,val'),familyIlya=familyGroup('branch','tan,val','ilya'),familySvetlana=familyGroup('branch','tan,val','svetlana');
+if(!familyStem||!familyIlya||!familySvetlana)throw Error('Missing Fetisov family stem or branches');
+const parent=cardById('tan'),child=cardById('ilya'),pointer={pointerType:'mouse'};
+parent.handlers.pointerenter(pointer);
+if(!findGroup(familyStem).classList.contains('is-selected')||!findGroup(familyIlya).classList.contains('is-selected')||!findGroup(familySvetlana).classList.contains('is-selected'))throw Error('Hover on parent must show children and family branch');
+parent.handlers.pointerleave(pointer);parent.handlers.click();
+if(!findGroup(familyStem).classList.contains('is-selected')||!findGroup(familyIlya).classList.contains('is-selected'))throw Error('Parent click must retain family branch');
+child.handlers.pointerenter(pointer);
+if(!findGroup(familyStem).classList.contains('is-selected')||!findGroup(familyIlya).classList.contains('is-selected')||!findGroup(familySvetlana).classList.contains('is-dim'))throw Error('Hover on child must show its shared branch only');
+const ilyaBus=fetisovFamily[0].bus.filter(s=>s.children.includes('ilya'));
+for(const segment of ilyaBus){const hit=all.find(h=>h.classList.contains('link-hit')&&h.attrs['data-parents']==='tan,val'&&h.attrs['data-role']==='family-bus'&&h.attrs.d===roundedPath(segment.points));if(!hit||!findGroup(hit).classList.contains('is-selected'))throw Error('Child highlight must include the entire connecting bus')}
+if(cardById('tan').classList.contains('is-dim')||cardById('val').classList.contains('is-dim'))throw Error('Both parents must stay visible on child hover');
+child.handlers.pointerleave(pointer);child.handlers.click();
+if(!findGroup(familyStem).classList.contains('is-selected')||!findGroup(familyIlya).classList.contains('is-selected')||!findGroup(familySvetlana).classList.contains('is-dim'))throw Error('Child click must show same shared path');
+if(!panel.children.some(e=>e.tag==='strong'&&e.textContent===nodeName('ilya')))throw Error('Child click should select that child');
+familyIlya.handlers.click({stopPropagation(){}});
+if(!panel.children.some(e=>e.className==='related-list'&&['tan','val','ilya'].every(id=>e.children.some(b=>b.textContent===nodeName(id)))))throw Error('Clicking child branch must identify both parents and child');
+familyStem.handlers.click({stopPropagation(){}});
+if(!panel.children.some(e=>e.className==='related-list'&&['tan','val','ol','ilya','svetlana','ser_fet'].every(id=>e.children.some(b=>b.textContent===nodeName(id)))))throw Error('Clicking family stem must identify whole family');
 document.handlers.keydown.forEach(f=>f({key:'Escape'}));
-const mishaCard=card('Миша Никифоров'),katyaCard=card('Катя Никифорова'),pointer={pointerType:'mouse'};
+if(isSelected()||findGroup(familyStem).classList.contains('is-dim'))throw Error('Escape must clear family selection');
+const adoptionHit=all.find(h=>h.classList.contains('link-hit')&&h.attrs['aria-label']?.startsWith(nodeName('ser')+' \u2014 '+nodeName('you')+':'));
+if(!adoptionHit||!findGroup(adoptionHit).classList.contains('edge-blue'))throw Error('Separate adoption line must remain visible and blue');
+adoptionHit.handlers.click({stopPropagation(){}});
+if(!panel.children.some(e=>e.tag==='strong'&&e.textContent==='\u0443\u0441\u044b\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435'))throw Error('Adoption selection must retain its label');
+const archiveRoot=roots['#chart-nikiforov'],archiveHits=walk(archiveRoot).filter(e=>e.classList.contains('link-hit'));
+const redBranch=archiveHits.find(e=>e.attrs['data-parents']==='ef2,ak2'&&e.attrs['data-child']==='stef');
+if(!redBranch||!walk(archiveRoot).find(e=>e.tag==='g'&&e.children.includes(redBranch))?.classList.contains('edge-red'))throw Error('Uncertain family branch must remain red');
+redBranch.handlers.click({stopPropagation(){}});
+if(!walk(archiveRoot).some(e=>e.tag==='strong'&&e.textContent.includes('\u0442\u0440\u0435\u0431\u0443\u0435\u0442 \u043f\u0440\u043e\u0432\u0435\u0440\u043a\u0438')))throw Error('Uncertain selection must show its status');
+const mishaCard=cardById('mi'),katyaCard=cardById('ka');
 if(file.includes('lines-simple')||file.includes('lines-complex'))throw Error('Line mode switch should be removed');
-const normalMisha=[efMisha.attrs.d,akMisha.attrs.d];
-mishaCard.handlers.pointerenter(pointer);
-if(!mishaCard.classList.contains('is-selected')||isSelected())throw Error('Hover should preview without changing the panel');
-const hoverMisha=[efMisha.attrs.d,akMisha.attrs.d];
-if(normalMisha.some((d,i)=>d!==hoverMisha[i]))throw Error('Hover must not move links');
-if(!card('Катя Никифорова').classList.contains('is-dim')||card('Ефим Никифоров').classList.contains('is-dim'))throw Error('Hover must dim only unrelated people');
-mishaCard.handlers.pointerleave(pointer);
-if(mishaCard.classList.contains('is-selected')||[efMisha.attrs.d,akMisha.attrs.d].some((d,i)=>d!==normalMisha[i]))throw Error('Hover should clear on leave');
-mishaCard.handlers.pointerenter(pointer);mishaCard.handlers.click();
-if([efMisha.attrs.d,akMisha.attrs.d].some((d,i)=>d!==hoverMisha[i]))throw Error('Hover and click should display the same paths');
-mishaCard.handlers.pointerleave(pointer);
-if(!mishaCard.classList.contains('is-selected')||!panel.children.some(e=>e.textContent==='Миша Никифоров'))throw Error('Click selection was lost on leave');
-katyaCard.handlers.pointerenter(pointer);
-if(!katyaCard.classList.contains('is-selected')||!panel.children.some(e=>e.textContent==='Миша Никифоров'))throw Error('Hover should not replace the saved selection');
-katyaCard.handlers.pointerleave(pointer);
-if(!mishaCard.classList.contains('is-selected')||!panel.children.some(e=>e.textContent==='Миша Никифоров'))throw Error('Hover did not restore the clicked person');
-edgeHit.handlers.click({stopPropagation(){}});const edgeTitle=panel.children.find(e=>e.tag==='strong')?.textContent;
-katyaCard.handlers.pointerenter(pointer);katyaCard.handlers.pointerleave(pointer);
-if(panel.children.find(e=>e.tag==='strong')?.textContent!==edgeTitle)throw Error('Hover did not restore the clicked connection');
-const oldPath=efMisha.attrs.d;katyaCard.handlers.pointerenter({pointerType:'touch'});katyaCard.handlers.pointerleave({pointerType:'touch'});
-if(efMisha.attrs.d!==oldPath)throw Error('Touch should not trigger hover');
+if(!/\.family-edge\s+\.edge-halo\s*\{\s*stroke-width\s*:\s*0/.test(file)||!/\.edge-halo\s*\{[^}]*stroke\s*:\s*#fff[^}]*stroke-width\s*:\s*9/.test(file))throw Error('Family junctions must remain continuous while unrelated crossings are separated');
 if(/\.edge\.is-selected\s+\.edge-line\s*\{[^}]*stroke-width/.test(file)||/\.node\.is-(selected|related)\s*\{[^}]*box-shadow/.test(file)||/\.node:hover\s*\{/.test(file))throw Error('Highlighting must not thicken outlines');
-console.log('Hover and click preserve routes and outlines while dimming unrelated elements.');
-// Incoming links must meet a child in the same left-to-right order as their sources.
-let orderedPairs=0;
-for(const c of charts){
- const subtree=walk(roots['#chart-'+c.id]),svg=subtree.find(x=>x.tag==='svg'),groups=[...new Set(svg.children)],edges=graph(c),map=Object.fromEntries(c.nodes.map(n=>[n.id,n]));
- for(const child of c.nodes){
-  const incoming=edges.map((edge,index)=>({edge,index})).filter(({edge})=>edge.b===child.id&&map[edge.a].y+96<=child.y).sort((x,y)=>map[x.edge.a].x-map[y.edge.a].x);
-  for(let i=1;i<incoming.length;i++){
-   const left=incoming[i-1],right=incoming[i];if(map[left.edge.a].x===map[right.edge.a].x)continue;
-   const endpoint=item=>{const hit=groups[item.index].children.find(e=>e.classList.contains('link-hit')),p=points(hit);return p[p.length-2]};
-   if(endpoint(left)>=endpoint(right))throw Error(`${c.id}: ${left.edge.a} must meet ${child.id} left of ${right.edge.a}`);
-   orderedPairs++;
-  }
- }
-}
-console.log(`Left-to-right entry order checked for ${orderedPairs} source pairs.`);
-// Parents of the same child should not have crossing or overlapping routes.
-function intersectSegments(a,b,c,d){
- const cross=(p,q,r)=>(q[0]-p[0])*(r[1]-p[1])-(q[1]-p[1])*(r[0]-p[0]),eps=1e-6;
- const x=cross(a,b,c),y=cross(a,b,d),z=cross(c,d,a),w=cross(c,d,b);
- if(x*y< -eps&&z*w< -eps)return true;
- if(Math.abs(x)<eps&&Math.abs(y)<eps&&Math.abs(z)<eps&&Math.abs(w)<eps){const axis=Math.abs(b[0]-a[0])>=Math.abs(b[1]-a[1])?0:1;return Math.min(Math.max(a[axis],b[axis]),Math.max(c[axis],d[axis]))-Math.max(Math.min(a[axis],b[axis]),Math.min(c[axis],d[axis]))>eps}
- return false;
-}
-let separatedPairs=0;
-for(const c of charts){
- const subtree=walk(roots['#chart-'+c.id]),svg=subtree.find(x=>x.tag==='svg'),groups=[...new Set(svg.children)],edges=graph(c),map=Object.fromEntries(c.nodes.map(n=>[n.id,n]));
- for(const child of c.nodes){const incoming=edges.map((edge,index)=>({edge,index})).filter(({edge})=>edge.b===child.id&&map[edge.a].y+96<=child.y);
-  for(let i=0;i<incoming.length;i++)for(let j=i+1;j<incoming.length;j++){
-   const getPath=item=>samples(groups[item.index].children.find(e=>e.classList.contains('link-hit')).attrs.d),a=getPath(incoming[i]),b=getPath(incoming[j]);
-   for(let m=1;m<a.length;m++)for(let n=1;n<b.length;n++)if(intersectSegments(a[m-1],a[m],b[n-1],b[n]))throw Error(`${c.id}: lines to ${child.id} cross or overlap`);
-   separatedPairs++;
-  }
- }
-}
-console.log(`Verified ${separatedPairs} pairs of incoming connections do not cross.`);
-// The actual visible attachment points must have an even spacing on every card side.
-let evenSides=0;
-for(const c of charts){
- const subtree=walk(roots['#chart-'+c.id]),svg=subtree.find(x=>x.tag==='svg'),groups=[...new Set(svg.children)],edges=graph(c);
- for(const person of c.nodes){const sides={top:[],bottom:[],left:[],right:[]};
-  edges.forEach((edge,i)=>{if(edge.a!==person.id&&edge.b!==person.id)return;
-   const hit=groups[i].children.find(e=>e.classList.contains('link-hit')),coords=points(hit),ends=[[coords[0],coords[1]],[coords.at(-2),coords.at(-1)]];
-   for(const [x,y] of ends){
-    if(x<person.x-.01||x>person.x+174.01||y<person.y-.01||y>person.y+96.01)continue;
-    if(Math.abs(y-person.y)<.01)sides.top.push(x);
-    else if(Math.abs(y-person.y-96)<.01)sides.bottom.push(x);
-    else if(Math.abs(x-person.x)<.01)sides.left.push(y);
-    else if(Math.abs(x-person.x-174)<.01)sides.right.push(y);
-   }
-  });
-  for(const [side,slots] of Object.entries(sides)){if(slots.length<3)continue;slots.sort((a,b)=>a-b);const step=slots[1]-slots[0];
-   if(step<.01||slots.slice(2).some((x,i)=>Math.abs((x-slots[i+1])-step)>.01))throw Error(`${c.id}: ${person.id} ${side} spacing is uneven (${slots})`);
-   evenSides++;
-  }
- }
-}
-console.log(`Even spacing verified on ${evenSides} card sides.`);
+console.log('Shared family routes, accurate selection, uncertainty and adoption validated.');
 // On narrow screens, the years control opens temporarily without consuming chart width.
 if(!file.includes('@media(max-width:700px)')||!file.includes('.chart-shell{grid-template-columns:minmax(0,1fr)}')||!file.includes('.timeline.is-collapsed .timeline-list{display:none}'))throw Error('Mobile timeline layout missing');
 for(const c of charts){
