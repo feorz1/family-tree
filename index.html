@@ -173,6 +173,33 @@ function roundedPath(points,radius=8){
  }
  const end=points[points.length-1];return d+` L ${end[0]} ${end[1]}`;
 }
+// The common horizontal line consists of individually selectable segments. Round only
+// its outer L corners; a point with both a stem and a child remains a T junction.
+function familyCorner(f,x){
+ const touching=f.bus.filter(s=>s.points[0][0]===x||s.points[1][0]===x);
+ if(touching.length!==1)return null;
+ const stem=f.anchor[0]===x,branch=f.branches.find(b=>b.points[0][0]===x);
+ if(stem===Boolean(branch))return null;
+ const segment=touching[0].points,other=segment[0][0]===x?segment[1][0]:segment[0][0];
+ const vertical=stem?Math.abs(f.stem[1][1]-f.stem[0][1]):Math.abs(branch.points[1][1]-branch.points[0][1]);
+ const radius=Math.min(8,Math.abs(other-x)/2,vertical/2);
+ return radius>0?{dir:Math.sign(other-x),radius}:null;
+}
+function familyPath(f,role,points){
+ if(role==='bus'){
+  const [[x1,y],[x2]]=points,c1=familyCorner(f,x1),c2=familyCorner(f,x2);
+  return roundedPath([[x1+(c1?c1.dir*c1.radius:0),y],[x2+(c2?c2.dir*c2.radius:0),y]]);
+ }
+ if(role==='stem'){
+  const [[x,y0],[,y]]=points,c=familyCorner(f,x);
+  return c?`M ${x} ${y0} L ${x} ${y-c.radius} Q ${x} ${y} ${x+c.dir*c.radius} ${y}`:roundedPath(points);
+ }
+ if(role==='branch'){
+  const [[x,y],[,y1]]=points,c=familyCorner(f,x);
+  return c?`M ${x+c.dir*c.radius} ${y} Q ${x} ${y} ${x} ${y+c.radius} L ${x} ${y1}`:roundedPath(points);
+ }
+ return roundedPath(points);
+}
 // Simple routes use the fewest natural turns and allow every card side.
 // In focus mode only highlighted cards are obstacles; faded cards do not force detours.
 function focusRoute(a,b,visibleNodes,usedPaths,preferTop=false,preferredStart=null,adaptivePorts=false,targetPlacement=null,lockStart=false,preferredEnd=null){
@@ -300,7 +327,7 @@ function render(c){
  function showFamily(family,child=null){lastTouchTap=null;selection={family,child};const people=[...family.parents,...(child?[child]:family.children)];focusPeople(people,null,{family,child});panel.replaceChildren();const title=document.createElement('strong');title.textContent=family.label+(family.kind==='red'?' · требует проверки':'');panel.append(title);panel.append(button('Показать всё',clear,'clear-button'));const items=document.createElement('div');items.className='related-list';for(const id of people)items.append(button(map[id].name,()=>showPerson(id),'related-item'+(family.kind==='red'?' is-uncertain':'')));panel.append(items)}
  function showEdge(i){lastTouchTap=null;const e=edges[i],family=familyForEdge(e);if(family){showFamily(family,e.b);return}selection={edge:i};focusPeople([e.a,e.b],i);panel.replaceChildren();const title=document.createElement('strong');title.textContent=e.label+(e.kind==='red'?' · требует проверки':'');panel.append(title);panel.append(button('Показать всё',clear,'clear-button'));const items=document.createElement('div');items.className='related-list';for(const id of [e.a,e.b])items.append(button(map[id].name,()=>showPerson(id),'related-item'));panel.append(items)}
  function addPath(path,info){
-  const d=roundedPath(path),group=document.createElementNS(SVG,'g');group.classList.add('edge');if(info.family)group.classList.add('family-edge');if(info.edge?.spouse)group.classList.add('edge-spouse');const kind=info.family?.kind||info.edge?.kind;if(kind)group.classList.add('edge-'+kind);
+  const d=info.family?familyPath(info.family,info.role,path):roundedPath(path),group=document.createElementNS(SVG,'g');group.classList.add('edge');if(info.family)group.classList.add('family-edge');if(info.edge?.spouse)group.classList.add('edge-spouse');const kind=info.family?.kind||info.edge?.kind;if(kind)group.classList.add('edge-'+kind);
   const halo=document.createElementNS(SVG,'path');halo.setAttribute('d',d);halo.classList.add('edge-halo');const visible=document.createElementNS(SVG,'path');visible.setAttribute('d',d);visible.classList.add('edge-line');const hit=document.createElementNS(SVG,'path');hit.setAttribute('d',d);hit.classList.add('link-hit');hit.setAttribute('tabindex','0');hit.setAttribute('role','button');
   if(info.family){const f=info.family;hit.setAttribute('data-role','family-'+info.role);hit.setAttribute('data-parents',f.parents.join(','));hit.setAttribute('data-family',String(f.index));if(info.child)hit.setAttribute('data-child',info.child);hit.setAttribute('aria-label',f.parents.map(id=>map[id].name).join(' и ')+' — '+(info.child?map[info.child].name:'общие дети')+': '+f.label)}
   else hit.setAttribute('aria-label',map[info.edge.a].name+' — '+map[info.edge.b].name+': '+info.edge.label);

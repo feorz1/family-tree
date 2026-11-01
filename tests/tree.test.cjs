@@ -79,7 +79,29 @@ function samples(d){
  for(let i=0;i<tokens.length;){const op=tokens[i++];if(op==='M'){x=+tokens[i++];y=+tokens[i++];out.push([x,y])}else if(op==='L'){const nx=+tokens[i++],ny=+tokens[i++];for(let k=1;k<=12;k++)out.push([x+(nx-x)*k/12,y+(ny-y)*k/12]);x=nx;y=ny}else if(op==='Q'){const cx=+tokens[i++],cy=+tokens[i++],nx=+tokens[i++],ny=+tokens[i++];for(let k=1;k<=12;k++){const t=k/12;out.push([(1-t)**2*x+2*(1-t)*t*cx+t*t*nx,(1-t)**2*y+2*(1-t)*t*cy+t*t*ny])}x=nx;y=ny}else throw Error('Unknown path command '+op)}return out;
 }
 const roundedPath=vm.runInContext('roundedPath',ctx);
+const familyPath=vm.runInContext('familyPath',ctx);
 function nearSegment(p,a,b){const dx=b[0]-a[0],dy=b[1]-a[1],t=Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dy)/(dx*dx+dy*dy||1)));return Math.hypot(p[0]-a[0]-t*dx,p[1]-a[1]-t*dy)<0.5}
+const distance=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
+function assertRoundCorner(hit,corner){
+ const m=hit.attrs.d.match(/([MLQ]|-?\d+(?:\.\d+)?)/g),qi=m.indexOf('Q');
+ if(qi<3)throw Error('An outer family corner must contain a quadratic curve');
+ const from=[+m[qi-2],+m[qi-1]],control=[+m[qi+1],+m[qi+2]],to=[+m[qi+3],+m[qi+4]],u=[from[0]-control[0],from[1]-control[1]],v=[to[0]-control[0],to[1]-control[1]];
+ if(distance(control,corner)>.001||Math.hypot(...u)<.001||Math.hypot(...v)<.001||Math.abs(u[0]*v[0]+u[1]*v[1])>.001)throw Error('Family corner must be a non-degenerate curve between perpendicular segments');
+}
+function connectedPathIndices(paths){
+ const points=paths.map(h=>{const p=samples(h.attrs.d);return [p[0],p.at(-1)]}),connected=new Set([0]);
+ let changed=true;while(changed){changed=false;for(let i=0;i<points.length;i++)if(!connected.has(i)&&[...connected].some(j=>points[i].some(a=>points[j].some(b=>distance(a,b)<.001)))){connected.add(i);changed=true}}
+ return connected;
+}
+// Exercise both L orientations, and the distinct T junction at an aligned child.
+for(const direction of [-1,1]){
+ const x=direction*100,f={anchor:[0,0],stem:[[0,0],[0,100]],bus:[{points:[[Math.min(0,x),100],[Math.max(0,x),100]]}],branches:[{child:'c',points:[[x,100],[x,200]]}]};
+ const stem={attrs:{d:familyPath(f,'stem',f.stem)}},branch={attrs:{d:familyPath(f,'branch',f.branches[0].points)}},bus={attrs:{d:familyPath(f,'bus',f.bus[0].points)}};
+ assertRoundCorner(stem,[0,100]);assertRoundCorner(branch,[x,100]);
+ if(connectedPathIndices([stem,bus,branch]).size!==3)throw Error('Rounded L turns must stay connected on both sides');
+ const tee={...f,branches:[...f.branches,{child:'aligned',points:[[0,100],[0,200]]}]};
+ if(familyPath(tee,'stem',tee.stem).includes('Q')||familyPath(tee,'branch',tee.branches[1].points).includes('Q'))throw Error('A T junction must remain connected rather than being rounded');
+}
 for(const c of charts){
  const subtree=walk(roots['#chart-'+c.id]),map=Object.fromEntries(c.nodes.map(n=>[n.id,n])),families=familyRoutes(c,map),allHits=subtree.filter(e=>e.classList.contains('link-hit'));
  const svg=subtree.find(e=>e.tag==='svg'),groups=[...svg.children];
@@ -107,8 +129,32 @@ for(const c of charts){
  for(const f of families){
   const hits=allHits.filter(h=>h.attrs['data-family']===String(f.index)&&h.attrs['data-parents']===f.parents.join(','));
   const stems=hits.filter(h=>h.attrs['data-role']==='family-stem'),buses=hits.filter(h=>h.attrs['data-role']==='family-bus'),branches=hits.filter(h=>h.attrs['data-role']==='family-branch');
-  if(stems.length!==1||buses.length!==f.bus.length||branches.length!==f.children.length||stems[0].attrs.d!==roundedPath(f.stem))throw Error(c.id+': incorrect shared family rendering');
-  for(const branch of f.branches){const hitsForChild=branches.filter(h=>h.attrs['data-child']===branch.child);if(hitsForChild.length!==1||hitsForChild[0].attrs.d!==roundedPath(branch.points))throw Error(c.id+': incorrect child branch '+branch.child)}
+  if(stems.length!==1||buses.length!==f.bus.length||branches.length!==f.children.length)throw Error(c.id+': incorrect shared family rendering');
+  for(const branch of f.branches){
+   const hitsForChild=branches.filter(h=>h.attrs['data-child']===branch.child),child=map[branch.child];
+   if(hitsForChild.length!==1)throw Error(c.id+': incorrect child branch '+branch.child);
+   const end=samples(hitsForChild[0].attrs.d).at(-1);
+   if(Math.abs(end[1]-child.y)>.001||end[0]<child.x||end[0]>child.x+174)throw Error(c.id+': rendered branch does not reach '+branch.child);
+  }
+  // Verify connectivity of the actual rendered SVG segments, not merely the unrounded topology.
+  const drawnPaths=[...stems,...buses,...branches];
+  if(connectedPathIndices(drawnPaths).size!==drawnPaths.length)throw Error(c.id+': rendered family segments are disconnected');
+  const corners=[...new Set([f.anchor[0],...f.branches.map(b=>b.points[0][0])])];
+  for(const x of corners){
+   const adjacent=f.bus.filter(s=>s.points.some(p=>p[0]===x)),stem=f.anchor[0]===x,branch=f.branches.find(b=>b.points[0][0]===x);
+   if(adjacent.length!==1||stem===Boolean(branch))continue;
+   const hit=stem?stems[0]:branches.find(h=>h.attrs['data-child']===branch.child);
+   assertRoundCorner(hit,[x,f.stem[1][1]]);
+  }
+  for(const branch of f.branches){
+   const target=cards[c.nodes.findIndex(n=>n.id===branch.child)];target.handlers.pointerenter({pointerType:'mouse'});
+   const selected=drawnPaths.filter(h=>groups.find(g=>g.children.includes(h))?.classList.contains('is-selected'));
+   const childHit=branches.find(h=>h.attrs['data-child']===branch.child);
+   if(!selected.includes(stems[0])||!selected.includes(childHit))throw Error(c.id+': hover must highlight the family stem and selected child branch');
+   const ordered=[stems[0],...selected.filter(h=>h!==stems[0])];
+   if(!connectedPathIndices(ordered).has(ordered.indexOf(childHit)))throw Error(c.id+': highlighted route to child is disconnected');
+   target.handlers.pointerleave({pointerType:'mouse'});
+  }
   const p0=map[f.parents[0]].name,p1=map[f.parents[1]].name,union=allHits.find(h=>h.attrs['aria-label']?.startsWith(p0+' \u2014 '+p1+':'));
   if(!union)throw Error(c.id+': missing parents union');
   const pts=samples(union.attrs.d);if(!pts.slice(1).some((p,i)=>nearSegment(f.anchor,pts[i],p)))throw Error(c.id+': family stem is disconnected from parents union');
@@ -129,7 +175,7 @@ if(!findGroup(familyStem).classList.contains('is-selected')||!findGroup(familyIl
 child.handlers.pointerenter(pointer);
 if(!findGroup(familyStem).classList.contains('is-selected')||!findGroup(familyIlya).classList.contains('is-selected')||!findGroup(familySvetlana).classList.contains('is-dim'))throw Error('Hover on child must show its shared branch only');
 const ilyaBus=fetisovFamily[0].bus.filter(s=>s.children.includes('ilya'));
-for(const segment of ilyaBus){const hit=all.find(h=>h.classList.contains('link-hit')&&h.attrs['data-parents']==='tan,val'&&h.attrs['data-role']==='family-bus'&&h.attrs.d===roundedPath(segment.points));if(!hit||!findGroup(hit).classList.contains('is-selected'))throw Error('Child highlight must include the entire connecting bus')}
+for(const segment of ilyaBus){const hit=all.find(h=>h.classList.contains('link-hit')&&h.attrs['data-parents']==='tan,val'&&h.attrs['data-role']==='family-bus'&&h.attrs.d===familyPath(fetisovFamily[0],'bus',segment.points));if(!hit||!findGroup(hit).classList.contains('is-selected'))throw Error('Child highlight must include the entire connecting bus')}
 if(cardById('tan').classList.contains('is-dim')||cardById('val').classList.contains('is-dim'))throw Error('Both parents must stay visible on child hover');
 child.handlers.pointerleave(pointer);child.handlers.click();
 if(!findGroup(familyStem).classList.contains('is-selected')||!findGroup(familyIlya).classList.contains('is-selected')||!findGroup(familySvetlana).classList.contains('is-dim'))throw Error('Child click must show same shared path');
