@@ -24,6 +24,13 @@ function relation(from,to){const hits=[...new Set(all.filter(e=>e.classList.cont
 function points(hit){return hit.attrs.d.match(/-?\d+(?:\.\d+)?/g).map(Number)}
 function turns(hit){return (hit.attrs.d.match(/Q/g)||[]).length}
 function straight(hit){const p=points(hit);return turns(hit)===0&&(p[0]===p[2]||p[1]===p[3])}
+// The four children share a generation and both parents; Olga's partners are not their children.
+const familyChart=charts.find(c=>c.id==='family'),familyEdges=graph(familyChart);
+for(const child of ['ilya','svetlana','ser_fet','ol']){
+ const n=familyChart.nodes.find(n=>n.id===child),olga=familyChart.nodes.find(n=>n.id==='ol');
+ if(!n||n.y!==olga.y||!['tan','val'].every(parent=>familyEdges.some(e=>e.a===parent&&e.b===child)))throw Error('Missing child or parent link in Fetisov family');
+}
+for(const partner of ['and','ser'])if(familyEdges.some(e=>['tan','val'].includes(e.a)&&e.b===partner))throw Error('Olga’s partner must not appear as her sibling');
 const efKatya=relation('Ефим Никифоров','Катя Никифорова'),akKatya=relation('Акулина Никифорова','Катя Никифорова');
 const basePaths=[efKatya.attrs.d,akKatya.attrs.d];card('Катя Никифорова').handlers.click();
 if(turns(efKatya)>2||turns(akKatya)>2)throw Error('Katya’s connections should stay simple');
