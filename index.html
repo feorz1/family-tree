@@ -36,6 +36,21 @@
  .timeline-item{grid-template-columns:42px minmax(0,1fr);gap:8px;padding:9px 7px;font-size:12px}
 }
 
+/* The timeline is an overlay, so the tree keeps the full available width. */
+main{max-width:none;padding-left:clamp(16px,2vw,32px);padding-right:clamp(16px,2vw,32px)}
+.chart-shell{position:relative;display:block}
+.workspace{width:100%}
+.viewport{height:max(520px,calc(100vh - 150px));height:max(520px,calc(100dvh - 150px))}
+.timeline{position:absolute;top:12px;left:12px;z-index:4;width:min(240px,calc(100% - 24px));padding:0;border:0;background:transparent}
+.timeline>strong,.timeline-hint{display:none}
+.timeline-toggle{display:flex;align-items:center;justify-content:space-between;width:auto;min-height:44px;padding:10px 14px;border:1px solid #ddd;border-radius:9px;background:#fff;color:#333;font-size:13px;font-weight:600;text-align:left;cursor:pointer;box-shadow:0 4px 14px #0000000e}
+.timeline-toggle::after{content:'▾';margin-left:14px;font-size:15px;color:#777}
+.timeline-toggle[aria-expanded="true"]::after{transform:rotate(180deg)}
+.timeline-list{position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:5;margin:0;max-height:min(45vh,360px);overflow:auto;border:1px solid #ddd;border-radius:10px;padding:6px 10px;background:#fff;box-shadow:0 10px 24px #0000001a}
+.timeline.is-collapsed .timeline-list{display:none}
+.timeline-item{grid-template-columns:42px minmax(0,1fr);gap:8px;padding:9px 7px;font-size:12px}
+@media(max-width:700px){.viewport{height:max(430px,calc(100vh - 170px));height:max(430px,calc(100dvh - 170px))}.timeline{top:8px;left:8px}}
+
 /* Person details follow the approved Figma modal. The optical-size axis matches
    the text and display static cuts included with the Medeo family. */
 @font-face{font-family:"Medeo Sans";src:url("assets/fonts/MedeoSansVariable.woff2") format("woff2");font-style:normal;font-weight:100 900;font-display:swap}
@@ -63,6 +78,41 @@
 #person-dialog .photo-count{min-width:36px;color:#787878;font:600 14px/20px "Medeo Sans",sans-serif;font-variation-settings:"opsz" 32;letter-spacing:0}
 #dialog-description{margin:0;color:#787878;font:400 16px/24px "Medeo Sans",sans-serif;font-variation-settings:"opsz" 32}
 #dialog-links{font:400 13px/20px "Medeo Sans",sans-serif;font-variation-settings:"opsz" 14}
+
+/* Neutral UI surfaces; relationship colours remain on the diagram lines. */
+:root{--ink:#242424;--muted:#707070;--paper:#fafafa;--line:#dedede}
+body{background:var(--paper);color:var(--ink)}
+header{background:#fff;color:#242424;border-bottom:1px solid #e9e9e9}
+header p{color:#666}.quiet{color:#777}
+a{color:#333}
+nav a{background:#efefef;color:#333}
+nav a:hover{background:#e1e1e1;color:#171717}
+.intro p,.legend{color:#666}
+.section-head p,.hint,.caption,.canvas-hint,.sources{color:#707070}
+.sources{border-color:#dedede}
+.chart-shell{background:#fff;border-color:#dedede}
+.canvas{background-image:radial-gradient(#d6d6d6 .7px,transparent .8px)}
+.node,.node.document,.node.adopt,.node.current,.node.uncertain,.node.group,.node.has-portrait{color:#242424}
+.node .node-avatar{background:#efefef;color:#303030}
+.node small,.node.current small{color:#707070}
+.node.group .node-avatar{outline-color:#999}
+.timeline>strong,.timeline-toggle,.timeline-item{color:#333}
+.timeline-hint,.timeline-item b,.timeline-empty,.timeline-toggle::after{color:#707070}
+.timeline-list{background:#fff;border-color:#dedede}
+.timeline-item:hover,.timeline-item.is-active{background:#f1f1f1}
+.floating-controls{background:#fff;border-color:#dedede;box-shadow:0 5px 18px #00000014}
+.controls button,.controls output{color:#454545}
+.controls button:hover{background:#f3f3f3}
+.selection-panel{background:#f5f5f5;border-color:#e5e5e5;color:#666}
+.selection-panel strong{color:#242424}
+.detail-button,.clear-button{color:#454545}
+.related-item{background:#fff;border-color:#dedede;color:#454545}
+.related-item.is-uncertain{color:#a14141;border-color:#d9aaaa;background:#fff8f7}
+.note{background:#f3f3f3;color:#555}
+dialog::backdrop{background:#0009}
+#person-dialog .photo-controls button:hover{background:#e6e6e6;color:#242424}
+#person-dialog .photo-controls button:active{background:#dcdcdc}
+#dialog-links a{color:#555}
 </style></head>
 <body><header><div class="header-line"><div><h1>Семейное древо</h1><p>Люди, истории и документы, из которых складывается история нашей семьи.</p></div><div class="quiet">Рабочая версия · Орск и другие места</div></div></header>
 <main><nav aria-label="Разделы"><a href="#family">Наша семья</a><a href="#khramov">Храмовы</a><a href="#boyko">Семья Сергея</a><a href="#perikov">Периковы в метриках</a><a href="#nikiforov">Никифоровы в метриках</a><a href="#korkota">Коркота</a><a href="#sources">Источники</a></nav>
@@ -86,6 +136,7 @@ const photoCatalog={
   an:[{src:'assets/photos/anatoly-perikov.png',alt:'Портрет Анатолия Перикова',caption:'Семейная фотография, имя указала мама.',portrait:true},{src:'assets/photos/anatoly-perikov-young.png',alt:'Анатолий Периков в водолазке',caption:'Личность на фотографии подтверждена пользователем.',portrait:true}],
   yu:[{src:'assets/photos/yuri-perikov-hat.png',alt:'Портрет Юрия Перикова в шляпе',caption:'Семейная фотография; имя уточнено мамой.',portrait:true}],
   tam:[{src:'assets/photos/tamara-perikova.png',alt:'Портрет Тамары Периковой',caption:'Семейная фотография; личность уточнена пользователем.',portrait:true}],
+  tan:[{src:'assets/photos/tatyana-fitisova.png',alt:'Портрет Татьяны Фитисовой',caption:'Семейная фотография; личность подтверждена пользователем.',portrait:true}],
   ol:[{src:'assets/photos/olga-fitisova.png',alt:'Портрет Ольги Фитисовой',caption:'Семейная фотография, предоставлена пользователем.',portrait:true}],
   nast:[{src:'assets/photos/anastasia-boyko.png',alt:'Портрет Анастасии Бойко',caption:'Семейная фотография, предоставлена пользователем.',portrait:true}],
   and:[{src:'assets/photos/andrey-khramov-memorial.png',alt:'Памятная надпись Андрея Николаевича Храмова',caption:'Памятная надпись с именем и датами.',portrait:false}]
@@ -490,7 +541,7 @@ function render(c){
  // Open on actual people, not an empty corner of the much larger canvas.
  clear();scale=c.id==='family'?.8:1;resize();
  const initial=map[c.id==='family'?'ol':c.nodes[0]?.id];
- if(initial){view.scrollLeft=Math.max(0,(initial.x+NODE_W/2)*scale-view.clientWidth/2);view.scrollTop=Math.max(0,initial.y*scale-35)}
+ if(initial){view.scrollLeft=Math.max(0,(initial.x+NODE_W/2)*scale-view.clientWidth/2);view.scrollTop=Math.max(0,initial.y*scale-76)}
 }
 charts.forEach(render);
 
