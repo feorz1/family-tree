@@ -47,10 +47,11 @@ for(const c of charts){
 const familyRoutesMain=familyRoutes(charts.find(c=>c.id==='family'),Object.fromEntries(charts.find(c=>c.id==='family').nodes.map(n=>[n.id,n])));
 // The paternal branch keeps the two Maxims and two Svetas distinct and connects each generation.
 const khramovChart=charts.find(c=>c.id==='khramov'),khramovEdges=graph(khramovChart);
-for(const [parent,child] of [['max_old','nik'],['nik','and'],['kat','and'],['nik','sk'],['kat','sv_k'],['nik','max_young'],['sk','liza'],['sk','slava'],['max_young','sv_max'],['and','you']]){
+for(const [parent,child] of [['max_old','nik'],['nik','and'],['kat','and'],['nik','sk'],['kat','sv_k'],['nik','max_young'],['sk','liza'],['sk','slava'],['max_young','sv_max'],['max_young','nik_max'],['and','you']]){
  if(!khramovEdges.some(e=>e.a===parent&&e.b===child))throw Error(`Missing paternal family relationship: ${parent} -> ${child}`);
 }
 if(births.khramov.nik[0]!=='15.11.1941'||births.khramov.kat[0]!=='23.02.1947')throw Error('Confirmed grandparents birth dates missing');
+if(births.khramov.nik_max?.[0]!=='11.08.2026'||khramovChart.nodes.find(n=>n.id==='nik_max')===khramovChart.nodes.find(n=>n.id==='nik'))throw Error('The new Nikolai must remain distinct from his grandfather');
 if(khramovChart.nodes.find(n=>n.id==='sv_k')===khramovChart.nodes.find(n=>n.id==='sv_max'))throw Error('Different Svetas must remain distinct');
 const fetisovFamily=familyRoutesMain.filter(f=>f.parents.includes('tan')&&f.parents.includes('val'));
 if(fetisovFamily.length!==1||['ol','ilya','svetlana','ser_fet'].some(id=>!fetisovFamily[0].children.includes(id)))throw Error('Tatiana and Valentin need one shared branch for all four children');
