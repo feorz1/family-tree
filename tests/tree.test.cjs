@@ -250,3 +250,20 @@ const archiveTree=charts.find(c=>c.id==='perikov'),archivePerson=archiveTree.nod
 now+=1000;tap(archiveCard);now+=200;tap(archiveCard);if(!modal.open||!roots['#dialog-links'].children.some(e=>e.href===archivePerson.source))throw Error('Double-tap details must retain archive sources');modal.close();
 now+=1000;tap(mishaCard);now+=100;tap(archiveCard);now+=100;tap(mishaCard);if(modal.open)throw Error('Taps in different branches must not count as a double tap');
 console.log('One tap selects; two taps open details. Other inputs do not cause accidental openings.');
+// Check real assigned photos, including the memorial which is a document, not a portrait.
+const photoCatalog=vm.runInContext('photoCatalog',ctx),path=require('path');
+for(const [chartId,personId,src] of [['family','an','assets/photos/anatoly-perikov.png'],['family','tam','assets/photos/tamara-perikova.png'],['khramov','max_old','assets/photos/maxim-khramov.png'],['family','and','assets/photos/andrey-khramov-memorial.png'],['khramov','and','assets/photos/andrey-khramov-memorial.png']])if(!photoCatalog[chartId]?.[personId]?.some(photo=>photo.src===src))throw Error(`Photo assignment missing: ${chartId}/${personId}`);
+for(const [chartId,people] of Object.entries(photoCatalog))for(const [personId,photos] of Object.entries(people)){
+ const chart=charts.find(c=>c.id===chartId),person=chart.nodes.find(n=>n.id===personId),subtree=walk(roots['#chart-'+chartId]);
+ const cardElement=subtree.find(e=>e.tag==='button'&&e.attrs['aria-label']?.startsWith(person.name+','));
+ const portrait=photos.find(photo=>photo.portrait);
+ if(!cardElement||cardElement.classList.contains('has-portrait')!==Boolean(portrait))throw Error('Incorrect portrait on '+person.name);
+ if(portrait&&!cardElement.children.some(e=>e.className==='node-portrait'&&e.src===portrait.src))throw Error('Missing thumbnail for '+person.name);
+ for(const photo of photos)if(!fs.existsSync(path.join(__dirname,'..',photo.src)))throw Error('Missing photo file: '+photo.src);
+ cardElement.handlers.pointerdown({pointerType:'mouse'});cardElement.handlers.click({detail:1});
+ subtree.find(e=>e.className==='selection-panel').children.find(e=>e.textContent==='Подробнее').handlers.click();
+ const figures=roots['#dialog-photos'].children;
+ if(figures.length!==photos.length||photos.some((photo,i)=>figures[i].children[0].href!==photo.src||figures[i].children[0].children[0].src!==photo.src))throw Error('Photo details missing for '+person.name);
+ modal.close();
+}
+console.log('Portraits and memorial image are assigned, accessible in details, and present on disk.');
