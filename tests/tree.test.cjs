@@ -3,8 +3,18 @@ class CL {constructor(){this.s=new Set()} add(...x){x.forEach(t=>this.s.add(t))}
 class E {constructor(tag){this.tag=tag;this.style={};this.children=[];this.attrs={};this.handlers={};this.clientWidth=1000;this.clientHeight=560;this.scrollLeft=0;this.scrollTop=0;this.classList=new CL();this.namespaceURI='http://www.w3.org/2000/svg'}setAttribute(k,v){this.attrs[k]=v}append(...v){this.children.push(...v)}replaceChildren(...v){this.children=[...v]}addEventListener(k,f){this.handlers[k]=f}showModal(){this.open=true}close(){this.open=false}getBoundingClientRect(){return{left:0,top:0}}setPointerCapture(){}}
 const roots={},warnings=[],document={handlers:{},addEventListener(k,f){(this.handlers[k]??=[]).push(f)},querySelector:s=>roots[s]??=new E('root'),createElement:t=>new E(t),createElementNS:(ns,t)=>new E(t)},file=fs.readFileSync(require('path').join(__dirname,'..','index.html'),'utf8');let ctx={document,console:{warn:(...x)=>warnings.push(x.join(' ')),log:console.log},Uint8Array,Float64Array,Int32Array};vm.createContext(ctx);vm.runInContext(file.match(/<script>([\s\S]*?)<\/script>/)[1],ctx,{timeout:30000});
 const charts=vm.runInContext('charts',ctx),graph=vm.runInContext('graphEdges',ctx),route=vm.runInContext('routeEdge',ctx),births=vm.runInContext('births',ctx);
+const {NODE_W,NODE_H,PORTRAIT,PORTRAIT_INSET}=vm.runInContext('({NODE_W,NODE_H,PORTRAIT,PORTRAIT_INSET})',ctx);
+if(NODE_W!==196||NODE_H!==220||PORTRAIT!==150||PORTRAIT_INSET!==23)throw Error('The portrait card geometry differs from the agreed layout');
 function walk(e){return [e,...e.children.flatMap(walk)]}
-function checkPath(points,nodes,a,b){for(let i=1;i<points.length;i++){let [x1,y1]=points[i-1],[x2,y2]=points[i];if(x1!==x2&&y1!==y2)throw Error('diagonal path');for(const n of nodes){const left=n.x,right=n.x+174,top=n.y,bottom=n.y+96;const hits=x1===x2 ? x1>left&&x1<right&&Math.max(y1,y2)>top&&Math.min(y1,y2)<bottom : y1>top&&y1<bottom&&Math.max(x1,x2)>left&&Math.min(x1,x2)<right;if(hits)throw Error(`${a} -> ${b} crosses ${n.id} (${x1},${y1})-(${x2},${y2})`)}}}
+// The enlarged trees should open on people rather than on empty canvas.
+for(const chart of charts){
+ const subtree=walk(roots['#chart-'+chart.id]),view=subtree.find(e=>e.className==='viewport'),output=subtree.find(e=>e.tag==='output'),scale=parseFloat(output.textContent)/100;
+ const visible=chart.nodes.some(n=>{const left=(n.x+PORTRAIT_INSET)*scale,right=left+PORTRAIT*scale,top=n.y*scale,bottom=top+PORTRAIT*scale;return right>view.scrollLeft&&left<view.scrollLeft+view.clientWidth&&bottom>view.scrollTop&&top<view.scrollTop+view.clientHeight});
+ if(!visible)throw Error(`${chart.id}: initial viewport contains no portrait`);
+ if(chart.id==='family'&&scale!==.8)throw Error('The main family tree should initially open at 80%');
+}
+function cardBoxes(n){return [{left:n.x+PORTRAIT_INSET,right:n.x+PORTRAIT_INSET+PORTRAIT,top:n.y,bottom:n.y+PORTRAIT},{left:n.x,right:n.x+NODE_W,top:n.y+PORTRAIT+5,bottom:n.y+NODE_H}];}
+function checkPath(points,nodes,a,b){for(let i=1;i<points.length;i++){let [x1,y1]=points[i-1],[x2,y2]=points[i];if(x1!==x2&&y1!==y2)throw Error('diagonal path');for(const n of nodes)for(const {left,right,top,bottom} of cardBoxes(n)){const hits=x1===x2 ? x1>left&&x1<right&&Math.max(y1,y2)>top&&Math.min(y1,y2)<bottom : y1>top&&y1<bottom&&Math.max(x1,x2)>left&&Math.min(x1,x2)<right;if(hits)throw Error(`${a} -> ${b} crosses ${n.id} (${x1},${y1})-(${x2},${y2})`)}}}
 for(const c of charts){const ids=new Set(c.nodes.map(x=>x.id));if(ids.size!==c.nodes.length)throw Error('duplicates');const edges=graph(c),occ=new Map(),ports=vm.runInContext('edgePorts',ctx)(edges,Object.fromEntries(c.nodes.map(n=>[n.id,n])));let missing=0;for(const e of edges){if(!ids.has(e.a)||!ids.has(e.b))throw Error('unknown person');let p=route(c.nodes.find(n=>n.id===e.a),c.nodes.find(n=>n.id===e.b),c.nodes,c.w,c.h,occ,ports[edges.indexOf(e)]);if(!p){missing++;continue}checkPath(p,c.nodes,e.a,e.b)}const all=walk(roots['#chart-'+c.id]);const cards=all.filter(e=>e.tag==='button' && e.className && String(e.className).startsWith('node '));if(cards.length!==c.nodes.length)throw Error('bad node count');cards[0].handlers.click();const panel=all.find(e=>e.className==='selection-panel');if(!panel.children.some(e=>e.tag==='strong'))throw Error('selection not shown');const details=panel.children.find(e=>e.textContent==='Подробнее');details.handlers.click();if(!roots['#person-dialog'].open)throw Error('details');const controls=all.filter(e=>e.tag==='button'&&e.attrs['aria-label']==='Увеличить масштаб');if(controls.length!==1)throw Error('zoom');controls[0].handlers.click();console.log(c.id, 'people',ids.size,'edges',edges.length,'failed',missing,'birth years',Object.keys(births[c.id]).length);if(missing)throw Error('missing route');}
 if(warnings.length)throw Error(warnings.join('\n'));
 const marriedPairs=vm.runInContext('marriedPairs',ctx);
@@ -26,7 +36,7 @@ for(const c of charts){
  const map=Object.fromEntries(c.nodes.map(n=>[n.id,n])),routes=familyRoutes(c,map);
  for(const f of routes){
   const [a,b]=f.parents.map(id=>map[id]),left=a.x<b.x?a:b,right=left===a?b:a;
-  if(f.anchor[0]<left.x+174||f.anchor[0]>right.x||f.anchor[1]!==left.y+48)throw Error(`${c.id}: family trunk must start on the parents' union`);
+  if(f.anchor[0]<left.x+PORTRAIT_INSET+PORTRAIT||f.anchor[0]>right.x+PORTRAIT_INSET||f.anchor[1]!==left.y+PORTRAIT/2)throw Error(`${c.id}: family trunk must start on the parents' union`);
   const [first,last]=[f.stem[0],f.stem.at(-1)];
   if(first[0]!==f.anchor[0]||first[1]!==f.anchor[1])throw Error(`${c.id}: detached family stem`);
   checkPath(f.stem,c.nodes,f.parents.join('+'),'family stem');
@@ -35,7 +45,7 @@ for(const c of charts){
   if(new Set(targetIds).size!==f.children.length||f.children.some(id=>!targetIds.includes(id)))throw Error(`${c.id}: each child needs exactly one family branch`);
   for(const branch of f.branches){
    const child=map[branch.child],start=branch.points[0],end=branch.points.at(-1);
-   if(start[1]!==last[1]||end[0]<child.x||end[0]>child.x+174||end[1]!==child.y)throw Error(`${c.id}: disconnected child branch ${branch.child}`);
+   if(start[1]!==last[1]||end[0]<child.x+PORTRAIT_INSET||end[0]>child.x+PORTRAIT_INSET+PORTRAIT||end[1]!==child.y)throw Error(`${c.id}: disconnected child branch ${branch.child}`);
    let reached=Math.min(last[0],start[0]);const target=Math.max(last[0],start[0]);
    for(const segment of bus){if(segment[0][1]!==last[1]||segment[1][1]!==last[1])throw Error(`${c.id}: bus height mismatch`);if(segment[0][0]<=reached&&segment[1][0]>reached)reached=segment[1][0]}
    if(reached<target)throw Error(`${c.id}: bus does not connect to ${branch.child}`);
@@ -57,6 +67,7 @@ const fetisovFamily=familyRoutesMain.filter(f=>f.parents.includes('tan')&&f.pare
 if(fetisovFamily.length!==1||['ol','ilya','svetlana','ser_fet'].some(id=>!fetisovFamily[0].children.includes(id)))throw Error('Tatiana and Valentin need one shared branch for all four children');
 const byParents=(a,b)=>familyRoutesMain.find(f=>f.parents.includes(a)&&f.parents.includes(b));
 if(!byParents('and','ol')?.children.includes('you')||byParents('and','ol')?.children.includes('nast')||!byParents('ol','ser')?.children.includes('nast')||byParents('ol','ser')?.children.includes('you'))throw Error('Children of different partnerships must remain separate');
+for(const [p1,p2,child] of [['and','ol','you'],['ol','ser','nast']]){const f=byParents(p1,p2),node=charts.find(c=>c.id==='family').nodes.find(n=>n.id===child);if(Math.abs(f.anchor[0]-(node.x+NODE_W/2))>.01||f.bus.length)throw Error('Child must be centered under their own parents with a straight shared branch: '+child)}
 const adoption=graph(charts.find(c=>c.id==='family')).find(e=>e.a==='ser'&&e.b==='you');
 if(!adoption||adoption.kind!=='blue'||adoption.label!=='усыновление')throw Error('Separate adoption must remain blue and labelled');
 const archive=charts.find(c=>c.id==='nikiforov'),archiveRoutes=familyRoutes(archive,Object.fromEntries(archive.nodes.map(n=>[n.id,n])));
@@ -79,18 +90,18 @@ for(const child of ['konst_an','oleg_an'])if(!familyEdges.some(e=>e.a==='an'&&e.
 if(births.family.konst_an?.[0]!=='11.10.1960'||births.family.oleg_an)throw Error('Children of Anatoly have incorrect birth dates');
 for(let i=0;i<familyChart.nodes.length;i++)for(let j=i+1;j<familyChart.nodes.length;j++){
  const a=familyChart.nodes[i],b=familyChart.nodes[j];
- if(a.x<b.x+174&&a.x+174>b.x&&a.y<b.y+96&&a.y+96>b.y)throw Error(`Family cards overlap: ${a.id}, ${b.id}`);
+ if(a.x<b.x+NODE_W&&a.x+NODE_W>b.x&&a.y<b.y+NODE_H&&a.y+NODE_H>b.y)throw Error(`Family cards overlap: ${a.id}, ${b.id}`);
 }
 const nodeName=(id,c=familyChart)=>c.nodes.find(n=>n.id===id).name;
-const cardById=(id)=>card(nodeName(id));
+const cardById=(id)=>all.filter(e=>e.tag==='button'&&e.className&&String(e.className).startsWith('node '))[familyChart.nodes.findIndex(n=>n.id===id)];
 for(const child of ['ilya','svetlana','ser_fet','ol']){
  const n=familyChart.nodes.find(n=>n.id===child),olga=familyChart.nodes.find(n=>n.id==='ol');
  if(!n||n.y!==olga.y||!['tan','val'].every(parent=>familyEdges.some(e=>e.a===parent&&e.b===child)))throw Error('Missing child or parent link in Fetisov family');
 }
 for(const partner of ['and','ser'])if(familyEdges.some(e=>['tan','val'].includes(e.a)&&e.b===partner))throw Error('Olga partner must not appear as her sibling');
-function samples(d){
+function samples(d,step=0){
  const tokens=d.match(/[MLQ]|-?\d+(?:\.\d+)?/g),out=[];let x=0,y=0;
- for(let i=0;i<tokens.length;){const op=tokens[i++];if(op==='M'){x=+tokens[i++];y=+tokens[i++];out.push([x,y])}else if(op==='L'){const nx=+tokens[i++],ny=+tokens[i++];for(let k=1;k<=12;k++)out.push([x+(nx-x)*k/12,y+(ny-y)*k/12]);x=nx;y=ny}else if(op==='Q'){const cx=+tokens[i++],cy=+tokens[i++],nx=+tokens[i++],ny=+tokens[i++];for(let k=1;k<=12;k++){const t=k/12;out.push([(1-t)**2*x+2*(1-t)*t*cx+t*t*nx,(1-t)**2*y+2*(1-t)*t*cy+t*t*ny])}x=nx;y=ny}else throw Error('Unknown path command '+op)}return out;
+ for(let i=0;i<tokens.length;){const op=tokens[i++];if(op==='M'){x=+tokens[i++];y=+tokens[i++];out.push([x,y])}else if(op==='L'){const nx=+tokens[i++],ny=+tokens[i++],count=step?Math.max(12,Math.ceil(Math.hypot(nx-x,ny-y)/step)):12;for(let k=1;k<=count;k++)out.push([x+(nx-x)*k/count,y+(ny-y)*k/count]);x=nx;y=ny}else if(op==='Q'){const cx=+tokens[i++],cy=+tokens[i++],nx=+tokens[i++],ny=+tokens[i++];for(let k=1;k<=12;k++){const t=k/12;out.push([(1-t)**2*x+2*(1-t)*t*cx+t*t*nx,(1-t)**2*y+2*(1-t)*t*cy+t*t*ny])}x=nx;y=ny}else throw Error('Unknown path command '+op)}return out;
 }
 const roundedPath=vm.runInContext('roundedPath',ctx);
 const familyPath=vm.runInContext('familyPath',ctx);
@@ -137,7 +148,7 @@ for(const c of charts){
   const visibleNodes=c.nodes.filter((n,i)=>!cards[i].classList.contains('is-dim'));
   for(const group of groups.filter(g=>g.classList.contains('is-selected'))){
    const path=group.children.find(x=>x.classList.contains('link-hit'));
-   for(const node of visibleNodes)if(samples(path.attrs.d).some(([x,y])=>x>node.x+.05&&x<node.x+173.95&&y>node.y+.05&&y<node.y+95.95))throw Error(c.id+': selected connection crosses visible card '+node.id);
+   for(const node of visibleNodes)for(const box of cardBoxes(node))if(samples(path.attrs.d).some(([x,y])=>x>box.left+.05&&x<box.right-.05&&y>box.top+.05&&y<box.bottom-.05))throw Error(c.id+': selected connection crosses visible card '+node.id);
   }
  }
  for(const f of families){
@@ -148,7 +159,7 @@ for(const c of charts){
    const hitsForChild=branches.filter(h=>h.attrs['data-child']===branch.child),child=map[branch.child];
    if(hitsForChild.length!==1)throw Error(c.id+': incorrect child branch '+branch.child);
    const end=samples(hitsForChild[0].attrs.d).at(-1);
-   if(Math.abs(end[1]-child.y)>.001||end[0]<child.x||end[0]>child.x+174)throw Error(c.id+': rendered branch does not reach '+branch.child);
+   if(Math.abs(end[1]-child.y)>.001||end[0]<child.x+PORTRAIT_INSET||end[0]>child.x+PORTRAIT_INSET+PORTRAIT)throw Error(c.id+': rendered branch does not reach '+branch.child);
   }
   // Verify connectivity of the actual rendered SVG segments, not merely the unrounded topology.
   const drawnPaths=[...stems,...buses,...branches];
@@ -179,6 +190,22 @@ for(const c of charts){
 }
 const familyGroup=(role,parents,child)=>all.find(e=>e.classList.contains('link-hit')&&e.attrs['data-role']==='family-'+role&&e.attrs['data-parents']===parents&&(child===undefined||e.attrs['data-child']===child));
 const findGroup=hit=>walk(host).find(e=>e.tag==='g'&&e.children.includes(hit));
+// Exercise the actual rendered lines for every chart, including curves and faded-independent states.
+for(const c of charts){
+ const subtree=walk(roots['#chart-'+c.id]),hits=subtree.filter(e=>e.classList.contains('link-hit'));
+ for(const hit of hits){const rendered=samples(hit.attrs.d,8);for(const node of c.nodes)for(const box of cardBoxes(node)){
+  if(rendered.some(([x,y])=>x>box.left+.05&&x<box.right-.05&&y>box.top+.05&&y<box.bottom-.05))throw Error(`${c.id}: rendered line ${hit.attrs['aria-label']} crosses portrait or caption of ${node.id}`);
+ }}
+ const map=Object.fromEntries(c.nodes.map(n=>[n.id,n])),families=familyRoutes(c,map);
+ function onPortrait(point,node){const [x,y]=point,l=node.x+PORTRAIT_INSET,r=l+PORTRAIT,t=node.y,b=t+PORTRAIT,eps=.02;return ((Math.abs(x-l)<eps||Math.abs(x-r)<eps)&&y>=t-eps&&y<=b+eps)||((Math.abs(y-t)<eps||Math.abs(y-b)<eps)&&x>=l-eps&&x<=r+eps)}
+ for(const edge of graph(c)){
+  if(families.some(f=>f.parents.includes(edge.a)&&f.children.includes(edge.b)&&edge.kind===f.kind))continue;
+  const hit=hits.find(h=>h.attrs['aria-label']===`${map[edge.a].name} — ${map[edge.b].name}: ${edge.label}`);
+  if(!hit)throw Error(`${c.id}: missing rendered line ${edge.a} → ${edge.b}`);
+  const points=samples(hit.attrs.d),first=points[0],last=points.at(-1);
+  if(!((onPortrait(first,map[edge.a])&&onPortrait(last,map[edge.b]))||(onPortrait(first,map[edge.b])&&onPortrait(last,map[edge.a]))))throw Error(`${c.id}: line ${edge.a} → ${edge.b} must connect portraits`);
+ }
+}
 const familyStem=familyGroup('stem','tan,val'),familyIlya=familyGroup('branch','tan,val','ilya'),familySvetlana=familyGroup('branch','tan,val','svetlana');
 if(!familyStem||!familyIlya||!familySvetlana)throw Error('Missing Fetisov family stem or branches');
 const parent=cardById('tan'),child=cardById('ilya'),pointer={pointerType:'mouse'};
@@ -202,6 +229,11 @@ document.handlers.keydown.forEach(f=>f({key:'Escape'}));
 if(isSelected()||findGroup(familyStem).classList.contains('is-dim'))throw Error('Escape must clear family selection');
 const adoptionHit=all.find(h=>h.classList.contains('link-hit')&&h.attrs['aria-label']?.startsWith(nodeName('ser')+' \u2014 '+nodeName('you')+':'));
 if(!adoptionHit||!findGroup(adoptionHit).classList.contains('edge-blue'))throw Error('Separate adoption line must remain visible and blue');
+const adoptionPoints=samples(adoptionHit.attrs.d),serNode=familyChart.nodes.find(n=>n.id==='ser'),youNode=familyChart.nodes.find(n=>n.id==='you');
+const startAdoption=adoptionPoints[0],endAdoption=adoptionPoints.at(-1);
+if(distance(startAdoption,[serNode.x+PORTRAIT_INSET+PORTRAIT,serNode.y+PORTRAIT/2])>.01||distance(endAdoption,[youNode.x+PORTRAIT_INSET,youNode.y+PORTRAIT/2])>.01)throw Error('Adoption must connect the two actual portraits');
+const nastNode=familyChart.nodes.find(n=>n.id==='nast'),ilyaNode=familyChart.nodes.find(n=>n.id==='ilya'),rightAdoption=Math.max(...adoptionPoints.map(p=>p[0])),bottomAdoption=Math.max(...adoptionPoints.map(p=>p[1]));
+if(rightAdoption<=Math.max(serNode.x+NODE_W,nastNode.x+NODE_W)||rightAdoption>=ilyaNode.x||bottomAdoption<=Math.max(youNode.y,nastNode.y)+NODE_H)throw Error('Adoption must use the nearby corridor after Nastya and before Ilya, then pass below the children');
 adoptionHit.handlers.click({stopPropagation(){}});
 if(!panel.children.some(e=>e.tag==='strong'&&e.textContent==='\u0443\u0441\u044b\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435'))throw Error('Adoption selection must retain its label');
 const archiveRoot=roots['#chart-nikiforov'],archiveHits=walk(archiveRoot).filter(e=>e.classList.contains('link-hit'));
@@ -256,10 +288,10 @@ for(const [chartId,personId,src] of [['family','an','assets/photos/anatoly-perik
 if(photoCatalog.family.an.some(photo=>photo.src.includes('yuri-perikov-hat')))throw Error('Yuri portrait must not be attributed to Anatoly');
 for(const [chartId,people] of Object.entries(photoCatalog))for(const [personId,photos] of Object.entries(people)){
  const chart=charts.find(c=>c.id===chartId),person=chart.nodes.find(n=>n.id===personId),subtree=walk(roots['#chart-'+chartId]);
- const cardElement=subtree.find(e=>e.tag==='button'&&e.attrs['aria-label']?.startsWith(person.name+','));
+ const cardElement=subtree.filter(e=>e.tag==='button'&&e.className&&String(e.className).startsWith('node '))[chart.nodes.findIndex(n=>n.id===personId)];
  const portrait=photos.find(photo=>photo.portrait);
  if(!cardElement||cardElement.classList.contains('has-portrait')!==Boolean(portrait))throw Error('Incorrect portrait on '+person.name);
- if(portrait&&!cardElement.children.some(e=>e.className==='node-portrait'&&e.src===portrait.src))throw Error('Missing thumbnail for '+person.name);
+ if(portrait&&!walk(cardElement).some(e=>e.className==='node-portrait'&&e.src===portrait.src))throw Error('Missing thumbnail for '+person.name);
  for(const photo of photos)if(!fs.existsSync(path.join(__dirname,'..',photo.src)))throw Error('Missing photo file: '+photo.src);
  cardElement.handlers.pointerdown({pointerType:'mouse'});cardElement.handlers.click({detail:1});
  subtree.find(e=>e.className==='selection-panel').children.find(e=>e.textContent==='Подробнее').handlers.click();
