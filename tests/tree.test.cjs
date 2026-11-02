@@ -311,9 +311,11 @@ if(photoPanel.children.length!==1||photoPanel.children[0].children[0].href!=='on
 showPhotos({name:'Test',photos:fixture});
 const figure=photoPanel.children[0],link=figure.children[0],img=link.children[0],caption=figure.children[1],controls=photoPanel.children[1],prev=controls.children[0],count=controls.children[1],next=controls.children[2];
 if(prev.attrs['aria-label']!=='Предыдущее фото'||next.attrs['aria-label']!=='Следующее фото'||count.attrs['aria-live']!=='polite')throw Error('Slider controls must have accessible names and live position');
-for(const [button,expected] of [[prev,'M 15 5 L 9 12 L 15 19'],[next,'M 9 5 L 15 12 L 9 19']]){
- const svg=button.children[0],icon=svg?.children[0];
- if(svg?.tag!=='svg'||svg.attrs.viewBox!=='0 0 24 24'||svg.attrs['aria-hidden']!=='true'||icon?.attrs.d!==expected||icon.attrs.stroke!=='currentColor')throw Error('Slider needs centered accessible vector arrows');
+for(const [button,expected] of [[prev,'assets/icons/photo-previous.svg'],[next,'assets/icons/photo-next.svg']]){
+ const icon=button.children[0];
+ if(icon?.tag!=='img'||icon.src!==expected||icon.attrs['aria-hidden']!=='true'||icon.alt!==''||!fs.existsSync(path.join(__dirname,'..',expected)))throw Error('Slider needs accessible vector arrows');
+ const svg=fs.readFileSync(path.join(__dirname,'..',expected),'utf8');
+ if(!/<svg\b/.test(svg)||!/viewBox="0 0 18 18"/.test(svg)||!/<path\b/.test(svg))throw Error('Slider icon must be a correctly sized vector');
 }
 const checkSlide=(index)=>{const photo=fixture[index];if(link.href!==photo.src||img.src!==photo.src||img.alt!==photo.alt||caption.textContent!==photo.caption||count.textContent!==`${index+1} / ${fixture.length}`)throw Error('Slider failed to show image '+index)};
 checkSlide(0);next.handlers.click();checkSlide(1);next.handlers.click();checkSlide(2);next.handlers.click();checkSlide(0);prev.handlers.click();checkSlide(2);prev.handlers.click();checkSlide(1);
@@ -350,3 +352,25 @@ personInfo(yuri);
 if(roots['#dialog-name'].textContent!==yuri.name||photoPanel.children.length!==1||photoPanel.children[0].children[0].href!=='assets/photos/yuri-perikov-hat.png')throw Error('Yuri must display the corrected photograph without extra slider controls');
 modal.close();
 console.log('Photo slider navigation, labels, touch gestures and reset validated.');
+
+// Modal data must follow the person and chart, including after opening a different person.
+const person=(chart,id)=>charts.find(c=>c.id===chart).nodes.find(n=>n.id===id);
+const dateText=()=>roots['#dialog-date'].textContent, maidenText=()=>roots['#dialog-maiden'].textContent;
+personInfo(person('family','tan'));
+if(roots['#dialog-name'].textContent!=='Татьяна Фитисова'||maidenText()!=='(Перикова)'||dateText()!=='28.05.1950'||roots['#dialog-relationship'].textContent!=='Бабушка')throw Error('Tatiana modal needs confirmed name, maiden surname, relationship and birth date');
+personInfo(person('family','nast'));
+if(roots['#dialog-name'].textContent!=='Анастасия Видянова'||maidenText()!=='(Бойко)'||dateText()!=='08.09.2002')throw Error('Anastasia modal needs confirmed maiden surname and birth date');
+personInfo(person('family','and'));
+if(maidenText()!==''||dateText()!=='11.07.1974 — 02.08.2015')throw Error('Birth and death must appear without carrying over previous maiden name');
+personInfo(person('family','du'));
+if(dateText()!==''||maidenText()!=='(Никифорова)')throw Error('Unknown date must not be inferred from an unverified record or previous modal');
+personInfo(person('nikiforov','d1909'));
+if(dateText()!=='16.02.1909 · ст. стиль'||roots['#dialog-state'].textContent!=='Требует проверки')throw Error('Historical date and uncertainty must retain their qualification');
+personInfo(person('khramov','fyodor'));
+if(dateText()!=='1915 — 1996'||roots['#dialog-relationship'].textContent!=='Отец Екатерины'||photoPanel.children[0].children[0].href!=='assets/photos/fyodor-konygin-memorial.png')throw Error('Fyodor must show his own years, daughter relationship and original family sheet');
+personInfo({id:'fyodor',chartId:'family',name:'Без даты',sub:'',photos:[]});
+if(dateText()!=='')throw Error('The same id in another chart must not inherit Fyodor’s date');
+personInfo(person('perikov','io'));
+if(!roots['#dialog-links'].children.some(e=>e.href===person('perikov','io').source))throw Error('Archive links must remain accessible from the modal');
+modal.close();
+console.log('Modal names, relationships, qualified dates, sources and chart-specific data validated.');
