@@ -74,6 +74,12 @@ console.log('Escape and background clear selection; dragging preserves selection
 document.handlers.keydown.forEach(f=>f({key:'Escape'}));
 function card(name){const item=all.find(e=>e.tag==='button' && e.attrs['aria-label']?.startsWith(name+','));if(!item)throw Error('Missing card '+name);return item}
 const familyChart=charts.find(c=>c.id==='family'),familyEdges=graph(familyChart);
+for(const child of ['konst_an','oleg_an'])if(!familyEdges.some(e=>e.a==='an'&&e.b===child))throw Error(`Missing Anatoly's child: ${child}`);
+if(births.family.konst_an?.[0]!=='11.10.1960'||births.family.oleg_an)throw Error('Children of Anatoly have incorrect birth dates');
+for(let i=0;i<familyChart.nodes.length;i++)for(let j=i+1;j<familyChart.nodes.length;j++){
+ const a=familyChart.nodes[i],b=familyChart.nodes[j];
+ if(a.x<b.x+174&&a.x+174>b.x&&a.y<b.y+96&&a.y+96>b.y)throw Error(`Family cards overlap: ${a.id}, ${b.id}`);
+}
 const nodeName=(id,c=familyChart)=>c.nodes.find(n=>n.id===id).name;
 const cardById=(id)=>card(nodeName(id));
 for(const child of ['ilya','svetlana','ser_fet','ol']){
