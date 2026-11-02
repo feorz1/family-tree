@@ -252,7 +252,8 @@ now+=1000;tap(mishaCard);now+=100;tap(archiveCard);now+=100;tap(mishaCard);if(mo
 console.log('One tap selects; two taps open details. Other inputs do not cause accidental openings.');
 // Check real assigned photos, including the memorial which is a document, not a portrait.
 const photoCatalog=vm.runInContext('photoCatalog',ctx),path=require('path');
-for(const [chartId,personId,src] of [['family','an','assets/photos/anatoly-perikov.png'],['family','tam','assets/photos/tamara-perikova.png'],['khramov','max_old','assets/photos/maxim-khramov.png'],['family','and','assets/photos/andrey-khramov-memorial.png'],['khramov','and','assets/photos/andrey-khramov-memorial.png']])if(!photoCatalog[chartId]?.[personId]?.some(photo=>photo.src===src))throw Error(`Photo assignment missing: ${chartId}/${personId}`);
+for(const [chartId,personId,src] of [['family','an','assets/photos/anatoly-perikov.png'],['family','an','assets/photos/anatoly-perikov-young.png'],['family','yu','assets/photos/yuri-perikov-hat.png'],['family','tam','assets/photos/tamara-perikova.png'],['khramov','max_old','assets/photos/maxim-khramov.png'],['family','and','assets/photos/andrey-khramov-memorial.png'],['khramov','and','assets/photos/andrey-khramov-memorial.png']])if(!photoCatalog[chartId]?.[personId]?.some(photo=>photo.src===src))throw Error(`Photo assignment missing: ${chartId}/${personId}`);
+if(photoCatalog.family.an.some(photo=>photo.src.includes('yuri-perikov-hat')))throw Error('Yuri portrait must not be attributed to Anatoly');
 for(const [chartId,people] of Object.entries(photoCatalog))for(const [personId,photos] of Object.entries(people)){
  const chart=charts.find(c=>c.id===chartId),person=chart.nodes.find(n=>n.id===personId),subtree=walk(roots['#chart-'+chartId]);
  const cardElement=subtree.find(e=>e.tag==='button'&&e.attrs['aria-label']?.startsWith(person.name+','));
@@ -278,6 +279,10 @@ if(photoPanel.children.length!==1||photoPanel.children[0].children[0].href!=='on
 showPhotos({name:'Test',photos:fixture});
 const figure=photoPanel.children[0],link=figure.children[0],img=link.children[0],caption=figure.children[1],controls=photoPanel.children[1],prev=controls.children[0],count=controls.children[1],next=controls.children[2];
 if(prev.attrs['aria-label']!=='Предыдущее фото'||next.attrs['aria-label']!=='Следующее фото'||count.attrs['aria-live']!=='polite')throw Error('Slider controls must have accessible names and live position');
+for(const [button,expected] of [[prev,'M 15 5 L 9 12 L 15 19'],[next,'M 9 5 L 15 12 L 9 19']]){
+ const svg=button.children[0],icon=svg?.children[0];
+ if(svg?.tag!=='svg'||svg.attrs.viewBox!=='0 0 24 24'||svg.attrs['aria-hidden']!=='true'||icon?.attrs.d!==expected||icon.attrs.stroke!=='currentColor')throw Error('Slider needs centered accessible vector arrows');
+}
 const checkSlide=(index)=>{const photo=fixture[index];if(link.href!==photo.src||img.src!==photo.src||img.alt!==photo.alt||caption.textContent!==photo.caption||count.textContent!==`${index+1} / ${fixture.length}`)throw Error('Slider failed to show image '+index)};
 checkSlide(0);next.handlers.click();checkSlide(1);next.handlers.click();checkSlide(2);next.handlers.click();checkSlide(0);prev.handlers.click();checkSlide(2);prev.handlers.click();checkSlide(1);
 let sliderPrevented=false;figure.handlers.keydown({key:'ArrowRight',preventDefault(){sliderPrevented=true}});if(!sliderPrevented)throw Error('ArrowRight should be consumed in slider');checkSlide(2);
@@ -296,17 +301,20 @@ if(photoPanel.children[0].children[0].href!=='one.png'||photoPanel.children[1].c
 showPhotos({name:'No photos'});if(photoPanel.children.length!==0)throw Error('Switching to a person without photos must clear the previous gallery');
 // Real cards exercise selection, details and switching between a multi-photo and a single-photo person.
 const anatoly=charts.find(c=>c.id==='family').nodes.find(n=>n.id==='an'),olga=charts.find(c=>c.id==='family').nodes.find(n=>n.id==='ol'),personInfo=vm.runInContext('personInfo',ctx);
-if(anatoly.photos.length!==3||olga.photos.length!==1)throw Error('Real photo fixtures missing');
+const yuri=charts.find(c=>c.id==='family').nodes.find(n=>n.id==='yu');
+if(anatoly.photos.length!==2||olga.photos.length!==1||yuri.photos.length!==1||yuri.photos[0].src!=='assets/photos/yuri-perikov-hat.png')throw Error('Real photo fixtures missing or incorrect');
 personInfo(anatoly);
 if(!modal.open||roots['#dialog-name'].textContent!==anatoly.name||photoPanel.children.length!==2)throw Error('Anatoly details should show a slider');
 let realLink=photoPanel.children[0].children[0],realControls=photoPanel.children[1];
 for(let i=0;i<anatoly.photos.length;i++){
- if(realLink.href!==anatoly.photos[i].src||realLink.children[0].src!==anatoly.photos[i].src||photoPanel.children[0].children[1].textContent!==anatoly.photos[i].caption||realControls.children[1].textContent!==`${i+1} / 3`)throw Error('Incorrect Anatoly slide '+i);
+ if(realLink.href!==anatoly.photos[i].src||realLink.children[0].src!==anatoly.photos[i].src||photoPanel.children[0].children[1].textContent!==anatoly.photos[i].caption||realControls.children[1].textContent!==`${i+1} / 2`)throw Error('Incorrect Anatoly slide '+i);
  if(i<anatoly.photos.length-1)realControls.children[2].handlers.click();
 }
 personInfo(olga);
 if(roots['#dialog-name'].textContent!==olga.name||photoPanel.children.length!==1||photoPanel.children[0].children[0].href!==olga.photos[0].src)throw Error('Single-photo details must replace the previous gallery without controls');
 personInfo(anatoly);
-if(photoPanel.children[0].children[0].href!==anatoly.photos[0].src||photoPanel.children[1].children[1].textContent!=='1 / 3')throw Error('Reopening Anatoly must reset slider');
+if(photoPanel.children[0].children[0].href!==anatoly.photos[0].src||photoPanel.children[1].children[1].textContent!=='1 / 2')throw Error('Reopening Anatoly must reset slider');
+personInfo(yuri);
+if(roots['#dialog-name'].textContent!==yuri.name||photoPanel.children.length!==1||photoPanel.children[0].children[0].href!=='assets/photos/yuri-perikov-hat.png')throw Error('Yuri must display the corrected photograph without extra slider controls');
 modal.close();
 console.log('Photo slider navigation, labels, touch gestures and reset validated.');
