@@ -262,8 +262,51 @@ for(const [chartId,people] of Object.entries(photoCatalog))for(const [personId,p
  for(const photo of photos)if(!fs.existsSync(path.join(__dirname,'..',photo.src)))throw Error('Missing photo file: '+photo.src);
  cardElement.handlers.pointerdown({pointerType:'mouse'});cardElement.handlers.click({detail:1});
  subtree.find(e=>e.className==='selection-panel').children.find(e=>e.textContent==='Подробнее').handlers.click();
- const figures=roots['#dialog-photos'].children;
- if(figures.length!==photos.length||photos.some((photo,i)=>figures[i].children[0].href!==photo.src||figures[i].children[0].children[0].src!==photo.src))throw Error('Photo details missing for '+person.name);
+ const parts=roots['#dialog-photos'].children,figure=parts[0],link=figure?.children[0],img=link?.children[0];
+ if(!figure||link.href!==photos[0].src||img.src!==photos[0].src)throw Error('First photo details missing for '+person.name);
+ if(parts.length!==(photos.length>1?2:1))throw Error('Unexpected photo controls for '+person.name);
  modal.close();
 }
 console.log('Portraits and memorial image are assigned, accessible in details, and present on disk.');
+
+// Exercise independent slider instances without relying on any specific family member's photos.
+const showPhotos=vm.runInContext('showPhotos',ctx),photoPanel=roots['#dialog-photos'];
+const fixture=[{src:'one.png',alt:'First portrait',caption:'First caption'},{src:'two.png',alt:'Second portrait',caption:'Second caption'},{src:'three.png',alt:'Third portrait',caption:'Third caption'}];
+showPhotos({name:'Test',photos:[]});if(photoPanel.children.length!==0)throw Error('Empty gallery should be hidden');
+showPhotos({name:'Test',photos:[fixture[0]]});
+if(photoPanel.children.length!==1||photoPanel.children[0].children[0].href!=='one.png')throw Error('A single photo must not show navigation');
+showPhotos({name:'Test',photos:fixture});
+const figure=photoPanel.children[0],link=figure.children[0],img=link.children[0],caption=figure.children[1],controls=photoPanel.children[1],prev=controls.children[0],count=controls.children[1],next=controls.children[2];
+if(prev.attrs['aria-label']!=='Предыдущее фото'||next.attrs['aria-label']!=='Следующее фото'||count.attrs['aria-live']!=='polite')throw Error('Slider controls must have accessible names and live position');
+const checkSlide=(index)=>{const photo=fixture[index];if(link.href!==photo.src||img.src!==photo.src||img.alt!==photo.alt||caption.textContent!==photo.caption||count.textContent!==`${index+1} / ${fixture.length}`)throw Error('Slider failed to show image '+index)};
+checkSlide(0);next.handlers.click();checkSlide(1);next.handlers.click();checkSlide(2);next.handlers.click();checkSlide(0);prev.handlers.click();checkSlide(2);prev.handlers.click();checkSlide(1);
+let sliderPrevented=false;figure.handlers.keydown({key:'ArrowRight',preventDefault(){sliderPrevented=true}});if(!sliderPrevented)throw Error('ArrowRight should be consumed in slider');checkSlide(2);
+sliderPrevented=false;controls.handlers.keydown({key:'ArrowLeft',preventDefault(){sliderPrevented=true}});if(!sliderPrevented)throw Error('ArrowLeft should be consumed in slider');checkSlide(1);
+sliderPrevented=false;figure.handlers.keydown({key:'Enter',preventDefault(){sliderPrevented=true}});if(sliderPrevented)throw Error('Other keys must not be consumed');checkSlide(1);
+const photoPointer=(x,y,type='touch')=>({pointerType:type,clientX:x,clientY:y});
+link.handlers.pointerdown(photoPointer(100,100));link.handlers.pointerup(photoPointer(30,105));checkSlide(2);
+sliderPrevented=false;link.handlers.click({preventDefault(){sliderPrevented=true}});if(!sliderPrevented)throw Error('Swipe must not open the image');
+sliderPrevented=false;link.handlers.click({preventDefault(){sliderPrevented=true}});if(sliderPrevented)throw Error('A later tap should open the image');
+link.handlers.pointerdown(photoPointer(30,100));link.handlers.pointerup(photoPointer(100,105));checkSlide(1);
+link.handlers.pointerdown(photoPointer(100,100));link.handlers.pointerup(photoPointer(90,200));checkSlide(1);
+link.handlers.pointerdown(photoPointer(100,100,'mouse'));link.handlers.pointerup(photoPointer(20,100,'mouse'));checkSlide(1);
+link.handlers.pointerdown(photoPointer(100,100));link.handlers.pointercancel();link.handlers.pointerup(photoPointer(20,100));checkSlide(1);
+showPhotos({name:'Another person',photos:fixture});
+if(photoPanel.children[0].children[0].href!=='one.png'||photoPanel.children[1].children[1].textContent!=='1 / 3')throw Error('Opening another person must reset the slider');
+showPhotos({name:'No photos'});if(photoPanel.children.length!==0)throw Error('Switching to a person without photos must clear the previous gallery');
+// Real cards exercise selection, details and switching between a multi-photo and a single-photo person.
+const anatoly=charts.find(c=>c.id==='family').nodes.find(n=>n.id==='an'),olga=charts.find(c=>c.id==='family').nodes.find(n=>n.id==='ol'),personInfo=vm.runInContext('personInfo',ctx);
+if(anatoly.photos.length!==3||olga.photos.length!==1)throw Error('Real photo fixtures missing');
+personInfo(anatoly);
+if(!modal.open||roots['#dialog-name'].textContent!==anatoly.name||photoPanel.children.length!==2)throw Error('Anatoly details should show a slider');
+let realLink=photoPanel.children[0].children[0],realControls=photoPanel.children[1];
+for(let i=0;i<anatoly.photos.length;i++){
+ if(realLink.href!==anatoly.photos[i].src||realLink.children[0].src!==anatoly.photos[i].src||photoPanel.children[0].children[1].textContent!==anatoly.photos[i].caption||realControls.children[1].textContent!==`${i+1} / 3`)throw Error('Incorrect Anatoly slide '+i);
+ if(i<anatoly.photos.length-1)realControls.children[2].handlers.click();
+}
+personInfo(olga);
+if(roots['#dialog-name'].textContent!==olga.name||photoPanel.children.length!==1||photoPanel.children[0].children[0].href!==olga.photos[0].src)throw Error('Single-photo details must replace the previous gallery without controls');
+personInfo(anatoly);
+if(photoPanel.children[0].children[0].href!==anatoly.photos[0].src||photoPanel.children[1].children[1].textContent!=='1 / 3')throw Error('Reopening Anatoly must reset slider');
+modal.close();
+console.log('Photo slider navigation, labels, touch gestures and reset validated.');
