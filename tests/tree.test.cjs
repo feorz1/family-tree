@@ -35,10 +35,11 @@ const familyRoutes=vm.runInContext('familyRoutes',ctx);
 for(const c of charts){
  const map=Object.fromEntries(c.nodes.map(n=>[n.id,n])),routes=familyRoutes(c,map);
  for(const f of routes){
-  const [a,b]=f.parents.map(id=>map[id]),left=a.x<b.x?a:b,right=left===a?b:a;
-  if(f.anchor[0]<left.x+PORTRAIT_INSET+PORTRAIT||f.anchor[0]>right.x+PORTRAIT_INSET||f.anchor[1]!==left.y+PORTRAIT/2)throw Error(`${c.id}: family trunk must start on the parents' union`);
-  const [first,last]=[f.stem[0],f.stem.at(-1)];
-  if(first[0]!==f.anchor[0]||first[1]!==f.anchor[1])throw Error(`${c.id}: detached family stem`);
+  const [a,b]=f.parents.map(id=>map[id]),[first,last]=[f.stem[0],f.stem.at(-1)];
+  if(b){const left=a.x<b.x?a:b,right=left===a?b:a;
+   if(f.anchor[0]<left.x+PORTRAIT_INSET+PORTRAIT||f.anchor[0]>right.x+PORTRAIT_INSET||f.anchor[1]!==left.y+PORTRAIT/2)throw Error(`${c.id}: family trunk must start on the parents' union`);
+   if(first[0]!==f.anchor[0]||first[1]!==f.anchor[1])throw Error(`${c.id}: detached family stem`);
+  }else if(![a.x+PORTRAIT_INSET,a.x+PORTRAIT_INSET+PORTRAIT].includes(first[0])||first[1]!==a.y+PORTRAIT/2||last[0]!==f.anchor[0])throw Error(`${c.id}: single-parent trunk must start on its portrait and reach the bus`);
   checkPath(f.stem,c.nodes,f.parents.join('+'),'family stem');
   const bus=f.bus.map(s=>s.points).sort((x,y)=>x[0][0]-y[0][0]);
   const targetIds=f.branches.map(b=>b.child);
@@ -108,7 +109,7 @@ const familyPath=vm.runInContext('familyPath',ctx);
 function nearSegment(p,a,b){const dx=b[0]-a[0],dy=b[1]-a[1],t=Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dy)/(dx*dx+dy*dy||1)));return Math.hypot(p[0]-a[0]-t*dx,p[1]-a[1]-t*dy)<0.5}
 const distance=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
 function assertRoundCorner(hit,corner){
- const m=hit.attrs.d.match(/([MLQ]|-?\d+(?:\.\d+)?)/g),qi=m.indexOf('Q');
+ const m=hit.attrs.d.match(/([MLQ]|-?\d+(?:\.\d+)?)/g),qi=m.findIndex((v,i)=>v==='Q'&&distance([+m[i+1],+m[i+2]],corner)<.001);
  if(qi<3)throw Error('An outer family corner must contain a quadratic curve');
  const from=[+m[qi-2],+m[qi-1]],control=[+m[qi+1],+m[qi+2]],to=[+m[qi+3],+m[qi+4]],u=[from[0]-control[0],from[1]-control[1]],v=[to[0]-control[0],to[1]-control[1]];
  if(distance(control,corner)>.001||Math.hypot(...u)<.001||Math.hypot(...v)<.001||Math.abs(u[0]*v[0]+u[1]*v[1])>.001)throw Error('Family corner must be a non-degenerate curve between perpendicular segments');
@@ -136,7 +137,7 @@ for(const c of charts){
   for(const [i,g] of groups.entries()){
    if(g.classList.contains('family-edge'))continue;
    const hit=g.children.find(x=>x.classList.contains('link-hit'));
-   const union=families.some(f=>hit.attrs['aria-label']?.startsWith(map[f.parents[0]].name+' — '+map[f.parents[1]].name+':'));
+   const union=families.some(f=>f.parents.length===2&&hit.attrs['aria-label']?.startsWith(map[f.parents[0]].name+' — '+map[f.parents[1]].name+':'));
    if(union&&i>firstFamily||!union&&i<lastFamily)throw Error(c.id+': line layers must preserve junctions and separate unrelated crossings');
   }
  }
@@ -169,7 +170,7 @@ for(const c of charts){
    const adjacent=f.bus.filter(s=>s.points.some(p=>p[0]===x)),stem=f.anchor[0]===x,branch=f.branches.find(b=>b.points[0][0]===x);
    if(adjacent.length!==1||stem===Boolean(branch))continue;
    const hit=stem?stems[0]:branches.find(h=>h.attrs['data-child']===branch.child);
-   assertRoundCorner(hit,[x,f.stem[1][1]]);
+   assertRoundCorner(hit,[x,f.stem.at(-1)[1]]);
   }
   for(const branch of f.branches){
    const target=cards[c.nodes.findIndex(n=>n.id===branch.child)];target.handlers.pointerenter({pointerType:'mouse'});
@@ -180,9 +181,10 @@ for(const c of charts){
    if(!connectedPathIndices(ordered).has(ordered.indexOf(childHit)))throw Error(c.id+': highlighted route to child is disconnected');
    target.handlers.pointerleave({pointerType:'mouse'});
   }
-  const p0=map[f.parents[0]].name,p1=map[f.parents[1]].name,union=allHits.find(h=>h.attrs['aria-label']?.startsWith(p0+' \u2014 '+p1+':'));
-  if(!union)throw Error(c.id+': missing parents union');
-  const pts=samples(union.attrs.d);if(!pts.slice(1).some((p,i)=>nearSegment(f.anchor,pts[i],p)))throw Error(c.id+': family stem is disconnected from parents union');
+  if(f.parents.length===2){const p0=map[f.parents[0]].name,p1=map[f.parents[1]].name,union=allHits.find(h=>h.attrs['aria-label']?.startsWith(p0+' \u2014 '+p1+':'));
+   if(!union)throw Error(c.id+': missing parents union');
+   const pts=samples(union.attrs.d);if(!pts.slice(1).some((p,i)=>nearSegment(f.anchor,pts[i],p)))throw Error(c.id+': family stem is disconnected from parents union');
+  }
   const rendered=groups.filter(g=>g.children.some(h=>hits.includes(h)));
   if(f.kind==='red'&&rendered.some(g=>!g.classList.contains('edge-red')))throw Error(c.id+': uncertain family must stay red');
   if(f.kind==='blue'&&rendered.some(g=>!g.classList.contains('edge-blue')))throw Error(c.id+': adoption must stay blue');
@@ -204,6 +206,24 @@ for(const c of charts){
   if(!hit)throw Error(`${c.id}: missing rendered line ${edge.a} → ${edge.b}`);
   const points=samples(hit.attrs.d),first=points[0],last=points.at(-1);
   if(!((onPortrait(first,map[edge.a])&&onPortrait(last,map[edge.b]))||(onPortrait(first,map[edge.b])&&onPortrait(last,map[edge.a]))))throw Error(`${c.id}: line ${edge.a} → ${edge.b} must connect portraits`);
+ }
+}
+// A single documented parent has one shared, selectable trunk and no invented spouse.
+for(const [parent,children] of [['an',['konst_an','oleg_an']],['mih',['sv','sr']],['yu',['ir','aa']]]){
+ const f=familyRoutesMain.find(f=>f.parents.length===1&&f.parents[0]===parent);
+ if(!f||f.children.length!==children.length||children.some(id=>!f.children.includes(id)))throw Error('Missing single-parent family '+parent);
+ const stem=familyGroup('stem',parent),parentCard=cardById(parent);
+ if(!stem||!stem.attrs['aria-label'].includes('дети'))throw Error('Single-parent shared line must be accessible');
+ parentCard.handlers.pointerenter({pointerType:'mouse'});
+ for(const child of children)if(!findGroup(familyGroup('branch',parent,child)).classList.contains('is-selected'))throw Error('Parent must highlight each child: '+child);
+ parentCard.handlers.pointerleave({pointerType:'mouse'});
+ for(const child of children){
+  const branch=familyGroup('branch',parent,child),other=children.find(id=>id!==child);
+  cardById(child).handlers.pointerenter({pointerType:'mouse'});
+  if(!findGroup(stem).classList.contains('is-selected')||!findGroup(branch).classList.contains('is-selected')||!findGroup(familyGroup('branch',parent,other)).classList.contains('is-dim')||cardById(other).classList.contains('is-related'))throw Error('Single-parent child selection must isolate its own route: '+child);
+  branch.handlers.click({stopPropagation(){}});
+  if(!findGroup(branch).classList.contains('is-selected')||!findGroup(familyGroup('branch',parent,other)).classList.contains('is-dim'))throw Error('Single-parent branch click must isolate its own route: '+child);
+  cardById(child).handlers.pointerleave({pointerType:'mouse'});
  }
 }
 const familyStem=familyGroup('stem','tan,val'),familyIlya=familyGroup('branch','tan,val','ilya'),familySvetlana=familyGroup('branch','tan,val','svetlana');
@@ -280,6 +300,13 @@ now+=1000;tap(mishaCard);now+=100;view.handlers.pointerdown({pointerType:'touch'
 const tatiana=card('Татьяна Перикова'),tatianaData=charts[0].nodes.find(n=>n.id==='tan');now+=1000;tap(tatiana);now+=200;tap(tatiana);
 if(!modal.open||roots['#dialog-description'].textContent!==tatianaData.info)throw Error('Double-tap details must contain the person’s story');modal.close();
 const archiveTree=charts.find(c=>c.id==='perikov'),archivePerson=archiveTree.nodes.find(n=>n.id==='io'),archiveCard=walk(roots['#chart-perikov']).find(e=>e.tag==='button'&&e.attrs['aria-label']?.startsWith(archivePerson.name+','));
+for(const chart of charts){
+ document.handlers.keydown.forEach(f=>f({key:'Escape'}));
+ const personCard=walk(roots['#chart-'+chart.id]).find(e=>e.tag==='button'&&e.className?.startsWith('node '));
+ if(!personCard?.attrs['aria-description'])throw Error(`${chart.id}: keyboard instructions missing`);
+ personCard.handlers.click({detail:0});if(modal.open)throw Error(`${chart.id}: first keyboard activation should select`);
+ personCard.handlers.click({detail:0});if(!modal.open)throw Error(`${chart.id}: second keyboard activation should open details`);modal.close();
+}
 now+=1000;tap(archiveCard);now+=200;tap(archiveCard);if(!modal.open||!roots['#dialog-links'].children.some(e=>e.href===archivePerson.source))throw Error('Double-tap details must retain archive sources');modal.close();
 now+=1000;tap(mishaCard);now+=100;tap(archiveCard);now+=100;tap(mishaCard);if(modal.open)throw Error('Taps in different branches must not count as a double tap');
 console.log('One tap selects; two taps open details. Other inputs do not cause accidental openings.');

@@ -113,8 +113,8 @@ dialog::backdrop{background:#0009}
 #person-dialog .photo-controls button:hover{background:#e6e6e6;color:#242424}
 #person-dialog .photo-controls button:active{background:#dcdcdc}
 #dialog-links a{color:#555}
-/* Keep the main tree free of the explanatory strip and selection panel. */
-#chart-family > .canvas-hint,#chart-family > .selection-panel{display:none}
+/* Keep the explanatory strips out of every tree. */
+.canvas-hint,.selection-panel,section > .caption,section > .note{display:none}
 </style></head>
 <body><header><div class="header-line"><div><h1>Семейное древо</h1><p>Люди, истории и документы, из которых складывается история нашей семьи.</p></div></div></header>
 <main><nav aria-label="Разделы"><a href="#family">Наша семья</a><a href="#khramov">Храмовы</a><a href="#boyko">Семья Сергея</a><a href="#perikov">Периковы в метриках</a><a href="#nikiforov">Никифоровы в метриках</a><a href="#korkota">Коркота</a><a href="#sources">Источники</a></nav>
@@ -249,11 +249,29 @@ function graphEdges(c){
  for(const e of c.extra||[])add(e.a,e.b,e.label,e.kind||'',isMarried(e.a,e.b));
  return edges;
 }
-// A couple's connection is shared by its children; unrelated blue links remain individual.
+// Children share a single branch from their parents or their one known parent.
+// Blue non-parental and adoption links keep their own routing.
 function familyRoutes(c,map){
- const groups=c.groups.filter(g=>g.parents.length===2&&g.children.length&&(!g.kind||g.kind==='red'||g.label==='усыновление'));
+ const groups=c.groups.filter(g=>g.children.length&&((g.parents.length===2&&(!g.kind||g.kind==='red'||g.label==='усыновление'))||(g.parents.length===1&&g.children.length>1&&!g.kind)));
  return groups.map((g,index)=>{
   const [a,b]=g.parents.map(id=>map[id]),children=g.children.map(id=>map[id]);
+  if(!b){
+   const childY=Math.min(...children.map(n=>n.y)),busY=a.y+NODE_H+(childY-a.y-NODE_H)*.5;
+   const childPoints=children.map(n=>({id:n.id,x:n.x+NODE_W/2,y:n.y}));
+   const candidates=[];
+   for(const side of [-1,1])for(const offset of [20,40,60,80]){
+    const x=side<0?a.x-offset:a.x+NODE_W+offset,port=side<0?a.x+PORTRAIT_INSET:a.x+PORTRAIT_INSET+PORTRAIT;
+    const stem=[[port,a.y+PORTRAIT/2],[x,a.y+PORTRAIT/2],[x,busY]];
+    const positions=[...new Set([x,...childPoints.map(n=>n.x)])].sort((u,v)=>u-v),bus=[];
+    for(let i=1;i<positions.length;i++){const x1=positions[i-1],x2=positions[i],middle=(x1+x2)/2,reachable=childPoints.filter(n=>middle>Math.min(x,n.x)&&middle<Math.max(x,n.x)).map(n=>n.id);if(reachable.length)bus.push({points:[[x1,busY],[x2,busY]],children:reachable})}
+    const branches=childPoints.map(n=>({child:n.id,points:[[n.x,busY],[n.x,n.y]]}));
+    const paths=[stem,...bus.map(segment=>segment.points),...branches.map(branch=>branch.points)];
+    const collisions=paths.reduce((sum,path)=>sum+c.nodes.filter(node=>pathHitsNode(path,node)).length,0);
+    const length=paths.reduce((sum,path)=>sum+path.slice(1).reduce((part,pt,i)=>part+Math.abs(pt[0]-path[i][0])+Math.abs(pt[1]-path[i][1]),0),0);
+    candidates.push({index,parents:[...g.parents],children:[...g.children],kind:'',label:g.label||'родитель и дети',anchor:[x,busY],stem,bus,branches,score:collisions*1000000+length});
+   }
+   candidates.sort((x,y)=>x.score-y.score);return candidates[0];
+  }
   const left=a.x<b.x?a:b,right=left===a?b:a;
   const pairGroups=groups.filter(other=>other.parents.length===2&&other.parents.every(id=>g.parents.includes(id)));
   const rank=pairGroups.indexOf(g),offset=(rank-(pairGroups.length-1)/2)*16;
@@ -346,7 +364,7 @@ function familyCorner(f,x){
  const stem=f.anchor[0]===x,branch=f.branches.find(b=>b.points[0][0]===x);
  if(stem===Boolean(branch))return null;
  const segment=touching[0].points,other=segment[0][0]===x?segment[1][0]:segment[0][0];
- const vertical=stem?Math.abs(f.stem[1][1]-f.stem[0][1]):Math.abs(branch.points[1][1]-branch.points[0][1]);
+ const vertical=stem?Math.abs(f.stem.at(-1)[1]-f.stem.at(-2)[1]):Math.abs(branch.points[1][1]-branch.points[0][1]);
  const radius=Math.min(8,Math.abs(other-x)/2,vertical/2);
  return radius>0?{dir:Math.sign(other-x),radius}:null;
 }
@@ -356,8 +374,10 @@ function familyPath(f,role,points){
   return roundedPath([[x1+(c1?c1.dir*c1.radius:0),y],[x2+(c2?c2.dir*c2.radius:0),y]]);
  }
  if(role==='stem'){
-  const [[x,y0],[,y]]=points,c=familyCorner(f,x);
-  return c?`M ${x} ${y0} L ${x} ${y-c.radius} Q ${x} ${y} ${x+c.dir*c.radius} ${y}`:roundedPath(points);
+  const [x,y]=points.at(-1),c=familyCorner(f,x);
+  if(!c)return roundedPath(points);
+  const prior=points.at(-2),direction=Math.sign(prior[1]-y);
+  return roundedPath([...points.slice(0,-1),[x,y+direction*c.radius]])+` Q ${x} ${y} ${x+c.dir*c.radius} ${y}`;
  }
  if(role==='branch'){
   const [[x,y],[,y1]]=points,c=familyCorner(f,x);
@@ -450,7 +470,7 @@ function render(c){
  const panel=document.createElement('div');panel.className='selection-panel';panel.setAttribute('aria-live','polite');host.append(panel);
  const edges=graphEdges(c),families=familyRoutes(c,map),nodeElements=new Map(),edgeElements=[];let selection=null,keyboardPerson=null;
  const familyForEdge=e=>families.find(f=>f.parents.includes(e.a)&&f.children.includes(e.b)&&e.kind===f.kind);
- // Keep individual connections for non-family relations (including godparents and one-parent links).
+ // Keep individual connections for non-family relations, including godparents and single-child links.
  const individual=edges.filter(e=>!familyForEdge(e)),ports=edgePorts(individual,map);
  const simpleRoutes=new Array(edges.length),simpleUsed=families.flatMap(f=>[f.stem,...f.bus.map(s=>s.points),...f.branches.map(b=>b.points)]),simpleFallback=new Map(),orderedTargets=new Map(),incomingGroups=new Map();
  for(const target of c.nodes){
@@ -510,7 +530,7 @@ function render(c){
  function addPath(path,info){
   const d=info.family?familyPath(info.family,info.role,path):roundedPath(path),group=document.createElementNS(SVG,'g');group.classList.add('edge');if(info.family)group.classList.add('family-edge');if(info.edge?.spouse)group.classList.add('edge-spouse');const kind=info.family?.kind||info.edge?.kind;if(kind)group.classList.add('edge-'+kind);
   const halo=document.createElementNS(SVG,'path');halo.setAttribute('d',d);halo.classList.add('edge-halo');const visible=document.createElementNS(SVG,'path');visible.setAttribute('d',d);visible.classList.add('edge-line');const hit=document.createElementNS(SVG,'path');hit.setAttribute('d',d);hit.classList.add('link-hit');hit.setAttribute('tabindex','0');hit.setAttribute('role','button');
-  if(info.family){const f=info.family;hit.setAttribute('data-role','family-'+info.role);hit.setAttribute('data-parents',f.parents.join(','));hit.setAttribute('data-family',String(f.index));if(info.child)hit.setAttribute('data-child',info.child);hit.setAttribute('aria-label',f.parents.map(id=>map[id].name).join(' и ')+' — '+(info.child?map[info.child].name:'общие дети')+': '+f.label)}
+  if(info.family){const f=info.family;hit.setAttribute('data-role','family-'+info.role);hit.setAttribute('data-parents',f.parents.join(','));hit.setAttribute('data-family',String(f.index));if(info.child)hit.setAttribute('data-child',info.child);hit.setAttribute('aria-label',f.parents.map(id=>map[id].name).join(' и ')+' — '+(info.child?map[info.child].name:(f.parents.length===1?'дети':'общие дети'))+': '+f.label)}
   else hit.setAttribute('aria-label',map[info.edge.a].name+' — '+map[info.edge.b].name+': '+info.edge.label);
   const select=()=>info.family?showFamily(info.family,info.child||null):showEdge(info.index);
   hit.addEventListener('click',ev=>{ev.stopPropagation();select()});hit.addEventListener('keydown',ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();select()}});group.append(halo,visible,hit);svg.append(group);edgeElements.push({group,...info})
@@ -522,14 +542,14 @@ function render(c){
  for(const e of unionEdges)drawIndividual(e);
  for(const f of families){addPath(f.stem,{family:f,role:'stem',children:f.children});for(const segment of f.bus)addPath(segment.points,{family:f,role:'bus',children:segment.children});for(const branch of f.branches)addPath(branch.points,{family:f,role:'branch',children:[branch.child],child:branch.child})}
  for(const e of individual)if(!unionEdges.includes(e))drawIndividual(e);
- for(const n of c.nodes){n.chartId=c.id;n.photos=(photoCatalog[c.id]||{})[n.id]||[];const b=document.createElement('button');b.type='button';b.className='node '+(n.kind||'');const [displayName,relationship]=cardText(c.id,n),portrait=n.photos.find(photo=>photo.portrait);const avatar=document.createElement('span');avatar.className='node-avatar';avatar.setAttribute('aria-hidden','true');if(portrait){b.classList.add('has-portrait');const img=document.createElement('img');img.className='node-portrait';img.src=portrait.src;img.alt='';img.loading='lazy';avatar.append(img)}else avatar.textContent=cardInitials(displayName);b.append(avatar);b.style.left=n.x+'px';b.style.top=n.y+'px';b.setAttribute('aria-label',displayName+(relationship?', '+relationship:'')+(n.kind==='uncertain'?', связь требует проверки':''));if(c.id==='family')b.setAttribute('aria-description','Нажмите Enter или пробел повторно, чтобы открыть подробности.');const name=document.createElement('strong');name.textContent=displayName;const sub=document.createElement('small');sub.textContent=relationship;b.append(name,sub);let pointerKind=null,lastInputKind=null,touchStart=null,touchMoved=false;
+ for(const n of c.nodes){n.chartId=c.id;n.photos=(photoCatalog[c.id]||{})[n.id]||[];const b=document.createElement('button');b.type='button';b.className='node '+(n.kind||'');const [displayName,relationship]=cardText(c.id,n),portrait=n.photos.find(photo=>photo.portrait);const avatar=document.createElement('span');avatar.className='node-avatar';avatar.setAttribute('aria-hidden','true');if(portrait){b.classList.add('has-portrait');const img=document.createElement('img');img.className='node-portrait';img.src=portrait.src;img.alt='';img.loading='lazy';avatar.append(img)}else avatar.textContent=cardInitials(displayName);b.append(avatar);b.style.left=n.x+'px';b.style.top=n.y+'px';b.setAttribute('aria-label',displayName+(relationship?', '+relationship:'')+(n.kind==='uncertain'?', связь требует проверки':''));b.setAttribute('aria-description','Нажмите Enter или пробел повторно, чтобы открыть подробности.');const name=document.createElement('strong');name.textContent=displayName;const sub=document.createElement('small');sub.textContent=relationship;b.append(name,sub);let pointerKind=null,lastInputKind=null,touchStart=null,touchMoved=false;
  b.addEventListener('pointerdown',e=>{pointerKind=e.pointerType;lastInputKind=e.pointerType;touchMoved=false;touchStart=e.pointerType==='touch'?{x:e.clientX,y:e.clientY}:null});
  b.addEventListener('pointermove',e=>{if(touchStart&&Math.hypot(e.clientX-touchStart.x,e.clientY-touchStart.y)>10){touchMoved=true;lastTouchTap=null}});
  b.addEventListener('pointercancel',()=>{pointerKind=null;touchStart=null;touchMoved=false;lastTouchTap=null});
  b.addEventListener('pointerenter',e=>{if(e.pointerType==='mouse'||e.pointerType==='pen')previewPerson(n.id)});b.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse'||e.pointerType==='pen')restoreSelection()});
  b.addEventListener('click',e=>{const touch=pointerKind==='touch'&&e?.detail!==0,moved=touch&&touchMoved;pointerKind=null;touchStart=null;touchMoved=false;if(moved){lastTouchTap=null;return}
-  // The main tree has no selection panel; a second keyboard activation opens details.
-  const keyboard=c.id==='family'&&e?.detail===0;if(keyboard&&keyboardPerson===n.id&&selection?.person===n.id){keyboardPerson=null;lastTouchTap=null;personInfo(n);return}keyboardPerson=keyboard?n.id:null;showPerson(n.id);
+  // A second keyboard activation opens details after selecting a person.
+  const keyboard=e?.detail===0;if(keyboard&&keyboardPerson===n.id&&selection?.person===n.id){keyboardPerson=null;lastTouchTap=null;personInfo(n);return}keyboardPerson=keyboard?n.id:null;showPerson(n.id);
   if(touch){const now=Date.now();if(lastTouchTap&&lastTouchTap.id===n.id&&now>=lastTouchTap.time&&now-lastTouchTap.time<=500){lastTouchTap=null;personInfo(n)}else lastTouchTap={id:n.id,time:now}}else lastTouchTap=null
  });b.addEventListener('dblclick',()=>{if(lastInputKind!=='touch')personInfo(n)});canvas.append(b);nodeElements.set(n.id,b)}
  const dated=c.nodes.filter(n=>(births[c.id]||{})[n.id]).sort((a,b)=>Number(births[c.id][a.id][1])-Number(births[c.id][b.id][1]));
