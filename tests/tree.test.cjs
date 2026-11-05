@@ -39,7 +39,7 @@ for(const c of charts){
   if(b){const left=a.x<b.x?a:b,right=left===a?b:a;
    if(f.anchor[0]<left.x+PORTRAIT_INSET+PORTRAIT||f.anchor[0]>right.x+PORTRAIT_INSET||f.anchor[1]!==left.y+PORTRAIT/2)throw Error(`${c.id}: family trunk must start on the parents' union`);
    if(first[0]!==f.anchor[0]||first[1]!==f.anchor[1])throw Error(`${c.id}: detached family stem`);
-  }else if(![a.x+PORTRAIT_INSET,a.x+PORTRAIT_INSET+PORTRAIT].includes(first[0])||first[1]!==a.y+PORTRAIT/2||last[0]!==f.anchor[0])throw Error(`${c.id}: single-parent trunk must start on its portrait and reach the bus`);
+  }else if(![a.x+PORTRAIT_INSET,a.x+PORTRAIT_INSET+PORTRAIT].includes(first[0])||first[1]<=a.y||first[1]>=a.y+PORTRAIT||first[1]===a.y+PORTRAIT/2||last[0]!==f.anchor[0])throw Error(`${c.id}: single-parent trunk must start separately from the spouse line and reach the bus`);
   checkPath(f.stem,c.nodes,f.parents.join('+'),'family stem');
   const bus=f.bus.map(s=>s.points).sort((x,y)=>x[0][0]-y[0][0]);
   const targetIds=f.branches.map(b=>b.child);
@@ -58,10 +58,14 @@ for(const c of charts){
 const familyRoutesMain=familyRoutes(charts.find(c=>c.id==='family'),Object.fromEntries(charts.find(c=>c.id==='family').nodes.map(n=>[n.id,n])));
 // The paternal branch keeps the two Maxims and two Svetas distinct and connects each generation.
 const khramovChart=charts.find(c=>c.id==='khramov'),khramovEdges=graph(khramovChart);
-for(const [parent,child] of [['max_old','nik'],['nik','and'],['kat','and'],['nik','sk'],['kat','sv_k'],['nik','max_young'],['sk','liza'],['sk','slava'],['max_young','sv_max'],['max_young','nik_max'],['and','you']]){
+for(const [parent,child] of [['max_old','nik'],['nik','and'],['kat','and'],['nik','sk'],['kat','sv_k'],['nik','max_young'],['sk','liza'],['sk','slava'],['max_young','sv_max'],['max_young','nik_max'],['and','you'],['slava','bogdan']]){
  if(!khramovEdges.some(e=>e.a===parent&&e.b===child))throw Error(`Missing paternal family relationship: ${parent} -> ${child}`);
 }
-if(births.khramov.nik[0]!=='15.11.1941'||births.khramov.kat[0]!=='23.02.1947')throw Error('Confirmed grandparents birth dates missing');
+if(births.khramov.nik[0]!=='15.11.1942 — 12.12.2018'||!khramovChart.nodes.find(n=>n.id==='nik').info.includes('1941')||births.khramov.kat[0]!=='23.02.1947')throw Error('Family-reported dates and grandfather birth-year discrepancy must be preserved');
+if(births.khramov.and[0]!=='11.07.1974 — 02.08.2015'||births.khramov.you[0]!=='03.03.1997'||!khramovChart.nodes.find(n=>n.id==='and').info.includes('2017'))throw Error('Confirmed father and user dates or conflict are missing');
+for(const [parent,child] of [['marina_b','liza'],['marina_b','slava'],['olga_h','sv_max'],['olga_h','nik_max'],['marina_s','sv_max'],['marina_s','nik_max']])if(khramovEdges.some(e=>e.a===parent&&e.b===child))throw Error(`Do not infer an unconfirmed parent: ${parent} -> ${child}`);
+const khramovTimeline=walk(roots['#chart-khramov']).find(e=>e.className==='timeline-list');
+if(births.khramov.marina_b[1]!==null||khramovTimeline.children.some(e=>e.children.some(child=>child.textContent==='Марина Геннадьевна Бондаренко')))throw Error('Incomplete birth year must not appear as a known timeline year');
 if(births.khramov.nik_max?.[0]!=='11.08.2026'||khramovChart.nodes.find(n=>n.id==='nik_max')===khramovChart.nodes.find(n=>n.id==='nik'))throw Error('The new Nikolai must remain distinct from his grandfather');
 if(khramovChart.nodes.find(n=>n.id==='sv_k')===khramovChart.nodes.find(n=>n.id==='sv_max'))throw Error('Different Svetas must remain distinct');
 const fetisovFamily=familyRoutesMain.filter(f=>f.parents.includes('tan')&&f.parents.includes('val'));
