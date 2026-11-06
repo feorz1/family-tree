@@ -154,6 +154,16 @@ for(const child of ['nik_son','vas_son','fed_son'])if(!['ni','na'].every(parent=
 if(births.family.fed_son?.[0]!=='1927 · по сообщению семьи'||births.family.nik_son||births.family.vas_son||!graph(mainFamily).some(e=>e.a==='vasi_sib'&&e.b==='ni'&&!e.kind))throw Error('Fedor’s year and Vasily’s sibling relationship must remain distinct');
 for(const id of ['@I_nikolai_nik@','@I_vasili_nik@','@I_fedor_nik@'])if(!gedRecords.get('@F_n2@')?.includes('1 CHIL '+id)||!gedRecords.get(id)?.includes('1 FAMC @F_n2@')||!gedRecords.get(id)?.includes('1 SOUR @S35@'))throw Error('Reported sons must be exported with their family and source: '+id);
 if(!gedRecords.get('@I_fedor_nik@')?.includes('2 DATE 1927')||!gedRecords.get('@F_niki_siblings@')?.includes('1 CHIL @I_vasi_sib@')||!gedRecords.get('@I_vasi_sib@')?.includes('1 SOUR @S34@'))throw Error('Fedor’s year and the different Vasily must be sourced in GEDCOM');
+const evdSister=mainFamily.nodes.find(n=>n.id==='evd_sis'),petr16=mainFamily.nodes.find(n=>n.id==='petr16');
+if(!evdSister?.info.includes('сестра Никиты и Василия')||!graph(mainFamily).some(e=>e.a==='evd_sis'&&e.b==='ni'&&!e.kind))throw Error('Evdokia must be a family-reported sibling');
+if(petr16?.kind!=='uncertain'||!petr16.info.includes('Артемием Никитиным')||!petr16.info.includes('перепутаны')||!petr16.info.includes('1896')||births.family.petr16?.[0]!=='03.05.1916 · ст. стиль')throw Error('Peter’s original father and possible family identification must remain distinct');
+if(!['ni','na'].every(parent=>graph(mainFamily).some(e=>e.a===parent&&e.b==='petr16'&&e.kind==='red'))||graph(mainFamily).some(e=>['ni','na'].includes(e.a)&&e.b==='petr16'&&e.kind!=='red'))throw Error('Both parent links to Peter must be marked unconfirmed');
+const petrFamily=familyRoutesMain.find(f=>f.parents.includes('ni')&&f.parents.includes('na'));
+if(!petrFamily?.children.includes('petr16')||!petrFamily.uncertainChildren?.includes('petr16')||!petrFamily.children.includes('iv'))throw Error('Peter must share the actual family route with an uncertain branch');
+const petrRecord=gedRecords.get('@I_petr16@')||'',evdRecord=gedRecords.get('@I_evd_sis@')||'';
+if(!petrRecord.includes('2 DATE @#DJULIAN@ 3 MAY 1916')||!petrRecord.includes('2 DATE @#DJULIAN@ 15 MAY 1916')||!petrRecord.includes('1 SOUR @S36@')||!petrRecord.includes('1 SOUR @S37@')||!petrRecord.includes('Артемий Никитин')||!gedRecords.get('@F_n2@')?.includes('1 CHIL @I_petr16@\n2 NOTE'))throw Error('Peter’s Gregorian/Julian calendar, provenance, and uncertain parentage must be preserved');
+if(!evdRecord.includes('1 SOUR @S36@')||!evdRecord.includes('1 SOUR @S37@')||!evdRecord.includes('1 FAMC @F_niki_siblings@')||!gedRecords.get('@F_niki_siblings@')?.includes('1 CHIL @I_evd_sis@')||!evdRecord.includes('1 ASSO @I_petr16@')||!petrRecord.includes('1 ASSO @I_evd_sis@'))throw Error('Evdokia and her baptismal role must retain provenance');
+if(/^1 BIRT/m.test(evdRecord))throw Error('The 1898 namesake birth must not be silently assigned to Evdokia');
 const agaGed=gedRecords.get('@I_aga_god07@')||'';
 if(!agaGed.includes('1 NAME Агафия Артемиева /Левина/\n2 TYPE married\n2 SOUR @S32@')||!gedRecords.get('@I_para_per12@')?.includes('1 ASSO @I_aga_god07@')||!gedRecords.get('@I_para_sis@')?.includes('1 ASSO @I_aga_god07@')||gedRecords.has('@I_aga_god12@'))throw Error('Agafia’s confirmed married name and godparent role must share one person');
 const nikitaSiblings=gedRecords.get('@F_niki_siblings@')||'';if(!['@I_niki@','@I_aga_god07@'].every(id=>nikitaSiblings.includes('1 CHIL '+id)&&gedRecords.get(id)?.includes('1 FAMC @F_niki_siblings@'))||/^1 (?:HUSB|WIFE) /m.test(nikitaSiblings)||!gedRecords.get('@I_ivan@')?.includes('1 ASSO @I_aga_god07@'))throw Error('Nikita and Agafia must share an unsourced-parent family and retain the godparent association');
@@ -323,7 +333,7 @@ for(const c of charts){
  const map=Object.fromEntries(c.nodes.map(n=>[n.id,n])),families=familyRoutes(c,map);
  function onPortrait(point,node){const [x,y]=point,l=node.x+PORTRAIT_INSET,r=l+PORTRAIT,t=node.y,b=t+PORTRAIT,eps=.02;return ((Math.abs(x-l)<eps||Math.abs(x-r)<eps)&&y>=t-eps&&y<=b+eps)||((Math.abs(y-t)<eps||Math.abs(y-b)<eps)&&x>=l-eps&&x<=r+eps)}
  for(const edge of graph(c)){
-  if(families.some(f=>f.parents.includes(edge.a)&&f.children.includes(edge.b)&&edge.kind===f.kind))continue;
+  if(families.some(f=>f.parents.includes(edge.a)&&f.children.includes(edge.b)&&edge.kind===(f.uncertainChildren?.includes(edge.b)?'red':f.kind)))continue;
   const hit=hits.find(h=>h.attrs['aria-label']===`${map[edge.a].name} — ${map[edge.b].name}: ${edge.label}`);
   if(!hit)throw Error(`${c.id}: missing rendered line ${edge.a} → ${edge.b}`);
   const points=samples(hit.attrs.d),first=points[0],last=points.at(-1);
@@ -348,6 +358,10 @@ for(const [parent,children] of [['an',['konst_an','oleg_an']],['mih',['sv','sr']
   cardById(child).handlers.pointerleave({pointerType:'mouse'});
  }
 }
+const peterBranch=familyGroup('branch','ni,na','petr16'),ivanBranch=familyGroup('branch','ni,na','iv');
+if(!peterBranch||!findGroup(peterBranch).classList.contains('edge-red')||!peterBranch.attrs['aria-label'].includes('требует проверки')||!ivanBranch||findGroup(ivanBranch).classList.contains('edge-red'))throw Error('Only Peter’s uncertain connection should be red in the shared branch');
+peterBranch.handlers.click({stopPropagation(){}});
+if(!findGroup(peterBranch).classList.contains('is-selected')||!findGroup(familyGroup('stem','ni,na')).classList.contains('is-selected'))throw Error('Selecting Peter must highlight his connection to both parents');
 const familyStem=familyGroup('stem','tan,val'),familyIlya=familyGroup('branch','tan,val','ilya'),familySvetlana=familyGroup('branch','tan,val','svetlana');
 if(!familyStem||!familyIlya||!familySvetlana)throw Error('Missing Fetisov family stem or branches');
 const parent=cardById('tan'),child=cardById('ilya'),pointer={pointerType:'mouse'};
