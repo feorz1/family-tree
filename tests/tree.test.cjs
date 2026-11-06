@@ -91,6 +91,8 @@ const gedcom=fs.readFileSync(require('path').join(__dirname,'..','semeinoe-drevo
 const gedRecords=new Map([...gedcom.matchAll(/^0 (@[^@]+@) (INDI|FAM|SOUR)\r?\n([\s\S]*?)(?=^0 |(?![\s\S]))/gm)].map(m=>[m[1],m[3]]));
 for(const match of gedcom.matchAll(/^\d+ (?:SOUR|FAMS|FAMC|HUSB|WIFE|CHIL) (@[^@]+@)\s*$/gm))if(!gedRecords.has(match[1]))throw Error('Dangling GEDCOM reference: '+match[1]);
 const weddingGed=gedRecords.get('@F_nik93@'),twinsGed=gedRecords.get('@F_nik09@');
+const petrGed=gedRecords.get('@I_petr_nikitin_1896@');
+if(!petrGed?.includes('1 SOUR @S18@')||/^1 FAM[CS] /m.test(petrGed)||!petrGed.includes('Родство с семейными Периковыми не установлено'))throw Error('The 1896 namesake must stay separate and cite the transcription');
 const sistersGed=gedRecords.get('@F_popova_siblings@');
 if(!['@I_nin@','@I_lud@'].every(id=>sistersGed?.includes('1 CHIL '+id)&&gedRecords.get(id)?.includes('1 FAMC @F_popova_siblings@'))||/^1 (?:HUSB|WIFE) /m.test(sistersGed||''))throw Error('The reported sisters must share a family without inventing their parents');
 for(const id of ['@F_n3@','@F_n6@','@F_n8@','@F_n11@','@F_n12@'])if(!gedRecords.get(id)?.includes('1 MARR\n2 SOUR @S1@'))throw Error('A reported marriage must be exported with its family source: '+id);
@@ -438,5 +440,7 @@ personInfo({id:'fyodor',chartId:'family',name:'Без даты',sub:'',photos:[]
 if(dateText()!=='')throw Error('The same id in another chart must not inherit Fyodor’s date');
 personInfo(person('perikov','io'));
 if(!roots['#dialog-links'].children.some(e=>e.href===person('perikov','io').source))throw Error('Archive links must remain accessible from the modal');
+personInfo(person('perikov','petr'));
+if(!roots['#dialog-links'].children.some(e=>e.href===person('perikov','petr').source&&e.textContent==='Открыть выписку'))throw Error('The transcription must not be labelled as the original metric record');
 modal.close();
 console.log('Modal names, relationships, qualified dates, sources and chart-specific data validated.');
