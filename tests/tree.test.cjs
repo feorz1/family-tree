@@ -66,6 +66,13 @@ if(!boykoFamily?.sidePort||boykoFamily.kind!=='blue'||boykoFamily.branches[0]?.c
 const familyRoutesMain=familyRoutes(charts.find(c=>c.id==='family'),Object.fromEntries(charts.find(c=>c.id==='family').nodes.map(n=>[n.id,n])));
 // The paternal branch keeps the two Maxims and two Svetas distinct and connects each generation.
 const khramovChart=charts.find(c=>c.id==='khramov'),khramovEdges=graph(khramovChart);
+// Keep siblings and their households close enough to read as one family.
+const khramovNodes=Object.fromEntries(khramovChart.nodes.map(n=>[n.id,n]));
+const siblingGaps=['sk','sv_k','and','max_young'].slice(1).map((id,i)=>khramovNodes[id].x-khramovNodes[['sk','sv_k','and'][i]].x);
+if(Math.max(...siblingGaps)>600||Math.max(...siblingGaps)>Math.min(...siblingGaps)*1.5||khramovChart.w>2800)throw Error('Paternal sibling groups should be compact and evenly spaced');
+for(let i=0;i<khramovChart.nodes.length;i++)for(let j=i+1;j<khramovChart.nodes.length;j++)for(const a of cardBoxes(khramovChart.nodes[i]))for(const b of cardBoxes(khramovChart.nodes[j])){
+ if(a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top)throw Error(`Paternal cards overlap: ${khramovChart.nodes[i].id} and ${khramovChart.nodes[j].id}`);
+}
 for(const [parent,child] of [['max_old','nik'],['nik','and'],['kat','and'],['nik','sk'],['kat','sv_k'],['nik','max_young'],['sk','liza'],['sk','slava'],['max_young','sv_max'],['max_young','nik_max'],['and','you'],['slava','bogdan']]){
  if(!khramovEdges.some(e=>e.a===parent&&e.b===child))throw Error(`Missing paternal family relationship: ${parent} -> ${child}`);
 }
