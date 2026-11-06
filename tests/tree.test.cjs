@@ -29,7 +29,12 @@ for(const c of charts){
  if(edges.some(e=>e.spouse&&!(marriedPairs[c.id]||[]).some(([a,b])=>a===e.a&&b===e.b||a===e.b&&b===e.a)))throw Error('Unverified spouse connection');
 }
 const boykoAdopters=graph(charts.find(c=>c.id==='boyko')).find(e=>e.a==='alex'&&e.b==='nina');
-if(!boykoAdopters||boykoAdopters.spouse||boykoAdopters.kind!=='blue')throw Error('Joint adoption alone must not imply marriage');
+if(!boykoAdopters?.spouse)throw Error('The family account identifies Alexey and Nina as spouses');
+const boykoEdges=graph(charts.find(c=>c.id==='boyko'));
+for(const parent of ['alex','nina'])if(!boykoEdges.some(e=>e.a===parent&&e.b==='ser2'&&e.kind==='blue'&&e.label==='усыновление'))throw Error('The adoption must remain distinct from the marriage');
+const adoptionAlone=graph({id:'no-marriage-evidence',groups:[{parents:['a','b'],children:['c'],kind:'blue',label:'усыновление'}]});
+const unprovenUnion=adoptionAlone.find(e=>e.a==='a'&&e.b==='b');
+if(!unprovenUnion||unprovenUnion.spouse||unprovenUnion.kind!=='blue')throw Error('Joint adoption alone must not imply marriage');
 // A family line is a continuous route from the parents' union to each actual child.
 const familyRoutes=vm.runInContext('familyRoutes',ctx);
 for(const c of charts){
@@ -46,7 +51,8 @@ for(const c of charts){
   if(new Set(targetIds).size!==f.children.length||f.children.some(id=>!targetIds.includes(id)))throw Error(`${c.id}: each child needs exactly one family branch`);
   for(const branch of f.branches){
    const child=map[branch.child],start=branch.points[0],end=branch.points.at(-1);
-   if(start[1]!==last[1]||end[0]<child.x+PORTRAIT_INSET||end[0]>child.x+PORTRAIT_INSET+PORTRAIT||end[1]!==child.y)throw Error(`${c.id}: disconnected child branch ${branch.child}`);
+   const validEnd=f.sidePort?([child.x+PORTRAIT_INSET,child.x+PORTRAIT_INSET+PORTRAIT].includes(end[0])&&end[1]===child.y+PORTRAIT/2):(end[0]>=child.x+PORTRAIT_INSET&&end[0]<=child.x+PORTRAIT_INSET+PORTRAIT&&end[1]===child.y);
+   if(start[1]!==last[1]||!validEnd)throw Error(`${c.id}: disconnected child branch ${branch.child}`);
    let reached=Math.min(last[0],start[0]);const target=Math.max(last[0],start[0]);
    for(const segment of bus){if(segment[0][1]!==last[1]||segment[1][1]!==last[1])throw Error(`${c.id}: bus height mismatch`);if(segment[0][0]<=reached&&segment[1][0]>reached)reached=segment[1][0]}
    if(reached<target)throw Error(`${c.id}: bus does not connect to ${branch.child}`);
@@ -55,16 +61,20 @@ for(const c of charts){
   for(const segment of bus)checkPath(segment,c.nodes,f.parents.join('+'),'family bus');
  }
 }
+const boykoChart=charts.find(c=>c.id==='boyko'),boykoFamily=familyRoutes(boykoChart,Object.fromEntries(boykoChart.nodes.map(n=>[n.id,n]))).find(f=>f.label==='усыновление');
+if(!boykoFamily?.sidePort||boykoFamily.kind!=='blue'||boykoFamily.branches[0]?.child!=='ser2')throw Error('The adoptive line must reach Sergey separately from his biological mother');
 const familyRoutesMain=familyRoutes(charts.find(c=>c.id==='family'),Object.fromEntries(charts.find(c=>c.id==='family').nodes.map(n=>[n.id,n])));
 // The paternal branch keeps the two Maxims and two Svetas distinct and connects each generation.
 const khramovChart=charts.find(c=>c.id==='khramov'),khramovEdges=graph(khramovChart);
 for(const [parent,child] of [['max_old','nik'],['nik','and'],['kat','and'],['nik','sk'],['kat','sv_k'],['nik','max_young'],['sk','liza'],['sk','slava'],['max_young','sv_max'],['max_young','nik_max'],['and','you'],['slava','bogdan']]){
  if(!khramovEdges.some(e=>e.a===parent&&e.b===child))throw Error(`Missing paternal family relationship: ${parent} -> ${child}`);
 }
-if(births.khramov.nik[0]!=='15.11.1942 — 12.12.2018'||!khramovChart.nodes.find(n=>n.id==='nik').info.includes('1941')||births.khramov.kat[0]!=='23.02.1947')throw Error('Family-reported dates and grandfather birth-year discrepancy must be preserved');
+if(!births.khramov.nik[0].includes('1941')||!births.khramov.nik[0].includes('1942')||!khramovChart.nodes.find(n=>n.id==='nik').info.includes('1941')||births.khramov.kat[0]!=='23.02.1947')throw Error('Family-reported dates and grandfather birth-year discrepancy must be preserved');
 if(births.khramov.and[0]!=='11.07.1974 — 02.08.2015'||births.khramov.you[0]!=='03.03.1997'||!khramovChart.nodes.find(n=>n.id==='and').info.includes('2017'))throw Error('Confirmed father and user dates or conflict are missing');
 for(const [parent,child] of [['marina_b','liza'],['marina_b','slava'],['olga_h','sv_max'],['olga_h','nik_max'],['marina_s','sv_max'],['marina_s','nik_max']])if(khramovEdges.some(e=>e.a===parent&&e.b===child))throw Error(`Do not infer an unconfirmed parent: ${parent} -> ${child}`);
 const khramovTimeline=walk(roots['#chart-khramov']).find(e=>e.className==='timeline-list');
+const grandfatherTimeline=khramovTimeline.children.find(e=>e.children.some(child=>child.textContent==='Николай Максимович Храмов'));
+if(grandfatherTimeline?.children[0]?.textContent!=='1942?')throw Error('A disputed birth year must remain visibly uncertain on the timeline');
 if(births.khramov.marina_b[1]!==null||khramovTimeline.children.some(e=>e.children.some(child=>child.textContent==='Марина Геннадьевна Бондаренко')))throw Error('Incomplete birth year must not appear as a known timeline year');
 if(births.khramov.nik_max?.[0]!=='11.08.2026'||khramovChart.nodes.find(n=>n.id==='nik_max')===khramovChart.nodes.find(n=>n.id==='nik'))throw Error('The new Nikolai must remain distinct from his grandfather');
 if(khramovChart.nodes.find(n=>n.id==='sv_k')===khramovChart.nodes.find(n=>n.id==='sv_max'))throw Error('Different Svetas must remain distinct');
@@ -96,6 +106,8 @@ if(!petrGed?.includes('1 SOUR @S18@')||/^1 FAM[CS] /m.test(petrGed)||!petrGed.in
 const sistersGed=gedRecords.get('@F_popova_siblings@');
 if(!['@I_nin@','@I_lud@'].every(id=>sistersGed?.includes('1 CHIL '+id)&&gedRecords.get(id)?.includes('1 FAMC @F_popova_siblings@'))||/^1 (?:HUSB|WIFE) /m.test(sistersGed||''))throw Error('The reported sisters must share a family without inventing their parents');
 for(const id of ['@F_n3@','@F_n6@','@F_n8@','@F_n11@','@F_n12@'])if(!gedRecords.get(id)?.includes('1 MARR\n2 SOUR @S1@'))throw Error('A reported marriage must be exported with its family source: '+id);
+if(!gedRecords.get('@F_khr2@')?.includes('1 MARR\n2 SOUR @S12@'))throw Error('Nikolai and Ekaterina’s marriage must cite the family table');
+if(!gedRecords.get('@I_nikolai_m@')?.includes('2 NOTE Ранее в семейном сообщении указано 15.11.1941'))throw Error('The competing birth year must accompany the birth event in GEDCOM');
 for(const id of ['@F_n1@','@F_n2@'])if(gedRecords.get(id)?.includes('1 MARR'))throw Error('A marriage must not be inferred solely from parenthood: '+id);
 if(!gedRecords.get('@I_du@')?.includes('1 NAME Евдокия Ефимовна /Никифорова/')||gedRecords.get('@I_du@')?.includes('1 BIRT'))throw Error('Family patronymic must be kept without adopting the incorrect birth date');
 if(!gedRecords.get('@I_val@')?.includes('1 NAME Валентин /Фетисов/')||!gedRecords.get('@I_val@')?.includes('1 NAME Валентин /Фитисов/'))throw Error('Both family surname spellings must survive GEDCOM export');
@@ -195,7 +207,8 @@ for(const c of charts){
    const hitsForChild=branches.filter(h=>h.attrs['data-child']===branch.child),child=map[branch.child];
    if(hitsForChild.length!==1)throw Error(c.id+': incorrect child branch '+branch.child);
    const end=samples(hitsForChild[0].attrs.d).at(-1);
-   if(Math.abs(end[1]-child.y)>.001||end[0]<child.x+PORTRAIT_INSET||end[0]>child.x+PORTRAIT_INSET+PORTRAIT)throw Error(c.id+': rendered branch does not reach '+branch.child);
+   const reaches=f.sidePort?([child.x+PORTRAIT_INSET,child.x+PORTRAIT_INSET+PORTRAIT].some(x=>Math.abs(end[0]-x)<.001)&&Math.abs(end[1]-(child.y+PORTRAIT/2))<.001):(Math.abs(end[1]-child.y)<.001&&end[0]>=child.x+PORTRAIT_INSET&&end[0]<=child.x+PORTRAIT_INSET+PORTRAIT);
+   if(!reaches)throw Error(c.id+': rendered branch does not reach '+branch.child);
   }
   // Verify connectivity of the actual rendered SVG segments, not merely the unrounded topology.
   const drawnPaths=[...stems,...buses,...branches];
