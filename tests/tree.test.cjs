@@ -84,12 +84,17 @@ for(const [marriagePerson,parentOfTwins] of [['ef_mar93','ef2'],['ak_mar93','ak2
  if(!possibleIdentity||possibleIdentity.kind!=='red'||possibleIdentity.label!=='возможно один человек')throw Error('The 1893 and 1909 identities must remain explicitly unconfirmed');
  if(nikiforovEdges.some(e=>e.a===marriagePerson&&['d1909','a1909'].includes(e.b)))throw Error('The 1893 marriage cannot be treated as proven parentage of the 1909 twins');
 }
+if(!['fed_tuev','evd_tuev'].every(parent=>nikiforovEdges.some(e=>e.a===parent&&e.b==='ak_baby74'))||!nikiforovEdges.some(e=>e.a==='ak_mar93'&&e.b==='ak_baby74'&&e.kind==='red'&&e.label==='возможно один человек'))throw Error('The 1874 family must be documented separately and its identity with the 1893 bride remain unconfirmed');
+if(!archiveRoutes.some(f=>f.kind==='red'&&f.children.includes('anast94')))throw Error('The 1894 child must remain an unconfirmed match to the 1909 parents');
+if(births.nikiforov.ak_baby74?.[0]!=='04.06.1874 · ст. стиль')throw Error('The 1874 birth must retain the calendar of the original record');
 const gedcom=fs.readFileSync(require('path').join(__dirname,'..','semeinoe-drevo.ged'),'utf8');
 const gedRecords=new Map([...gedcom.matchAll(/^0 (@[^@]+@) (INDI|FAM|SOUR)\r?\n([\s\S]*?)(?=^0 |(?![\s\S]))/gm)].map(m=>[m[1],m[3]]));
 for(const match of gedcom.matchAll(/^\d+ (?:SOUR|FAMS|FAMC|HUSB|WIFE|CHIL) (@[^@]+@)\s*$/gm))if(!gedRecords.has(match[1]))throw Error('Dangling GEDCOM reference: '+match[1]);
 const weddingGed=gedRecords.get('@F_nik93@'),twinsGed=gedRecords.get('@F_nik09@');
 if(!weddingGed?.includes('1 HUSB @I_ef93@')||!weddingGed.includes('1 WIFE @I_ak93@')||!weddingGed.includes('2 DATE @#DJULIAN@ 5 NOV 1893')||weddingGed.includes('1 CHIL '))throw Error('The documented 1893 marriage must retain the source calendar without inferred children');
 if(!twinsGed?.includes('1 CHIL @I_evd_candidate@')||!twinsGed.includes('1 CHIL @I_ant_candidate@')||twinsGed.includes('1 CHIL @I_du@'))throw Error('The 1909 twins must remain separate from the family member whose identity is unproved');
+if(!gedRecords.get('@F_tuev74@')?.includes('1 CHIL @I_ak74@')||!gedRecords.get('@F_nik94@')?.includes('1 CHIL @I_anast94@')||twinsGed.includes('@I_anast94@'))throw Error('The 1874 and 1894 archive families must remain independent');
+for(const [id,date] of [['@I_ak74@','4 JUN 1874'],['@I_anast94@','10 DEC 1894']])if(!gedRecords.get(id)?.includes('2 DATE @#DJULIAN@ '+date))throw Error('Archive birth date must retain the source calendar: '+id);
 for(const id of ['@I_evd_candidate@','@I_ant_candidate@'])if(!gedRecords.get(id)?.includes('2 DATE @#DJULIAN@ 16 FEB 1909'))throw Error('The twins birth date must retain its source calendar');
 console.log('All routes avoid unrelated cards; selection, details, zoom and timelines validated.');
 const host=roots['#chart-family'];const all=walk(host),view=all.find(e=>e.className==='viewport'),output=all.find(e=>e.tag==='output');const original=output.textContent;let prevented=false;view.handlers.wheel({ctrlKey:true,metaKey:false,deltaY:-120,clientX:300,clientY:200,preventDefault(){prevented=true}});if(!prevented||output.textContent===original)throw Error('wheel zoom failed');let target={closest:()=>false};view.handlers.pointerdown({button:0,pointerId:1,clientX:200,clientY:200,target});view.handlers.pointerdown({button:0,pointerId:2,clientX:300,clientY:200,target});const beforePinch=output.textContent;view.handlers.pointermove({pointerId:2,clientX:350,clientY:200});if(output.textContent===beforePinch)throw Error('pinch zoom failed');view.handlers.pointerup({pointerId:2});view.handlers.pointerup({pointerId:1});const timeline=all.find(e=>e.className==='timeline-item');timeline.handlers.click();const panel=all.find(e=>e.className==='selection-panel');if(!panel.children.some(e=>e.tag==='strong'))throw Error('timeline focus failed');const edgeHit=all.find(e=>e.classList.contains('link-hit'));edgeHit.handlers.click({stopPropagation(){}});if(!panel.children.some(e=>e.className==='related-list'))throw Error('edge selection failed');console.log('Wheel zoom, pinch, drag, timeline focus and selected relation validated.');
@@ -275,6 +280,9 @@ if(rightAdoption<=Math.max(serNode.x+NODE_W,nastNode.x+NODE_W)||rightAdoption>=i
 adoptionHit.handlers.click({stopPropagation(){}});
 if(!panel.children.some(e=>e.tag==='strong'&&e.textContent==='\u0443\u0441\u044b\u043d\u043e\u0432\u043b\u0435\u043d\u0438\u0435'))throw Error('Adoption selection must retain its label');
 const archiveRoot=roots['#chart-nikiforov'],archiveHits=walk(archiveRoot).filter(e=>e.classList.contains('link-hit'));
+const akIdentity=archiveHits.find(e=>e.attrs['aria-label']==='Акилина Туева — Акулина Туева: возможно один человек');
+const ak1874=archive.nodes.find(n=>n.id==='ak_baby74'),identityPoints=akIdentity&&samples(akIdentity.attrs.d);
+if(!akIdentity||distance(identityPoints.at(-1),[ak1874.x+PORTRAIT_INSET,ak1874.y+PORTRAIT/2])>.01)throw Error('The possible identity must meet the 1874 portrait at its side, separate from the parents line');
 const redBranch=archiveHits.find(e=>e.attrs['data-parents']==='ef2,ak2'&&e.attrs['data-child']==='stef');
 if(!redBranch||!walk(archiveRoot).find(e=>e.tag==='g'&&e.children.includes(redBranch))?.classList.contains('edge-red'))throw Error('Uncertain family branch must remain red');
 redBranch.handlers.click({stopPropagation(){}});
