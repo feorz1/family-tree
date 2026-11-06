@@ -316,6 +316,10 @@ now+=1000;tap(mishaCard);now+=100;tap(archiveCard);now+=100;tap(mishaCard);if(mo
 console.log('One tap selects; two taps open details. Other inputs do not cause accidental openings.');
 // Check real assigned photos, including the memorial which is a document, not a portrait.
 const photoCatalog=vm.runInContext('photoCatalog',ctx),path=require('path');
+const redactedTable='assets/sources/khramov-family-table-redacted.png';
+const redactedHash=require('crypto').createHash('sha256').update(fs.readFileSync(path.join(__dirname,'..',redactedTable))).digest('hex');
+if(redactedHash!=='796b00c30aaf86e63973ef9572d08ff310e3db0c1865ac43987e5dde0358571c')throw Error('Verify that both phone numbers are fully redacted before replacing the family table');
+if(!photoCatalog.khramov.nik?.some(photo=>photo.src===redactedTable&&!photo.portrait)||!photoCatalog.khramov.and?.some(photo=>photo.src===redactedTable&&!photo.portrait))throw Error('Redacted family table must be available as a source, not a portrait');
 for(const [chartId,personId,src] of [['family','an','assets/photos/anatoly-perikov.png'],['family','an','assets/photos/anatoly-perikov-young.png'],['family','yu','assets/photos/yuri-perikov-hat.png'],['family','tam','assets/photos/tamara-perikova.png'],['khramov','max_old','assets/photos/maxim-khramov.png'],['family','and','assets/photos/andrey-khramov-memorial.png'],['khramov','and','assets/photos/andrey-khramov-memorial.png']])if(!photoCatalog[chartId]?.[personId]?.some(photo=>photo.src===src))throw Error(`Photo assignment missing: ${chartId}/${personId}`);
 if(photoCatalog.family.an.some(photo=>photo.src.includes('yuri-perikov-hat')))throw Error('Yuri portrait must not be attributed to Anatoly');
 for(const [chartId,people] of Object.entries(photoCatalog))for(const [personId,photos] of Object.entries(people)){
