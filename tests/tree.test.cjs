@@ -97,6 +97,12 @@ for(const [marriagePerson,parentOfTwins] of [['ef_mar93','ef2'],['ak_mar93','ak2
 if(!['fed_tuev','evd_tuev'].every(parent=>nikiforovEdges.some(e=>e.a===parent&&e.b==='ak_baby74'))||!nikiforovEdges.some(e=>e.a==='ak_mar93'&&e.b==='ak_baby74'&&e.kind==='red'&&e.label==='возможно один человек'))throw Error('The 1874 family must be documented separately and its identity with the 1893 bride remain unconfirmed');
 if(!archiveRoutes.some(f=>f.kind==='red'&&f.children.includes('anast94')))throw Error('The 1894 child must remain an unconfirmed match to the 1909 parents');
 if(births.nikiforov.ak_baby74?.[0]!=='04.06.1874 · ст. стиль')throw Error('The 1874 birth must retain the calendar of the original record');
+const leviny=charts.find(c=>c.id==='leviny'),levinyEdges=graph(leviny);
+for(const [parent,child] of [['geo16','feo16'],['aga16','feo16'],['geo17','ol17'],['aga17','ol17']])if(!levinyEdges.some(e=>e.a===parent&&e.b===child))throw Error('Missing documented parent in the Levin records: '+parent+' '+child);
+for(const [parent,child] of [['geo16','ol17'],['aga16','ol17'],['geo17','feo16'],['aga17','feo16']])if(levinyEdges.some(e=>e.a===parent&&e.b===child))throw Error('The two Levin families must not be merged without proof');
+for(const [child,witness] of [['feo16','tik16'],['feo16','evd16'],['ol17','nik17']])if(!levinyEdges.some(e=>e.a===child&&e.b===witness&&e.kind==='blue'))throw Error('A godparent must be represented separately in the archive chart');
+for(const [a,b] of [['aga16','ref12'],['ref12','aga17'],['nik17','ref05']])if(!levinyEdges.some(e=>e.a===a&&e.b===b&&e.kind==='red'&&e.label==='возможно один человек'))throw Error('A possible namesake match must remain uncertain');
+if(levinyEdges.some(e=>e.spouse)||!leviny.nodes.find(n=>n.id==='ol17')?.info.includes('по карточке'))throw Error('A marriage or an OCR reading cannot become established facts');
 const gedcom=fs.readFileSync(require('path').join(__dirname,'..','semeinoe-drevo.ged'),'utf8');
 const gedRecords=new Map([...gedcom.matchAll(/^0 (@[^@]+@) (INDI|FAM|SOUR)\r?\n([\s\S]*?)(?=^0 |(?![\s\S]))/gm)].map(m=>[m[1],m[3]]));
 for(const match of gedcom.matchAll(/^\d+ (?:SOUR|FAMS|FAMC|HUSB|WIFE|CHIL|ASSO) (@[^@]+@)\s*$/gm))if(!gedRecords.has(match[1]))throw Error('Dangling GEDCOM reference: '+match[1]);
@@ -123,6 +129,17 @@ const antoninaGed=gedRecords.get('@I_ant_per09@')||'',iraidaGed=gedRecords.get('
 if(!mother09Ged.includes('Иванова')||!mother09Ged.includes('Ермолаевна')||!mother09Ged.includes('требуют проверки')||/^1 NAME .*Ермолаева/m.test(mother09Ged))throw Error('The 1909 mother’s conflicting readings must remain unresolved');
 if(!/1 BIRT\n2 DATE 1909\n2 SOUR @S24@/.test(antoninaGed)||!/1 BIRT\n2 DATE 1914\n2 SOUR @S25@/.test(iraidaGed)||/^2 DATE @#DJULIAN@/m.test(antoninaGed+iraidaGed))throw Error('Unverified days of the 1909 and 1914 records must not become exact dates');
 for(const [child,witnesses,source] of [[antoninaGed,['@I_ilya_god09@','@I_anast_god09@'],'@S24@'],[iraidaGed,['@I_mih_god14@','@I_eli_god14@'],'@S25@']])for(const id of witnesses)if(!child.includes('1 ASSO '+id)||!gedRecords.get(id)?.includes('1 SOUR '+source)||/^1 FAM[CS] /m.test(gedRecords.get(id)||''))throw Error('Godparents must be retained as sourced associations, not relatives: '+id);
+for(const [fam,father,mother,child,source,year,witnesses] of [
+ ['@F_lev16@','@I_geo_lev16@','@I_aga_lev16@','@I_feo_lev16@','@S26@','1916',['@I_tik_god16@','@I_evd_god16@']],
+ ['@F_lev17@','@I_geo_lev17@','@I_aga_lev17@','@I_ol_lev17@','@S27@','1917',['@I_nik_god17@']]
+]){
+ const record=gedRecords.get(fam)||'',person=gedRecords.get(child)||'';
+ if(!record.includes('1 HUSB '+father)||!record.includes('1 WIFE '+mother)||!record.includes('1 CHIL '+child)||!record.includes('1 SOUR '+source)||/^1 MARR/m.test(record))throw Error('Each Levin record must remain a separate parental family without an invented marriage: '+fam);
+ if(![father,mother].every(id=>gedRecords.get(id)?.includes('1 FAMS '+fam))||!person.includes('1 FAMC '+fam)||!person.includes('1 BIRT\n2 DATE '+year+'\n2 SOUR '+source))throw Error('Levin record pointers, birth year, or sources are inconsistent: '+fam);
+ if(/^2 DATE @#DJULIAN@/m.test(person))throw Error('A day or month from the Levin record is not verified');
+ for(const id of witnesses)if(!person.includes('1 ASSO '+id)||!gedRecords.get(id)?.includes('1 SOUR '+source)||/^1 FAM[CS] /m.test(gedRecords.get(id)||''))throw Error('Godparents must not become relatives in the Levin records: '+id);
+}
+if(!gedRecords.get('@I_ol_lev17@')?.includes('по карточке распознавания'))throw Error('The 1917 name must be identified as an OCR reading');
 const maximGed=gedRecords.get('@I_maxim_h_1906@'),tamaraGed=gedRecords.get('@I_kid@');
 if(!/1 BIRT\r?\n2 DATE 1906\r?\n2 SOUR @S7@/.test(maximGed)||!/1 DEAT\r?\n2 DATE 1954\r?\n2 SOUR @S7@/.test(maximGed)||!maximGed.includes('тождество не установлено'))throw Error('Maxim’s family photograph dates and uncertain museum match must remain distinct');
 if(!/1 BIRT\r?\n2 DATE ABT 1958\r?\n2 SOUR @S1@/.test(tamaraGed)||!/1 DEAT\r?\n2 DATE ABT 2011\r?\n2 SOUR @S1@/.test(tamaraGed)||births.boyko.kid?.[1]!==null)throw Error('Tamara’s estimated years must remain approximate and outside the exact-year timeline');
