@@ -77,6 +77,13 @@ const adoption=graph(charts.find(c=>c.id==='family')).find(e=>e.a==='ser'&&e.b==
 if(!adoption||adoption.kind!=='blue'||adoption.label!=='усыновление')throw Error('Separate adoption must remain blue and labelled');
 const archive=charts.find(c=>c.id==='nikiforov'),archiveRoutes=familyRoutes(archive,Object.fromEntries(archive.nodes.map(n=>[n.id,n])));
 if(!archiveRoutes.some(f=>f.kind==='red'&&f.children.includes('stef'))||archiveRoutes.some(f=>f.parents.includes('d1909')&&f.parents.includes('a1909')))throw Error('Uncertain family and godparent relationships must stay distinct');
+const nikiforovEdges=graph(archive);
+if(!nikiforovEdges.some(e=>e.a==='ef_mar93'&&e.b==='ak_mar93'&&e.spouse))throw Error('The 1893 marriage must be represented as a documented union');
+for(const [marriagePerson,parentOfTwins] of [['ef_mar93','ef2'],['ak_mar93','ak2']]){
+ const possibleIdentity=nikiforovEdges.find(e=>e.a===marriagePerson&&e.b===parentOfTwins);
+ if(!possibleIdentity||possibleIdentity.kind!=='red'||possibleIdentity.label!=='возможно один человек')throw Error('The 1893 and 1909 identities must remain explicitly unconfirmed');
+ if(nikiforovEdges.some(e=>e.a===marriagePerson&&['d1909','a1909'].includes(e.b)))throw Error('The 1893 marriage cannot be treated as proven parentage of the 1909 twins');
+}
 console.log('All routes avoid unrelated cards; selection, details, zoom and timelines validated.');
 const host=roots['#chart-family'];const all=walk(host),view=all.find(e=>e.className==='viewport'),output=all.find(e=>e.tag==='output');const original=output.textContent;let prevented=false;view.handlers.wheel({ctrlKey:true,metaKey:false,deltaY:-120,clientX:300,clientY:200,preventDefault(){prevented=true}});if(!prevented||output.textContent===original)throw Error('wheel zoom failed');let target={closest:()=>false};view.handlers.pointerdown({button:0,pointerId:1,clientX:200,clientY:200,target});view.handlers.pointerdown({button:0,pointerId:2,clientX:300,clientY:200,target});const beforePinch=output.textContent;view.handlers.pointermove({pointerId:2,clientX:350,clientY:200});if(output.textContent===beforePinch)throw Error('pinch zoom failed');view.handlers.pointerup({pointerId:2});view.handlers.pointerup({pointerId:1});const timeline=all.find(e=>e.className==='timeline-item');timeline.handlers.click();const panel=all.find(e=>e.className==='selection-panel');if(!panel.children.some(e=>e.tag==='strong'))throw Error('timeline focus failed');const edgeHit=all.find(e=>e.classList.contains('link-hit'));edgeHit.handlers.click({stopPropagation(){}});if(!panel.children.some(e=>e.className==='related-list'))throw Error('edge selection failed');console.log('Wheel zoom, pinch, drag, timeline focus and selected relation validated.');
 
