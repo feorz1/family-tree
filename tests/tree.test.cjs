@@ -99,7 +99,7 @@ if(!archiveRoutes.some(f=>f.kind==='red'&&f.children.includes('anast94')))throw 
 if(births.nikiforov.ak_baby74?.[0]!=='04.06.1874 · ст. стиль')throw Error('The 1874 birth must retain the calendar of the original record');
 const gedcom=fs.readFileSync(require('path').join(__dirname,'..','semeinoe-drevo.ged'),'utf8');
 const gedRecords=new Map([...gedcom.matchAll(/^0 (@[^@]+@) (INDI|FAM|SOUR)\r?\n([\s\S]*?)(?=^0 |(?![\s\S]))/gm)].map(m=>[m[1],m[3]]));
-for(const match of gedcom.matchAll(/^\d+ (?:SOUR|FAMS|FAMC|HUSB|WIFE|CHIL) (@[^@]+@)\s*$/gm))if(!gedRecords.has(match[1]))throw Error('Dangling GEDCOM reference: '+match[1]);
+for(const match of gedcom.matchAll(/^\d+ (?:SOUR|FAMS|FAMC|HUSB|WIFE|CHIL|ASSO) (@[^@]+@)\s*$/gm))if(!gedRecords.has(match[1]))throw Error('Dangling GEDCOM reference: '+match[1]);
 const weddingGed=gedRecords.get('@F_nik93@'),twinsGed=gedRecords.get('@F_nik09@');
 const petrGed=gedRecords.get('@I_petr_nikitin_1896@');
 if(!petrGed?.includes('1 SOUR @S18@')||/^1 FAM[CS] /m.test(petrGed)||!petrGed.includes('Родство с семейными Периковыми не установлено'))throw Error('The 1896 namesake must stay separate and cite the transcription');
@@ -111,6 +111,18 @@ if(!gedRecords.get('@I_nikolai_m@')?.includes('2 NOTE Ранее в семейн
 for(const id of ['@F_n1@','@F_n2@'])if(gedRecords.get(id)?.includes('1 MARR'))throw Error('A marriage must not be inferred solely from parenthood: '+id);
 if(!gedRecords.get('@I_du@')?.includes('1 NAME Евдокия Ефимовна /Никифорова/')||gedRecords.get('@I_du@')?.includes('1 BIRT'))throw Error('Family patronymic must be kept without adopting the incorrect birth date');
 if(!gedRecords.get('@I_val@')?.includes('1 NAME Валентин /Фетисов/')||!gedRecords.get('@I_val@')?.includes('1 NAME Валентин /Фитисов/'))throw Error('Both family surname spellings must survive GEDCOM export');
+for(const [id,name] of [['@I_tam@','Тамара /Васильева/'],['@I_tan@','Татьяна /Фитисова/'],['@I_nast@','Анастасия Сергеевна /Видянова/'],['@I_nin@','Нина Анатольевна /Бойко/']])if(!gedRecords.get(id)?.includes(`1 NAME ${name}\n2 TYPE married\n2 SOUR @S1@`))throw Error('The reported married name must survive export with its source: '+id);
+for(const [fam,husband,wife,child,source] of [['@F_per05@','@I_nik_per05@','@I_nat_per05@',null,'@S23@'],['@F_per09@','@I_nik_per09@','@I_nat_per09@','@I_ant_per09@','@S24@'],['@F_per14@','@I_nik_per14@','@I_nat_per14@','@I_ira_per14@','@S25@']]){
+ const record=gedRecords.get(fam)||'';
+ if(!record.includes('1 HUSB '+husband)||!record.includes('1 WIFE '+wife)||!record.includes('1 SOUR '+source)||![husband,wife].every(id=>gedRecords.get(id)?.includes('1 FAMS '+fam)))throw Error('The archive couple must remain separately sourced and reciprocal: '+fam);
+ if(child?(!record.includes('1 CHIL '+child)||!gedRecords.get(child)?.includes('1 FAMC '+fam)):/^1 CHIL /m.test(record))throw Error('The archival family must not gain an inferred child: '+fam);
+ for(const other of ['@I_ivan@','@I_io_per07@','@I_para_per12@'])if(record.includes(other))throw Error('An unproved identity must not merge archive and family records: '+fam);
+}
+if(!/1 MARR\n2 DATE 1905\n2 SOUR @S23@/.test(gedRecords.get('@F_per05@')||''))throw Error('The 1905 marriage must be exported with its own source');
+const antoninaGed=gedRecords.get('@I_ant_per09@')||'',iraidaGed=gedRecords.get('@I_ira_per14@')||'',mother09Ged=gedRecords.get('@I_nat_per09@')||'';
+if(!mother09Ged.includes('Иванова')||!mother09Ged.includes('Ермолаевна')||!mother09Ged.includes('требуют проверки')||/^1 NAME .*Ермолаева/m.test(mother09Ged))throw Error('The 1909 mother’s conflicting readings must remain unresolved');
+if(!/1 BIRT\n2 DATE 1909\n2 SOUR @S24@/.test(antoninaGed)||!/1 BIRT\n2 DATE 1914\n2 SOUR @S25@/.test(iraidaGed)||/^2 DATE @#DJULIAN@/m.test(antoninaGed+iraidaGed))throw Error('Unverified days of the 1909 and 1914 records must not become exact dates');
+for(const [child,witnesses,source] of [[antoninaGed,['@I_ilya_god09@','@I_anast_god09@'],'@S24@'],[iraidaGed,['@I_mih_god14@','@I_eli_god14@'],'@S25@']])for(const id of witnesses)if(!child.includes('1 ASSO '+id)||!gedRecords.get(id)?.includes('1 SOUR '+source)||/^1 FAM[CS] /m.test(gedRecords.get(id)||''))throw Error('Godparents must be retained as sourced associations, not relatives: '+id);
 const maximGed=gedRecords.get('@I_maxim_h_1906@'),tamaraGed=gedRecords.get('@I_kid@');
 if(!/1 BIRT\r?\n2 DATE 1906\r?\n2 SOUR @S7@/.test(maximGed)||!/1 DEAT\r?\n2 DATE 1954\r?\n2 SOUR @S7@/.test(maximGed)||!maximGed.includes('тождество не установлено'))throw Error('Maxim’s family photograph dates and uncertain museum match must remain distinct');
 if(!/1 BIRT\r?\n2 DATE ABT 1958\r?\n2 SOUR @S1@/.test(tamaraGed)||!/1 DEAT\r?\n2 DATE ABT 2011\r?\n2 SOUR @S1@/.test(tamaraGed)||births.boyko.kid?.[1]!==null)throw Error('Tamara’s estimated years must remain approximate and outside the exact-year timeline');
