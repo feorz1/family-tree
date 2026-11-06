@@ -91,6 +91,12 @@ const gedcom=fs.readFileSync(require('path').join(__dirname,'..','semeinoe-drevo
 const gedRecords=new Map([...gedcom.matchAll(/^0 (@[^@]+@) (INDI|FAM|SOUR)\r?\n([\s\S]*?)(?=^0 |(?![\s\S]))/gm)].map(m=>[m[1],m[3]]));
 for(const match of gedcom.matchAll(/^\d+ (?:SOUR|FAMS|FAMC|HUSB|WIFE|CHIL) (@[^@]+@)\s*$/gm))if(!gedRecords.has(match[1]))throw Error('Dangling GEDCOM reference: '+match[1]);
 const weddingGed=gedRecords.get('@F_nik93@'),twinsGed=gedRecords.get('@F_nik09@');
+const sistersGed=gedRecords.get('@F_popova_siblings@');
+if(!['@I_nin@','@I_lud@'].every(id=>sistersGed?.includes('1 CHIL '+id)&&gedRecords.get(id)?.includes('1 FAMC @F_popova_siblings@'))||/^1 (?:HUSB|WIFE) /m.test(sistersGed||''))throw Error('The reported sisters must share a family without inventing their parents');
+for(const id of ['@F_n3@','@F_n6@','@F_n8@','@F_n11@','@F_n12@'])if(!gedRecords.get(id)?.includes('1 MARR\n2 SOUR @S1@'))throw Error('A reported marriage must be exported with its family source: '+id);
+for(const id of ['@F_n1@','@F_n2@'])if(gedRecords.get(id)?.includes('1 MARR'))throw Error('A marriage must not be inferred solely from parenthood: '+id);
+if(!gedRecords.get('@I_du@')?.includes('1 NAME Евдокия Ефимовна /Никифорова/')||gedRecords.get('@I_du@')?.includes('1 BIRT'))throw Error('Family patronymic must be kept without adopting the incorrect birth date');
+if(!gedRecords.get('@I_val@')?.includes('1 NAME Валентин /Фетисов/')||!gedRecords.get('@I_val@')?.includes('1 NAME Валентин /Фитисов/'))throw Error('Both family surname spellings must survive GEDCOM export');
 if(!weddingGed?.includes('1 HUSB @I_ef93@')||!weddingGed.includes('1 WIFE @I_ak93@')||!weddingGed.includes('2 DATE @#DJULIAN@ 5 NOV 1893')||weddingGed.includes('1 CHIL '))throw Error('The documented 1893 marriage must retain the source calendar without inferred children');
 if(!twinsGed?.includes('1 CHIL @I_evd_candidate@')||!twinsGed.includes('1 CHIL @I_ant_candidate@')||twinsGed.includes('1 CHIL @I_du@'))throw Error('The 1909 twins must remain separate from the family member whose identity is unproved');
 if(!gedRecords.get('@F_tuev74@')?.includes('1 CHIL @I_ak74@')||!gedRecords.get('@F_nik94@')?.includes('1 CHIL @I_anast94@')||twinsGed.includes('@I_anast94@'))throw Error('The 1874 and 1894 archive families must remain independent');
@@ -403,7 +409,7 @@ for(let i=0;i<anatoly.photos.length;i++){
  if(i<anatoly.photos.length-1)realControls.children[2].handlers.click();
 }
 personInfo(olga);
-if(roots['#dialog-name'].textContent!==olga.name||photoPanel.children.length!==1||photoPanel.children[0].children[0].href!==olga.photos[0].src)throw Error('Single-photo details must replace the previous gallery without controls');
+if(roots['#dialog-name'].textContent!=='Ольга Валентиновна Фитисова'||photoPanel.children.length!==1||photoPanel.children[0].children[0].href!==olga.photos[0].src)throw Error('Single-photo details must show Olga’s full name and replace the previous gallery without controls');
 personInfo(anatoly);
 if(photoPanel.children[0].children[0].href!==anatoly.photos[0].src||photoPanel.children[1].children[1].textContent!=='1 / 2')throw Error('Reopening Anatoly must reset slider');
 personInfo(yuri);
@@ -417,11 +423,13 @@ const dateText=()=>roots['#dialog-date'].textContent, maidenText=()=>roots['#dia
 personInfo(person('family','tan'));
 if(roots['#dialog-name'].textContent!=='Татьяна Фитисова'||maidenText()!=='(Перикова)'||dateText()!=='28.05.1950'||roots['#dialog-relationship'].textContent!=='Бабушка')throw Error('Tatiana modal needs confirmed name, maiden surname, relationship and birth date');
 personInfo(person('family','nast'));
-if(roots['#dialog-name'].textContent!=='Анастасия Видянова'||maidenText()!=='(Бойко)'||dateText()!=='08.09.2002')throw Error('Anastasia modal needs confirmed maiden surname and birth date');
+if(roots['#dialog-name'].textContent!=='Анастасия Сергеевна Видянова'||maidenText()!=='(Бойко)'||dateText()!=='08.09.2002')throw Error('Anastasia modal needs confirmed maiden surname and birth date');
 personInfo(person('family','and'));
 if(maidenText()!==''||dateText()!=='11.07.1974 — 02.08.2015')throw Error('Birth and death must appear without carrying over previous maiden name');
 personInfo(person('family','du'));
-if(dateText()!==''||maidenText()!=='(Никифорова)')throw Error('Unknown date must not be inferred from an unverified record or previous modal');
+if(roots['#dialog-name'].textContent!=='Евдокия Ефимовна Перикова'||dateText()!==''||maidenText()!=='(Никифорова)')throw Error('Family patronymic must be shown without inferring an unknown date');
+personInfo(person('boyko','nina'));
+if(roots['#dialog-name'].textContent!=='Нина Анатольевна Бойко'||maidenText()!=='(Попова)')throw Error('Nina modal must retain her patronymic and maiden name');
 personInfo(person('nikiforov','d1909'));
 if(dateText()!=='16.02.1909 · ст. стиль'||roots['#dialog-state'].textContent!=='Требует проверки')throw Error('Historical date and uncertainty must retain their qualification');
 personInfo(person('khramov','fyodor'));
