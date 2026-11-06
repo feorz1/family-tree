@@ -129,7 +129,7 @@ for(const [family,archival] of [['@I_ivan@','@I_io_per07@'],['@I_ant_sis@','@I_a
 if(!gedRecords.get('@I_ivan@')?.includes('2 DATE @#DJULIAN@ 23 MAY 1907')||!['@I_ant_sis@','@I_para_sis@','@I_ira_sis@'].every(id=>gedRecords.get('@F_n2@')?.includes('1 CHIL '+id)&&gedRecords.get(id)?.includes('1 FAMC @F_n2@')))throw Error('Ivan’s source-calendar birth and his sisters must be exported');
 const weddingGed=gedRecords.get('@F_nik93@'),twinsGed=gedRecords.get('@F_nik09@');
 const petrGed=gedRecords.get('@I_petr_nikitin_1896@');
-if(!petrGed?.includes('1 SOUR @S18@')||/^1 FAM[CS] /m.test(petrGed)||!petrGed.includes('Родство с семейными Периковыми не установлено'))throw Error('The 1896 namesake must stay separate and cite the transcription');
+if(!petrGed?.includes('1 SOUR @S33@')||/^1 FAM[CS] /m.test(petrGed)||!petrGed.includes('Родители Петра и родство с семейными Периковыми не установлены')||!petrGed.includes('Марии Харламовой'))throw Error('The 1896 namesake must remain separate and cite the corrected original');
 const sistersGed=gedRecords.get('@F_popova_siblings@');
 if(!['@I_nin@','@I_lud@'].every(id=>sistersGed?.includes('1 CHIL '+id)&&gedRecords.get(id)?.includes('1 FAMC @F_popova_siblings@'))||/^1 (?:HUSB|WIFE) /m.test(sistersGed||''))throw Error('The reported sisters must share a family without inventing their parents');
 for(const id of ['@F_n3@','@F_n6@','@F_n8@','@F_n11@','@F_n12@'])if(!gedRecords.get(id)?.includes('1 MARR\n2 SOUR @S1@'))throw Error('A reported marriage must be exported with its family source: '+id);
@@ -527,6 +527,6 @@ if(dateText()!=='')throw Error('The same id in another chart must not inherit Fy
 personInfo(person('perikov','io'));
 if(!roots['#dialog-links'].children.some(e=>e.href===person('perikov','io').source))throw Error('Archive links must remain accessible from the modal');
 personInfo(person('perikov','petr'));
-if(!roots['#dialog-links'].children.some(e=>e.href===person('perikov','petr').source&&e.textContent==='Открыть выписку'))throw Error('The transcription must not be labelled as the original metric record');
+if(!roots['#dialog-links'].children.some(e=>e.href===person('perikov','petr').source&&e.textContent==='Метрика 1896 года · запись 19')||!person('perikov','petr').info.includes('Родители Петра в этой записи не названы')||perikovFamilyEdges.some(e=>(e.a==='petr'&&['pn','nn'].includes(e.b))||(e.b==='petr'&&['pn','nn'].includes(e.a))))throw Error('Peter must cite the metric and stay unlinked while his parents are unknown');
 modal.close();
 console.log('Modal names, relationships, qualified dates, sources and chart-specific data validated.');
