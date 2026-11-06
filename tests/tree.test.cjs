@@ -170,8 +170,10 @@ if(elderRoute?.kind!=='red'||!mainFamily.nodes.find(n=>n.id==='efim1896')?.info.
 if(!['nik_elder','art_max'].every(id=>olderEdges.some(e=>e.a==='max_per'&&e.b===id&&e.kind==='red'))||olderEdges.some(e=>e.a==='art_nik'&&e.b==='art_max'&&e.label==='возможно один человек'))throw Error('The proposed shared father must be tentative and the two Artemiys must remain separate');
 if(!olderEdges.some(e=>e.a==='art_max'&&e.b==='vasilisa_art'&&e.spouse)||!['art_max','vasilisa_art'].every(id=>olderEdges.some(e=>e.a===id&&e.b==='evd1898'&&!e.kind))||!olderEdges.some(e=>e.a==='evd1898'&&e.b==='evd_sis'&&e.kind==='red'))throw Error('The documented 1898 child and the family Evdokia must remain distinct with an uncertain match');
 for(const id of ['evd_sis','vasi_sib','aga_sis','ni'])if(!olderEdges.some(e=>e.a==='art_nik'&&e.b===id&&e.kind==='red')||olderEdges.some(e=>e.a==='vasilisa_art'&&e.b===id)||olderEdges.some(e=>e.a==='art_max'&&e.b===id))throw Error('The siblings have only a tentative father and no inferred mother: '+id);
-if(births.family.evd_sis||births.family.evd1898?.[0]!=='27.02.1898 · ст. стиль'||births.family.nik_son?.[2]!=='1920?'||!mainFamily.nodes.find(n=>n.id==='nik_son')?.info.includes('17 мая'))throw Error('The archive date must belong only to the documented Evdokia and Nikolai’s identity must remain provisional');
+if(births.family.evd_sis||births.family.evd1898?.[0]!=='27.02.1898 · ст. стиль'||births.family.nik_son?.[2]!=='1920?'||!mainFamily.nodes.find(n=>n.id==='nik_son')?.info.includes('подтвердил'))throw Error('The archive date must belong only to the documented Evdokia; Nikolai is family-confirmed but his birth date remains provisional');
 if(!gedRecords.get('@F_nik_elder@')?.includes('непроверенная версия')||!gedRecords.get('@I_efim_nikitin_1896@')?.includes('1 OCCU Запасной рядовой')||!gedRecords.get('@F_max_per@')?.includes('1 CHIL @I_art_max@')||!gedRecords.get('@F_max_per@')?.includes('1 CHIL @I_nik_elder@')||!gedRecords.get('@F_art_max_vas@')?.includes('1 WIFE @I_vasilisa_art@')||!gedRecords.get('@F_art_max_vas@')?.includes('1 CHIL @I_evd_1898@')||!gedRecords.get('@I_evd_sis@')?.includes('1 ASSO @I_evd_1898@')||!gedRecords.get('@I_evd_1898@')?.includes('2 DATE @#DJULIAN@ 27 FEB 1898'))throw Error('The GEDCOM must retain the proposed ancestor chain, soldier detail, and the separate recorded and family Evdokias');
+const nikolai1920=gedRecords.get('@I_nikolai_nik@')||'';
+if(!nikolai1920.includes('1 NAME Николай /Периков/')||!nikolai1920.includes('1 SOUR @S42@')||!nikolai1920.includes('2 DATE ABT 1920')||!nikolai1920.includes('заголовок требуют сверки')||nikolai1920.includes('2 DATE 17 MAY 1920'))throw Error('The family-confirmed Nikolai must preserve the archive source and a qualified birth date');
 const agaGed=gedRecords.get('@I_aga_god07@')||'';
 if(!agaGed.includes('1 NAME Агафия Артемиева /Левина/\n2 TYPE married\n2 SOUR @S32@')||!gedRecords.get('@I_para_per12@')?.includes('1 ASSO @I_aga_god07@')||!gedRecords.get('@I_para_sis@')?.includes('1 ASSO @I_aga_god07@')||gedRecords.has('@I_aga_god12@'))throw Error('Agafia’s confirmed married name and godparent role must share one person');
 const nikitaSiblings=gedRecords.get('@F_niki_siblings@')||'';if(!['@I_niki@','@I_aga_god07@'].every(id=>nikitaSiblings.includes('1 CHIL '+id)&&gedRecords.get(id)?.includes('1 FAMC @F_niki_siblings@'))||!nikitaSiblings.includes('1 HUSB @I_art_nik@')||!nikitaSiblings.includes('по гипотезе')||/^1 WIFE /m.test(nikitaSiblings)||!gedRecords.get('@I_ivan@')?.includes('1 ASSO @I_aga_god07@'))throw Error('Nikita and Agafia must retain their family and the hypothetical father');
@@ -557,3 +559,31 @@ personInfo(person('perikov','petr'));
 if(!roots['#dialog-links'].children.some(e=>e.href===person('perikov','petr').source&&e.textContent==='Метрика 1896 года · запись 19')||!person('perikov','petr').info.includes('Родители Петра в этой записи не названы')||perikovFamilyEdges.some(e=>(e.a==='petr'&&['pn','nn'].includes(e.b))||(e.b==='petr'&&['pn','nn'].includes(e.a))))throw Error('Peter must cite the metric and stay unlinked while his parents are unknown');
 modal.close();
 console.log('Modal names, relationships, qualified dates, sources and chart-specific data validated.');
+
+// Historical observations and relatives' dated births are visible in each person's details.
+const personFacts=vm.runInContext('factsForPerson',ctx),ageAt=vm.runInContext('yearsAt',ctx);
+const olgaFacts=personFacts(person('family','ol'));
+if(!olgaFacts.some(f=>f.text.includes('Константин')&&f.text.includes('19 лет (расчёт по датам)'))||!olgaFacts.some(f=>f.text.includes('Анастасия')&&f.text.includes('25 лет (расчёт по датам)')))throw Error('Olga must see each child and her correctly calculated age at their birth');
+const sergeyFacts=personFacts(person('family','ser'));
+if(!sergeyFacts.some(f=>f.text.includes('Анастасия')&&f.text.includes('28 лет'))||sergeyFacts.some(f=>f.text.includes('Константин')))throw Error('An adoption must not be presented as a biological birth');
+const userFacts=personFacts(person('family','you'));
+if(!userFacts.some(f=>f.text.includes('Рождение брата или сестры')&&f.text.includes('Анастасия')&&f.text.includes('5 лет (расчёт по датам)')))throw Error('Half-siblings who share a biological parent must appear in the chronology');
+if(!personFacts(person('family','iv')).some(f=>f.text.includes('Пётр')&&f.text.includes('Возможное родство')))throw Error('An unproven sibling relationship must remain explicitly tentative');
+if(!personFacts(person('family','vas_son')).some(f=>f.text.includes('возможное совпадение')&&f.url.includes('orenlib.ru'))||births.family.vas_son)throw Error('The war memorial candidate must not become a proven birth or death');
+if(personFacts(person('khramov','nik')).some(f=>f.text.includes('расчёт по датам')))throw Error('A disputed birth year must not produce an exact calculated age');
+const userBirthFromFather=personFacts(person('khramov','and')).find(f=>f.text.includes('03.03.1997'));
+if(!userBirthFromFather||userBirthFromFather.url)throw Error('The corrected user birthday must not cite the family table containing the wrong date');
+if(ageAt('01.03.1900 · ст. стиль','01.03.1920')!==null||ageAt('15.11.1941 или 15.11.1942','11.07.1974')!==null||ageAt('29.02.1900','01.03.1920')!==null||ageAt('11.07.1974','03.03.1997')!==22)throw Error('Age calculations must respect calendar, ambiguity and exact birthdays');
+const nikitaFacts=personFacts(person('family','ni'));
+if(!nikitaFacts.some(f=>f.year===1905&&f.text.includes('22 года')&&f.text.includes('машинном')&&f.url.includes('/116'))||!nikitaFacts.some(f=>f.year===1916&&f.text.includes('версия семьи')))throw Error('Nikita must retain sourced ages and the uncertainty over Peter');
+for(const id of ['ni','na','nik_son']){const observation=personFacts(person('family',id)).find(f=>f.year===1920);if(!observation?.text.includes('33 года')||!observation.text.includes('предположительно 38')||!observation.text.includes('заголовок и год надо уточнить')||!observation.url.includes('/101'))throw Error('The 1920 observation must follow Nikolai and both parents with its source and uncertain readings: '+id)}
+if(!births.family.nik_son[0].includes('требует сверки')||!births.family.na[0].includes('оценка')||ageAt(births.family.nik_son[0],'03.03.1997')!==null)throw Error('Estimated dates must not silently become exact birth dates or ages');
+if(!['pn','nn'].every(id=>perikovFamilyEdges.some(e=>e.a===id&&e.b==='nik20')))throw Error('Nikolai must appear with both parents in the archive chart too');
+if(personFacts(person('family','ef')).some(f=>f.year===1893&&/19|20/.test(f.text)))throw Error('Do not silently transfer archival ages to the unproven family match');
+personInfo(person('family','ni'));
+const factsPanel=roots['#dialog-facts'];
+if(factsPanel.children[0]?.textContent!=='События и даты'||!walk(factsPanel).some(e=>e.tag==='a'&&e.href?.includes('/116')))throw Error('Dated evidence and its source must be available in the modal');
+personInfo({id:'unlisted',chartId:'family',name:'Нет сведений',sub:'',photos:[]});
+if(factsPanel.children.length)throw Error('Changing person must clear the previous chronology');
+modal.close();
+console.log('Source chronology, qualified matches and derived family ages validated.');
