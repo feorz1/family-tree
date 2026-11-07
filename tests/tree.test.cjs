@@ -567,7 +567,7 @@ if(!olgaFacts.some(f=>f.text.includes('Константин')&&f.text.includes('
 const sergeyFacts=personFacts(person('family','ser'));
 if(!sergeyFacts.some(f=>f.text.includes('Анастасия')&&f.text.includes('28 лет'))||sergeyFacts.some(f=>f.text.includes('Константин')))throw Error('An adoption must not be presented as a biological birth');
 const userFacts=personFacts(person('family','you'));
-if(!userFacts.some(f=>f.text.includes('Рождение брата или сестры')&&f.text.includes('Анастасия')&&f.text.includes('5 лет (расчёт по датам)')))throw Error('Half-siblings who share a biological parent must appear in the chronology');
+if(!userFacts.some(f=>f.text.includes('Рождение сестры')&&f.text.includes('Анастасия')&&f.text.includes('5 лет (расчёт по датам)')))throw Error('Half-siblings who share a biological parent must appear in the chronology');
 if(!personFacts(person('family','iv')).some(f=>f.text.includes('Пётр')&&f.text.includes('Возможное родство')))throw Error('An unproven sibling relationship must remain explicitly tentative');
 if(!personFacts(person('family','vas_son')).some(f=>f.text.includes('возможное совпадение')&&f.url.includes('orenlib.ru'))||births.family.vas_son)throw Error('The war memorial candidate must not become a proven birth or death');
 if(personFacts(person('khramov','nik')).some(f=>f.text.includes('расчёт по датам')))throw Error('A disputed birth year must not produce an exact calculated age');

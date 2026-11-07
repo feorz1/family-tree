@@ -397,7 +397,12 @@ function factsForPerson(n){
   if(own.kind==='blue'||!own.children.includes(n.id))continue;
   for(const other of chart.groups){
    if(other.kind==='blue'||!own.parents.some(parent=>other.parents.includes(parent)))continue;
-   for(const id of other.children){if(id===n.id)continue;const maybe=own.kind==='red'||other.kind==='red'||own.uncertainChildren?.includes(n.id)||other.uncertainChildren?.includes(id);addBirth(id,maybe,'Рождение брата или сестры')}
+   for(const id of other.children){
+    if(id===n.id)continue;
+    const maybe=own.kind==='red'||other.kind==='red'||own.uncertainChildren?.includes(n.id)||other.uncertainChildren?.includes(id),role=(map[id]?.sub||'').toLowerCase();
+    const relation=/(сестра|дочь|мать|бабушка|жена|невеста)/.test(role)?'Рождение сестры':/(брат|сын|отец|дед|муж|жених)/.test(role)?'Рождение брата':'Рождение брата или сестры';
+    addBirth(id,maybe,relation);
+   }
   }
  }
  return events.sort((a,b)=>a.year-b.year);
