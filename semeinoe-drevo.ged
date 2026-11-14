@@ -844,8 +844,8 @@
 1 FAMC @F_n3@
 1 FAMS @F_n4@
 0 @I_tam@ INDI
-1 NAME Тамара /Перикова/
-1 NAME Тамара /Васильева/
+1 NAME Тамара Ивановна /Перикова/
+1 NAME Тамара Ивановна /Васильева/
 2 TYPE married
 2 SOUR @S1@
 1 SOUR @S1@
