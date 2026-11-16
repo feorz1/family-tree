@@ -97,6 +97,14 @@ const treeData = {
           "caption": "Семейная таблица; телефоны скрыты. Дата рождения Константина и предполагаемый год смерти Андрея в таблице неверны.",
           "portrait": false
         }
+      ],
+      "you": [
+        {
+          "src": "assets/photos/editor-83e8fd4246929bb7ccb4cf7f08d9091ab2ffb2705e449b9dfbf723507a62b7d8.jpg",
+          "alt": "Константин Бойко",
+          "caption": "",
+          "portrait": true
+        }
       ]
     },
     "khramov": {
