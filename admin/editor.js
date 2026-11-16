@@ -703,7 +703,7 @@ async function init() {
     ({data,revision} = draft);
     currentRole = draft.role;
     $("#publish").hidden = $("#access").hidden = currentRole !== "admin";
-    $("#logout").hidden = currentRole === "admin";
+    $("#logout").hidden = !draft.hasSession;
     publicDirty = draft.dirty;
     $("#public-link").href = draft.publicUrl;
     $("#chart").replaceChildren(...Object.entries(titles).map(([id,label]) => element("option",label,{value:id})));

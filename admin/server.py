@@ -227,9 +227,9 @@ class Handler(BaseHTTPRequestHandler):
 
     def viewer(self, db):
         if not self.server.shared:
-            return {"role": "admin", "name": "Владелец"}
+            return {"role": "admin", "name": "Владелец", "hasSession": False}
         member = accounts.user_at(db, accounts.read_token(self.headers))
-        return {"role": "editor", "name": member[1]} if member else None
+        return {"role": member[2], "name": member[1], "hasSession": True} if member else None
 
     def require_admin(self, viewer):
         if viewer["role"] != "admin":
@@ -335,8 +335,8 @@ class Handler(BaseHTTPRequestHandler):
                 db.execute("BEGIN IMMEDIATE")
                 if is_login:
                     action = accounts.activate if path == "/api/activate" else accounts.login
-                    token = action(db, body)
-                    session_cookie = accounts.cookie(token, accounts.SESSION_AGE)
+                    token, age = action(db, body)
+                    session_cookie = accounts.cookie(token, age)
                     result = {"ok": True}
                 else:
                     viewer = self.viewer(db)
@@ -388,7 +388,7 @@ def main():
     STATE.mkdir(mode=0o700, parents=True, exist_ok=True)
     with connection() as db:
         db.execute("PRAGMA journal_mode=WAL")
-        db.executescript(accounts.SCHEMA)
+        accounts.initialize(db)
         db.executescript(
             "CREATE TABLE IF NOT EXISTS draft (id INTEGER PRIMARY KEY CHECK (id=1), revision INTEGER NOT NULL,"
             " origin TEXT NOT NULL, publication TEXT, payload TEXT NOT NULL);"

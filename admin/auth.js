@@ -10,6 +10,14 @@ if (invitation) {
   document.title = "Приглашение в редактор родословной";
   document.querySelector("#auth-title").textContent = "Доступ к родословной";
   document.querySelector("#auth-description").textContent = "Задай пароль для своей учётной записи. По приглашению ты получишь доступ к общему черновику.";
+  if (fragment.get("mode") === "owner") {
+    document.title = "Настройка входа владельца";
+    document.querySelector("#auth-title").textContent = "Учётная запись владельца";
+    document.querySelector("#auth-description").textContent = "Задай пароль для входа в редактор и управления доступом.";
+    activate.elements.password.minLength = 16;
+    document.querySelector("#password-hint").textContent = "От 16 до 128 символов. Можно использовать менеджер паролей.";
+    activate.querySelector("button").textContent = "Активировать учётную запись";
+  }
 }
 for (const form of [login,activate]) form.addEventListener("submit", async event => {
   event.preventDefault();
