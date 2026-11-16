@@ -109,7 +109,7 @@
 </main>
 <dialog id="history-dialog" aria-labelledby="history-title">
   <div class="history-head">
-    <div><h2 id="history-title">История правок</h2><p id="history-summary" role="status"></p></div>
+    <h2 id="history-title">История правок</h2>
     <button type="button" id="close-history">Закрыть</button>
     <div class="history-filters" role="group" aria-label="Вид изменений">
       <button type="button" data-history-filter="all" aria-pressed="true">Все</button>
@@ -118,10 +118,13 @@
       <button type="button" data-history-filter="relations" aria-pressed="false">Родство</button>
       <button type="button" data-history-filter="routes" aria-pressed="false">Маршруты</button>
     </div>
-    <p class="field-error" id="history-error" role="alert"></p>
   </div>
-  <div id="history-items"></div>
-  <button type="button" id="history-more" hidden>Более ранние правки</button>
+  <p id="history-summary" role="status"></p>
+  <p class="field-error" id="history-error" role="alert"></p>
+  <div id="history-body">
+    <div id="history-items" aria-busy="false"></div>
+    <button type="button" id="history-more" hidden>Более ранние правки</button>
+  </div>
 </dialog>
 <dialog id="crop-dialog" aria-labelledby="crop-title">
   <div class="dialog-head"><h2 id="crop-title">Кадр для портрета</h2><button id="crop-cancel" type="button">Закрыть</button></div>

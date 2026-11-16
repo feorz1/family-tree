@@ -4,6 +4,7 @@ const historyDialog = $("#history-dialog");
 const historyLabel = $("#history-summary");
 const historyError = $("#history-error");
 const historyItems = $("#history-items");
+const historyBody = $("#history-body");
 const historyDate = new Intl.DateTimeFormat("ru-RU", {
   dateStyle:"medium",timeStyle:"short",timeZone:"Europe/Moscow"
 });
@@ -297,6 +298,7 @@ async function loadHistory(older=false, anchor=null) {
     await historyLoading.catch(() => {});
   }
   $("#history-more").disabled = true;
+  historyItems.setAttribute("aria-busy","true");
   const filter = historyFilter;
   const operation = (async () => {
     const filters = new URLSearchParams();
@@ -321,7 +323,7 @@ async function loadHistory(older=false, anchor=null) {
       historyLabel.textContent = historyNotice || (entries.length ? "" : filter === "all" ? "Сохранённых правок пока нет." : "Правок этого типа пока нет.");
       if (anchorSelector) {
         const section = historyItems.querySelector(anchorSelector);
-        if (section && top != null) historyDialog.scrollTop += section.getBoundingClientRect().top - top;
+        if (section && top != null) historyBody.scrollTop += section.getBoundingClientRect().top - top;
         (section?.querySelector("summary") || $("#history-title")).focus({preventScroll:true});
       }
       if (feed.unseen && filter === "all") {
@@ -337,6 +339,7 @@ async function loadHistory(older=false, anchor=null) {
   finally {
     if (historyLoading === operation) {
       historyLoading = null;
+      historyItems.setAttribute("aria-busy","false");
       $("#history-more").disabled = false;
     }
   }
@@ -373,7 +376,7 @@ $("#history-title").tabIndex = -1;
 $("#history").addEventListener("click",async () => {
   historyError.textContent = "";
   historyNotice = "";
-  historyLabel.textContent = "Загружаем историю…";
+  historyLabel.textContent = "";
   historyDialog.showModal();
   try {await loadHistory();}
   catch (error) {historyError.textContent = error.message;}
@@ -390,14 +393,14 @@ for (const button of document.querySelectorAll("[data-history-filter]")) {
     historyCursor = null;
     historyNotice = "";
     historyError.textContent = "";
-    historyLabel.textContent = "Загружаем историю…";
+    historyLabel.textContent = "";
     $("#history-more").hidden = true;
     for (const option of document.querySelectorAll("[data-history-filter]")) {
       option.setAttribute("aria-pressed",String(option === button));
     }
     await historyLoading?.catch(() => {});
     if (historyFilter !== next) return;
-    historyDialog.scrollTop = 0;
+    historyBody.scrollTop = 0;
     try {await loadHistory();}
     catch (error) {historyError.textContent = error.message;}
   });
