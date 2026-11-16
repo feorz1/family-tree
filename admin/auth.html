@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="ru">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Вход в редактор родословной</title>
+<link rel="stylesheet" href="/editor.css">
+<script defer src="/auth.js"></script>
+<main class="auth-card">
+  <h1 id="auth-title">Редактор родословной</h1>
+  <p id="auth-description">Введи логин и пароль, чтобы открыть семейный черновик.</p>
+  <form id="login">
+    <label>Логин<input name="username" autocomplete="username" required maxlength="40"></label>
+    <label>Пароль<input name="password" type="password" autocomplete="current-password" required maxlength="128"></label>
+    <button type="submit" class="primary">Войти</button>
+  </form>
+  <form id="activate" hidden>
+    <label>Твой логин<input name="username" autocomplete="username" readonly></label>
+    <label>Пароль<input name="password" type="password" autocomplete="new-password" required minlength="12" maxlength="128" aria-describedby="password-hint"></label>
+    <p id="password-hint">От 12 до 128 символов. Можно использовать менеджер паролей.</p>
+    <button type="submit" class="primary">Принять приглашение</button>
+  </form>
+  <p id="auth-error" class="field-error" role="alert"></p>
+</main>
+</html>

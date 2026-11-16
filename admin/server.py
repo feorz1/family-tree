@@ -10,15 +10,21 @@ import sqlite3
 import subprocess
 import tempfile
 from http import HTTPStatus
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from threading import Thread
 from urllib.error import URLError
-from urllib.parse import parse_qs, unquote, urlsplit
+from urllib.parse import parse_qs, unquote, urlencode, urlsplit
 from urllib.request import urlopen
+
+import accounts
 
 ADMIN = Path(__file__).resolve().parent
 REPO = Path(os.environ.get("TREE_REPO", ADMIN.parent)).resolve()
 STATE = Path(os.environ.get("TREE_STATE", ADMIN / ".local")).resolve()
 PORT = int(os.environ.get("TREE_PORT", "18146"))
+SHARED_HOST = os.environ.get("TREE_SHARED_HOST", "")
+SHARED_BIND = os.environ.get("TREE_SHARED_BIND", "")
+SHARED_PORT = int(os.environ.get("TREE_SHARED_PORT", "18148"))
 PUBLIC_URL = os.environ.get("TREE_PUBLIC_URL", "https://feorz1.github.io/family-tree/")
 DATA = "data/tree.js"
 PREFIX = "const treeData = "
@@ -209,34 +215,69 @@ def digest(blob):
 
 
 class Handler(BaseHTTPRequestHandler):
-    def host_ok(self):
-        return self.headers.get("Host") in {f"127.0.0.1:{PORT}", f"localhost:{PORT}"}
+    def setup(self):
+        self.request.settimeout(25)
+        super().setup()
 
-    def send_content(self, raw, mime, status=200, preview=False):
+    def host_ok(self):
+        host = self.headers.get("Host")
+        if self.server.shared:
+            return host == SHARED_HOST
+        return host in {f"127.0.0.1:{PORT}", f"localhost:{PORT}"}
+
+    def viewer(self, db):
+        if not self.server.shared:
+            return {"role": "admin", "name": "Владелец"}
+        member = accounts.user_at(db, accounts.read_token(self.headers))
+        return {"role": "editor", "name": member[1]} if member else None
+
+    def require_admin(self, viewer):
+        if viewer["role"] != "admin":
+            raise EditError("Эта операция доступна владельцу", 403)
+
+    def origin(self):
+        return ("https://" if self.server.shared else "http://") + self.headers.get("Host", "")
+
+
+    def send_content(self, raw, mime, status=200, preview=False, cookie=None):
         self.send_response(status)
         self.send_header("Content-Type", mime)
         self.send_header("Content-Length", str(len(raw)))
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header("Cross-Origin-Resource-Policy", "same-origin")
+        if cookie:
+            self.send_header("Set-Cookie", cookie)
         script = "'self' 'unsafe-inline'" if preview else "'self'"
         self.send_header("Content-Security-Policy", f"default-src 'self'; script-src {script}; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; frame-ancestors 'self'; object-src 'none'; base-uri 'self'")
         self.end_headers()
         self.wfile.write(raw)
 
-    def send_json(self, value, status=200):
-        self.send_content(json.dumps(value, ensure_ascii=False).encode(), "application/json; charset=utf-8", status)
+    def send_json(self, value, status=200, cookie=None):
+        self.send_content(json.dumps(value, ensure_ascii=False).encode(), "application/json; charset=utf-8", status, cookie=cookie)
 
     def do_GET(self):
         if not self.host_ok():
-            return self.send_json({"error": "Откройте редактор по локальному адресу"}, 403)
+            return self.send_json({"error": "Проверьте адрес редактора"}, 403)
         path = unquote(urlsplit(self.path).path)
         try:
             with connection() as db:
+                viewer = self.viewer(db)
+                if path in {"/editor.css", "/auth.js"}:
+                    target = ADMIN / path[1:]
+                    return self.send_content(target.read_bytes(), mimetypes.guess_type(target.name)[0])
+                if path == "/join" or (path == "/" and not viewer):
+                    return self.send_content((ADMIN / "auth.html").read_bytes(), "text/html; charset=utf-8")
+                if not viewer:
+                    return self.send_json({"error": "Войди в редактор"}, 401)
+                if path == "/api/accounts":
+                    self.require_admin(viewer)
+                    return self.send_json({"accounts": accounts.roster(db), "canInvite": bool(SHARED_HOST and SHARED_BIND)})
                 if path == "/api/draft":
                     revision, origin, publication, data = get_draft(db)
                     return self.send_json({"revision": revision, "publication": publication,
-                                           "dirty": digest(data_script(data)) != origin, "data": data, "publicUrl": PUBLIC_URL})
+                                           "dirty": digest(data_script(data)) != origin, "data": data, "publicUrl": PUBLIC_URL, **viewer})
                 if path == "/api/publication":
                     _, origin, publication, _ = get_draft(db)
                     query = parse_qs(urlsplit(self.path).query)
@@ -250,7 +291,7 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send_json({"current": current})
                 if path == "/preview/data/tree.js":
                     return self.send_content(data_script(get_draft(db)[3]), "text/javascript; charset=utf-8")
-                if path in {"/", "/editor.js", "/editor.css"}:
+                if path in {"/", "/editor.js", "/select.js", "/access.js"}:
                     target = ADMIN / ("index.html" if path == "/" else path[1:])
                 elif path in {"/preview/", "/preview/index.html"}:
                     target = REPO / "index.html"
@@ -269,33 +310,43 @@ class Handler(BaseHTTPRequestHandler):
                 return self.send_content(target.read_bytes(), mime, preview=path.startswith("/preview/"))
         except FileNotFoundError:
             return self.send_json({"error": "Файл не найден"}, 404)
+        except EditError as error:
+            return self.send_json({"error": str(error)}, error.status)
 
     def do_POST(self):
-        if not self.host_ok() or self.headers.get("Origin") != "http://" + self.headers.get("Host", ""):
+        if not self.host_ok() or self.headers.get("Origin") != self.origin():
             return self.send_json({"error": "Запрос доступен только из редактора"}, 403)
         try:
             demand(self.headers.get_content_type() == "application/json", "Неверный формат запроса")
+            path = self.path
+            is_login = path in {"/api/activate", "/api/login"}
             size = int(self.headers.get("Content-Length", "0"))
-            demand(0 < size <= 12 * 1024 * 1024, "Слишком большой запрос")
+            max_size = 4096 if is_login else 12 * 1024 * 1024
+            demand(0 < size <= max_size, "Слишком большой запрос")
+            if self.server.shared and not is_login and not accounts.read_token(self.headers):
+                raise EditError("Войди в редактор", 401)
             body = json.loads(self.rfile.read(size))
+            if is_login:
+                demand(self.server.shared, "Вход доступен по общему адресу редактора")
+                # Caddy sets this header for the single shared listener.
+                accounts.limit_attempts(self.headers.get("X-Forwarded-For", self.client_address[0])[-128:])
+            session_cookie = None
             with connection() as db:
-                if self.path == "/api/photo":
-                    result = {"path": save_photo(db, body)}
+                db.execute("BEGIN IMMEDIATE")
+                if is_login:
+                    action = accounts.activate if path == "/api/activate" else accounts.login
+                    token = action(db, body)
+                    session_cookie = accounts.cookie(token, accounts.SESSION_AGE)
+                    result = {"ok": True}
                 else:
-                    revision, origin, publication, data = get_draft(db)
-                    if body["revision"] != revision:
-                        raise EditError("Черновик уже изменён в другом окне. Обновите редактор.", 409)
-                    if self.path == "/api/draft":
-                        data = body["data"]
-                        validate(data, db)
-                        db.execute("UPDATE draft SET revision=?, payload=? WHERE id=1", (revision + 1, data_script(data).decode()[len(PREFIX):-2]))
-                        result = {"revision": revision + 1, "dirty": digest(data_script(data)) != origin}
-                    elif self.path == "/api/publish":
-                        result = {"commit": publish(db, revision, origin, data)}
-                    else:
-                        raise EditError("Неизвестный запрос", HTTPStatus.NOT_FOUND)
-            return self.send_json(result)
-        except EditError as error:
+                    viewer = self.viewer(db)
+                    if not viewer:
+                        raise EditError("Войди в редактор", 401)
+                    if path in {"/api/invite", "/api/revoke", "/api/publish"}:
+                        self.require_admin(viewer)
+                    result, session_cookie = self.edit(db, path, body)
+            return self.send_json(result, cookie=session_cookie)
+        except (EditError, accounts.AccessError) as error:
             return self.send_json({"error": str(error)}, error.status)
         except (ValueError, TypeError, KeyError, AttributeError):
             return self.send_json({"error": "В форме есть некорректные данные"}, 400)
@@ -303,10 +354,41 @@ class Handler(BaseHTTPRequestHandler):
             print(str(error), flush=True)
             return self.send_json({"error": "Не удалось завершить операцию на сервере. Черновик сохранён."}, 503)
 
+    def edit(self, db, path, body):
+        if path == "/api/invite":
+            demand(SHARED_HOST and SHARED_BIND, "Адрес приглашений ещё не подключён")
+            username, token = accounts.make_invite(db, body)
+            fragment = urlencode({"invite": token, "login": username})
+            return {"link": f"https://{SHARED_HOST}/join#{fragment}"}, None
+        if path == "/api/revoke":
+            accounts.revoke(db, body["username"])
+            return {"ok": True}, None
+        if path == "/api/logout":
+            token = accounts.read_token(self.headers)
+            if token:
+                db.execute("DELETE FROM sessions WHERE token=?", (accounts.token_hash(token),))
+            return {"ok": True}, accounts.cookie("", 0)
+        if path == "/api/photo":
+            return {"path": save_photo(db, body)}, None
+        revision, origin, _, data = get_draft(db)
+        if body["revision"] != revision:
+            raise EditError("Черновик уже изменён в другом окне. Обновите редактор.", 409)
+        if path == "/api/draft":
+            data = body["data"]
+            validate(data, db)
+            script = data_script(data)
+            db.execute("UPDATE draft SET revision=?, payload=? WHERE id=1", (revision + 1, script.decode()[len(PREFIX):-2]))
+            return {"revision": revision + 1, "dirty": digest(script) != origin}, None
+        if path == "/api/publish":
+            return {"commit": publish(db, revision, origin, data)}, None
+        raise EditError("Неизвестный запрос", HTTPStatus.NOT_FOUND)
+
 
 def main():
     STATE.mkdir(mode=0o700, parents=True, exist_ok=True)
     with connection() as db:
+        db.execute("PRAGMA journal_mode=WAL")
+        db.executescript(accounts.SCHEMA)
         db.executescript(
             "CREATE TABLE IF NOT EXISTS draft (id INTEGER PRIMARY KEY CHECK (id=1), revision INTEGER NOT NULL,"
             " origin TEXT NOT NULL, publication TEXT, payload TEXT NOT NULL);"
@@ -317,7 +399,13 @@ def main():
             validate(data, db)
             script = data_script(data)
             db.execute("INSERT INTO draft VALUES (1, 0, ?, NULL, ?)", (digest(script), script.decode()[len(PREFIX):-2]))
-    HTTPServer(("127.0.0.1", PORT), Handler).serve_forever()
+    local = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
+    local.shared = False
+    if SHARED_HOST and SHARED_BIND:
+        shared = ThreadingHTTPServer((SHARED_BIND, SHARED_PORT), Handler)
+        shared.shared = True
+        Thread(target=shared.serve_forever, daemon=True).start()
+    local.serve_forever()
 
 
 if __name__ == "__main__":

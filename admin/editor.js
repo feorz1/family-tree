@@ -7,7 +7,7 @@ const titles = {
 const frame = $("#preview");
 const personForm = $("#person-form");
 const relationForm = $("#relation-form");
-let data, revision, publicDirty, localDirty = false, busy = false;
+let data, revision, publicDirty, localDirty = false, busy = false, currentRole;
 let mode = "people", selectedPerson = "", route = null;
 let selectedPoint = null, addingPoint = false;
 
@@ -25,7 +25,7 @@ function status(message, error = false) {
 
 function buttons() {
   $("#save").disabled = busy || !localDirty;
-  $("#publish").disabled = busy || !(localDirty || publicDirty);
+  $("#publish").disabled = currentRole !== "admin" || busy || !(localDirty || publicDirty);
 }
 
 function changed() {
@@ -90,6 +90,7 @@ function showPerson() {
   personForm.elements.cardName.placeholder = node.name;
   personForm.elements.role.placeholder = node.sub || "Например, бабушка";
   for (const [field,value] of Object.entries(values)) personForm.elements[field].value = value;
+  syncSelect(personForm.elements.kind);
   $("#sync-label").hidden = !linkedPeople().length;
   showPhotos();
   showFacts();
@@ -100,7 +101,7 @@ function linkedPeople() {
   return data.identities.find(group => group.includes(ref))?.filter(item => item !== ref) || [];
 }
 
-personForm.addEventListener("input", event => {
+function updatePersonField(event) {
   const field = event.target.name;
   const node = person();
   if (!field || !node) return;
@@ -131,7 +132,9 @@ personForm.addEventListener("input", event => {
     node[field] = event.target.value;
   }
   changed();
-});
+}
+personForm.addEventListener("input", event => {if (event.target.tagName !== "SELECT") updatePersonField(event);});
+personForm.addEventListener("change", event => {if (event.target.tagName === "SELECT") updatePersonField(event);});
 
 $("#search").addEventListener("input", redrawPeople);
 $("#person").addEventListener("change", event => {
@@ -275,14 +278,14 @@ function redrawRelations() {
     options.push(element("option", edge.label+" · "+who.join(", "), {value:"extra:"+index}));
   }
   $("#relation").replaceChildren(...options);
+  syncSelect($("#relation"));
   relationForm.hidden = true;
 }
 
 let relationEdit = null;
-function memberSelect(id, selected, multiple = false, blank = "Не выбран") {
+function memberSelect(id, selected, blank = "Не выбран") {
   const select = element("select", "", {id});
-  if (multiple) {select.multiple = true;select.size = 5;}
-  else select.append(element("option", blank, {value:""}));
+  select.append(element("option", blank, {value:""}));
   for (const node of [...chart().nodes].sort((a,b) => displayName(a).localeCompare(displayName(b),"ru"))) {
     const option = element("option", displayName(node), {value:node.id});
     option.selected = selected.includes(node.id);
@@ -300,8 +303,10 @@ function drawRelation(value) {
   relationForm.hidden = false;
   relationForm.elements.label.value = original?.label || "";
   relationForm.elements.kind.value = original?.kind || "";
+  syncSelect(relationForm.elements.kind);
   $("#remove-relation").hidden = !original;
   const members = $("#relation-members");
+  members.querySelectorAll("select").forEach(removeSelect);
   members.replaceChildren();
   const kind = element("select", "", {id:"relation-type"});
   kind.append(element("option","Родительская или супружеская",{value:"group"}),element("option","Другая связь двух людей",{value:"extra"}));
@@ -312,17 +317,30 @@ function drawRelation(value) {
   members.append(fields);
   const drawMembers = () => {
     const pair = kind.value === "group" ? original?.parents || [] : [original?.a,original?.b];
+    fields.querySelectorAll("select").forEach(removeSelect);
     fields.replaceChildren(
       createLabel(kind.value === "group" ? "Первый родитель или супруг" : "Первый человек", memberSelect("member-a",pair.slice(0,1))),
       createLabel(kind.value === "group" ? "Второй родитель или супруг" : "Второй человек", memberSelect("member-b",pair.slice(1,2)))
     );
     if (kind.value === "group") {
-      fields.append(createLabel("Дети · ⌘ или Ctrl для выбора нескольких",memberSelect("children",original?.children || [],true)));
+      const group = element("fieldset");
+      const choices = element("div", "", {class:"children-options",id:"children"});
+      for (const node of [...current.nodes].sort((a,b) => displayName(a).localeCompare(displayName(b),"ru"))) {
+        const check = element("input","",{type:"checkbox",value:node.id});
+        check.checked = original?.children.includes(node.id) || false;
+        const label = element("label","",{class:"check"});
+        label.append(check,document.createTextNode(displayName(node)));
+        choices.append(label);
+      }
+      group.append(element("legend","Дети"),choices);
+      fields.append(group);
       $("#married-label").hidden = false;
       relationForm.elements.married.checked = (data.marriedPairs[current.id] || []).some(ids => pair.length === 2 && ids.every(member => pair.includes(member)));
     } else $("#married-label").hidden = true;
+    fields.querySelectorAll("select").forEach(enhanceSelect);
   };
   kind.addEventListener("change",drawMembers);
+  enhanceSelect(kind);
   drawMembers();
 }
 
@@ -344,7 +362,7 @@ relationForm.addEventListener("submit", event => {
     if (original) list[list.indexOf(original)] = record; else list.push(record);
   } else {
     const parents = [a,b].filter(Boolean);
-    const children = [...$("#children").selectedOptions].map(option => option.value);
+    const children = [...$("#children").querySelectorAll("input:checked")].map(choice => choice.value);
     if (children.some(id => parents.includes(id)) || (!children.length && parents.length < 2)) {
       return status("Добавь ребёнка или выбери двух супругов", true);
     }
@@ -415,6 +433,14 @@ frame.addEventListener("load", () => {
   const style = doc.createElement("style");
   style.textContent = "header, #section-tabs, .archive-tabs{display:none!important}main{padding:0} .chart-shell{border:0;border-radius:0}.route-editor-overlay{z-index:3}.editing-point{pointer-events:all;cursor:move;touch-action:none;fill:#fff;stroke:#96400e;stroke-width:3}.editing-point.active{fill:#ffb06c}.editing-point.fixed{cursor:default;stroke:#777;pointer-events:none}";
   doc.head.append(style);
+  doc.addEventListener("keydown", event => {
+    const hit = event.target.closest?.(".link-hit");
+    if (mode !== "routes" || !hit?.treeRoute || !["Enter"," "].includes(event.key)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    selectRoute(hit);
+    $("#radius").focus();
+  },true);
   doc.addEventListener("click", event => {
     if (mode === "routes") {
       if (addingPoint && route && event.target.closest(".viewport")) {
@@ -494,9 +520,9 @@ function drawHandles() {
     circle.addEventListener("pointerdown", event => {
       event.preventDefault();
       event.stopPropagation();
-      selectedPoint = end ? null : index;
+      selectedPoint = index;
       for (const marker of handles.children) marker.classList.toggle("active",marker === circle);
-      $("#remove-point").disabled = selectedPoint === null;
+      syncRouteControls();
       circle.setPointerCapture(event.pointerId);
     });
     circle.addEventListener("pointermove", event => {
@@ -510,8 +536,50 @@ function drawHandles() {
       applyRoute();
     });
   }
-  $("#remove-point").disabled = selectedPoint === null;
+  syncRouteControls();
 }
+
+function syncRouteControls(){
+  const previous = $("#route-point").value;
+  const points = route.model.pointsFor(route.override);
+  $("#route-point").replaceChildren(...points.map((_,index)=>{
+    const label = index === 0 ? "Начало" : index === points.length-1 ? "Конец" : "Точка " + index;
+    return element("option",label,{value:index});
+  }));
+  const selection = selectedPoint ?? (previous && Number(previous) < points.length ? Number(previous):0);
+  $("#route-point").value = selection;
+  syncSelect($("#route-point"));
+  const end = selection === 0 ? "start" : selection === points.length-1 ? "end" : null;
+  for (const button of document.querySelectorAll("[data-nudge]")) button.disabled = Boolean(end && !route.model[end]);
+  $("#add-midpoint").disabled = selection === points.length-1 || route.override.points.length >= 60;
+  $("#remove-point").disabled = Boolean(end);
+}
+
+$("#route-point").addEventListener("change", () => {
+  selectedPoint = Number($("#route-point").value);
+  drawHandles();
+});
+for (const button of document.querySelectorAll("[data-nudge]")) {
+  button.addEventListener("click", () => {
+    const index = Number($("#route-point").value);
+    const points = route.model.pointsFor(route.override);
+    const delta = button.dataset.nudge.split(",").map(Number);
+    const moved = points[index].map((value,axis)=>Math.max(0,value+delta[axis]));
+    const end = index === 0 ? "start" : index === points.length-1 ? "end" : null;
+    if (end) route.override[end] = attachment(route.model[end],moved);
+    else route.override.points[index-1] = moved;
+    selectedPoint = index;
+    applyRoute();
+    drawHandles();
+  });
+}
+$("#add-midpoint").addEventListener("click", () => {
+  const index = Number($("#route-point").value), points = route.model.pointsFor(route.override);
+  route.override.points.splice(index,0,points[index].map((point,axis)=>Math.round((point+points[index+1][axis])/2)));
+  selectedPoint = index + 1;
+  applyRoute();
+  drawHandles();
+});
 
 function applyRoute() {
   const {model,override} = route;
@@ -549,7 +617,7 @@ $("#add-point").addEventListener("click", event => {
   event.target.setAttribute("aria-pressed",String(addingPoint));
 });
 $("#remove-point").addEventListener("click", () => {
-  route.override.points.splice(selectedPoint-1,1);
+  route.override.points.splice(Number($("#route-point").value)-1,1);
   selectedPoint = null;
   applyRoute();
   drawHandles();
@@ -591,6 +659,7 @@ async function saveDraft() {
 
 async function run(action) {
   if (busy) return;
+  if (localDirty && mode === "people" && !personForm.hidden && !personForm.reportValidity()) return;
   busy = true;
   $("aside").inert = true;
   frame.inert = true;
@@ -632,11 +701,15 @@ async function init() {
   try {
     const draft = await api("draft");
     ({data,revision} = draft);
+    currentRole = draft.role;
+    $("#publish").hidden = $("#access").hidden = currentRole !== "admin";
+    $("#logout").hidden = currentRole === "admin";
     publicDirty = draft.dirty;
     $("#public-link").href = draft.publicUrl;
     $("#chart").replaceChildren(...Object.entries(titles).map(([id,label]) => element("option",label,{value:id})));
     redrawPeople();
     redrawRelations();
+    document.querySelectorAll("select").forEach(enhanceSelect);
     refreshPreview();
     status(publicDirty ? "Есть неопубликованный черновик" : "Опубликованная версия");
     $("aside").inert = false;

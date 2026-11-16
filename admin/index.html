@@ -4,11 +4,15 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Редактор родословной</title>
 <link rel="stylesheet" href="/editor.css">
+<script defer src="/select.js"></script>
 <script defer src="/editor.js"></script>
+<script defer src="/access.js"></script>
 <header>
   <h1>Редактор родословной</h1>
   <div class="actions">
     <span id="status" role="status">Загружаем черновик…</span>
+    <button type="button" id="access" hidden>Доступ</button>
+    <button type="button" id="logout" hidden>Выйти</button>
     <button type="button" id="save" disabled>Сохранить черновик</button>
     <button type="button" id="publish" class="primary" disabled>Опубликовать</button>
   </div>
@@ -25,10 +29,10 @@
     </div>
     <section id="people" aria-label="Карточки">
       <div class="actions">
-        <input type="search" id="search" placeholder="Найти человека" aria-label="Найти человека">
+        <label class="search-label">Поиск по семье<input type="search" id="search" placeholder="Имя или фамилия"></label>
         <button type="button" id="new-person">Добавить</button>
       </div>
-      <select id="person" aria-label="Карточка"></select>
+      <label>Человек<select id="person"></select></label>
       <form id="person-form" hidden>
         <label>Имя на карточке<input name="cardName" maxlength="160"></label>
         <label>Подпись на карточке<input name="role" placeholder="Например, бабушка"></label>
@@ -72,13 +76,21 @@
       </form>
     </section>
     <section id="routes" aria-label="Маршруты" hidden>
-      <p>Выбери линию на схеме. Потяни точку изгиба или точку крепления на карточке.</p>
+      <p>Выбери линию на схеме мышью или клавишами Tab и Enter.</p>
       <div id="route-form" hidden>
         <h2 id="route-name"></h2>
-        <p>Общие стыки остаются на месте. Чтобы вставить точку между соседними, нажми «Добавить точку» и щёлкни рядом с нужным участком.</p>
+        <p>Перетащи точку на схеме или выбери её в списке и сдвинь кнопками.</p>
+        <label>Точка маршрута<select id="route-point"></select></label>
+        <div class="actions" aria-label="Сдвинуть точку">
+          <button type="button" data-nudge="-10,0" aria-label="Сдвинуть точку влево">←</button>
+          <button type="button" data-nudge="0,-10" aria-label="Сдвинуть точку вверх">↑</button>
+          <button type="button" data-nudge="0,10" aria-label="Сдвинуть точку вниз">↓</button>
+          <button type="button" data-nudge="10,0" aria-label="Сдвинуть точку вправо">→</button>
+        </div>
         <label>Скругление <output id="radius-value">8</output><input type="range" id="radius" min="0" max="80" value="8"></label>
         <div class="actions">
-          <button type="button" id="add-point" aria-pressed="false">Добавить точку</button>
+          <button type="button" id="add-point" aria-pressed="false">Вставить на схеме</button>
+          <button type="button" id="add-midpoint">Вставить после выбранной</button>
           <button type="button" id="remove-point" disabled>Убрать точку</button>
         </div>
         <button type="button" id="reset-route">Восстановить автоматический маршрут</button>
@@ -90,4 +102,26 @@
     <iframe name="family-tree-admin-preview" id="preview" title="Схема в черновике"></iframe>
   </section>
 </main>
+<dialog id="access-dialog" aria-labelledby="access-title">
+  <div class="dialog-head">
+    <h2 id="access-title">Кто может редактировать</h2>
+    <button type="button" id="close-access">Закрыть</button>
+  </div>
+  <p>Ты управляешь доступом и публикуешь древо. Редакторы могут менять карточки, родство и маршруты во всех семьях и сохранять общий черновик.</p>
+  <div id="account-items" class="account-items"></div>
+  <form id="invite-form">
+    <h2>Пригласить редактора</h2>
+    <label>Имя<input name="displayName" required maxlength="80"></label>
+    <label>Логин<input name="username" autocomplete="off" required pattern="[a-zA-Z0-9_.\-]{3,40}" maxlength="40" aria-describedby="username-hint"></label>
+    <p id="username-hint">Латинские буквы, цифры, точка, дефис или подчёркивание.</p>
+    <button type="submit" class="primary">Создать приглашение</button>
+  </form>
+  <p class="field-error" id="access-error" role="alert"></p>
+  <div id="invite-result" class="editor-item" hidden>
+    <label>Одноразовая ссылка<input id="invite-link" readonly></label>
+    <p>Действует 7 дней. Получатель задаст собственный пароль.</p>
+    <button type="button" id="copy-invite">Скопировать ссылку</button>
+    <p id="copy-status" role="status"></p>
+  </div>
+</dialog>
 </html>
