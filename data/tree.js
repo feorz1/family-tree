@@ -3030,6 +3030,16 @@ const treeData = {
     ]
   ],
   "routes": {
-    "family": {}
+    "family": {},
+    "khramov": {
+      "[\"fyodor\",\"kat\",\"\",\"отец и дочь\"]": {
+        "points": [],
+        "radius": 8,
+        "start": {
+          "side": "bottom",
+          "fraction": 0.5
+        }
+      }
+    }
   }
 };
