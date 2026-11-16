@@ -1,0 +1,24 @@
+[Unit]
+Description=Private Family Tree Editor
+After=network-online.target
+
+[Service]
+Type=simple
+User=deploy
+Group=deploy
+WorkingDirectory=/srv/family-tree-editor/site
+Environment=TREE_REPO=/srv/family-tree-editor/site
+Environment=TREE_STATE=/srv/family-tree-editor/state
+Environment=TREE_PORT=18146
+Environment="GIT_SSH_COMMAND=ssh -F /dev/null -i /srv/family-tree-editor/credentials/github -o IdentitiesOnly=yes -o UserKnownHostsFile=/srv/family-tree-editor/credentials/known_hosts -o StrictHostKeyChecking=yes"
+ExecStart=/usr/bin/python3 /srv/family-tree-editor/site/admin/server.py
+Restart=on-failure
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/srv/family-tree-editor/site /srv/family-tree-editor/state
+
+[Install]
+WantedBy=multi-user.target

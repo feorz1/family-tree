@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ru">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Редактор родословной</title>
+<link rel="stylesheet" href="/editor.css">
+<script defer src="/editor.js"></script>
+<header>
+  <h1>Редактор родословной</h1>
+  <div class="actions">
+    <span id="status" role="status">Загружаем черновик…</span>
+    <button type="button" id="save" disabled>Сохранить черновик</button>
+    <button type="button" id="publish" class="primary" disabled>Опубликовать</button>
+  </div>
+</header>
+<main>
+  <aside inert aria-label="Редактирование">
+    <div class="sidebar-head">
+      <label>Семья или архив <select id="chart"></select></label>
+      <nav aria-label="Режим редактирования">
+        <button type="button" data-mode="people" aria-pressed="true">Карточки</button>
+        <button type="button" data-mode="relations" aria-pressed="false">Родство</button>
+        <button type="button" data-mode="routes" aria-pressed="false">Маршруты</button>
+      </nav>
+    </div>
+    <section id="people" aria-label="Карточки">
+      <div class="actions">
+        <input type="search" id="search" placeholder="Найти человека" aria-label="Найти человека">
+        <button type="button" id="new-person">Добавить</button>
+      </div>
+      <select id="person" aria-label="Карточка"></select>
+      <form id="person-form" hidden>
+        <label>Имя на карточке<input name="cardName" maxlength="160"></label>
+        <label>Подпись на карточке<input name="role" placeholder="Например, бабушка"></label>
+        <label>Полное имя<input name="name" maxlength="160" required></label>
+        <label>Девичья фамилия<input name="maiden"></label>
+        <label>Даты для карточки<input name="dates" placeholder="Например, 1906–1954"></label>
+        <div class="columns">
+          <label>Год в указателе<input name="year" inputmode="numeric" maxlength="4"></label>
+          <label>Подпись года<input name="yearLabel" placeholder="Например, 1942?"></label>
+        </div>
+        <label>Статус<select name="kind"><option value="">Семейные сведения</option><option value="document">Архивная запись</option><option value="uncertain">Требует проверки</option><option value="adopt">Усыновление</option><option value="current">Основной человек</option><option value="group">Участники записи</option></select></label>
+        <label>Описание<textarea name="info" rows="4"></textarea></label>
+        <label>Ссылка на источник<input name="source" type="url" placeholder="https://"></label>
+        <label>Название источника<input name="sourceLabel"></label>
+        <label id="sync-label" class="check" hidden><input type="checkbox" id="sync" checked> Обновлять имя, девичью фамилию и даты в связанных схемах</label>
+        <details>
+          <summary>Фотографии</summary>
+          <div id="photos"></div>
+          <label>Добавить фото<input type="file" id="photo-file" accept="image/jpeg,image/png,image/webp"></label>
+        </details>
+        <details>
+          <summary>События и даты</summary>
+          <div id="facts"></div>
+          <button type="button" id="new-fact">Добавить событие</button>
+        </details>
+        <button type="button" id="remove-person" class="danger">Убрать карточку</button>
+      </form>
+    </section>
+    <section id="relations" aria-label="Родство" hidden>
+      <label>Связь<select id="relation"></select></label>
+      <button type="button" id="new-relation">Добавить связь</button>
+      <form id="relation-form" hidden>
+        <label>Описание<input name="label" required></label>
+        <label>Линия<select name="kind"><option value="">Подтверждённая</option><option value="red">Версия</option><option value="blue">Усыновление или крёстные</option></select></label>
+        <div id="relation-members"></div>
+        <label class="check" id="married-label" hidden><input type="checkbox" name="married"> Супруги</label>
+        <div class="actions">
+          <button type="submit" class="primary">Применить к черновику</button>
+          <button type="button" class="danger" id="remove-relation">Убрать</button>
+        </div>
+      </form>
+    </section>
+    <section id="routes" aria-label="Маршруты" hidden>
+      <p>Выбери линию на схеме. Потяни точку изгиба или точку крепления на карточке.</p>
+      <div id="route-form" hidden>
+        <h2 id="route-name"></h2>
+        <p>Общие стыки остаются на месте. Чтобы вставить точку между соседними, нажми «Добавить точку» и щёлкни рядом с нужным участком.</p>
+        <label>Скругление <output id="radius-value">8</output><input type="range" id="radius" min="0" max="80" value="8"></label>
+        <div class="actions">
+          <button type="button" id="add-point" aria-pressed="false">Добавить точку</button>
+          <button type="button" id="remove-point" disabled>Убрать точку</button>
+        </div>
+        <button type="button" id="reset-route">Восстановить автоматический маршрут</button>
+      </div>
+    </section>
+  </aside>
+  <section class="preview" aria-label="Предпросмотр черновика">
+    <div class="preview-bar"><span>Предпросмотр черновика</span><a id="public-link" target="_blank" rel="noopener">Открыть публичное древо ↗</a></div>
+    <iframe name="family-tree-admin-preview" id="preview" title="Схема в черновике"></iframe>
+  </section>
+</main>
+</html>

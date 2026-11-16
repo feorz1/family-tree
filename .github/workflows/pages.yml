@@ -1,0 +1,35 @@
+name: Publish family tree
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: family-pages
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Check genealogy data and photos
+        run: python3 admin/check.py
+      - name: Collect public files
+        run: |
+          mkdir public
+          cp -r index.html data assets semeinoe-drevo.ged family-overview.md research.md public/
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: public
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
