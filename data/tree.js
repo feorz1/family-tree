@@ -130,6 +130,12 @@ const treeData = {
           "alt": "Семейная таблица Храмовых",
           "caption": "Семейная таблица; телефоны скрыты. Год рождения Николая расходится с прежним семейным сообщением.",
           "portrait": false
+        },
+        {
+          "src": "assets/photos/editor-1ddf5ee09d41f57097502c8a58f56556b95d4a6f595af15354d8b3c1fdd58f3f.jpg",
+          "alt": "Николай Максимович Храмов",
+          "caption": "",
+          "portrait": true
         }
       ],
       "and": [
@@ -144,6 +150,38 @@ const treeData = {
           "alt": "Семейная таблица Храмовых",
           "caption": "Семейная таблица; телефоны скрыты. Дата рождения Константина и предполагаемый год смерти Андрея в таблице неверны.",
           "portrait": false
+        }
+      ],
+      "kat": [
+        {
+          "src": "assets/photos/editor-0e7ff10a8eee029dfbe984472abd7bf840c315c714d074a5cd4152983a7e826c.webp",
+          "alt": "Екатерина Фёдоровна Коныгина",
+          "caption": "",
+          "portrait": true,
+          "crop": {
+            "x": 0.6377,
+            "y": 0.9624,
+            "zoom": 1.25
+          }
+        },
+        {
+          "src": "assets/photos/editor-ad4aaff3e44484e7286cc03b976390e8b58c49185c14455ab38fb34c5ca54a03.webp",
+          "alt": "Екатерина Фёдоровна Коныгина",
+          "caption": "",
+          "portrait": false
+        }
+      ],
+      "max_young": [
+        {
+          "src": "assets/photos/editor-604528aa9d2de8f11a71956d8a927255ecaf0ac04ea2a70fdafc79a1b0583d61.webp",
+          "alt": "Максим Николаевич Храмов",
+          "caption": "",
+          "portrait": true,
+          "crop": {
+            "x": 0.3794,
+            "y": 0.3136,
+            "zoom": 3
+          }
         }
       ]
     }
@@ -3038,7 +3076,17 @@ const treeData = {
     ]
   ],
   "routes": {
-    "family": {},
+    "family": {
+      "[\"iv\",\"aga_sis\",\"blue\",\"восприемница\"]": {
+        "points": [
+          [
+            2773,
+            1404
+          ]
+        ],
+        "radius": 8
+      }
+    },
     "khramov": {
       "[\"fyodor\",\"kat\",\"\",\"отец и дочь\"]": {
         "points": [],
