@@ -7,7 +7,7 @@ const historyItems = $("#history-items");
 const historyDate = new Intl.DateTimeFormat("ru-RU", {
   dateStyle:"medium",timeStyle:"short",timeZone:"Europe/Moscow"
 });
-let historyCursor = null, historyLatest = 0, historyLoading = null, historyStarted = false, historyNotice = "";
+let historyCursor = null, historyLatest = 0, historyLoading = null, historyStarted = false, historyNotice = "", historyFilter = "all";
 
 function dateLabel(stamp) {
   return historyDate.format(new Date(stamp*1000));
@@ -167,6 +167,22 @@ async function reviewPortrait(entry, section, index, picture) {
   });
 }
 
+function authorName(actor) {
+  return actor ? actor.split(" · ")[0] : "Неизвестный автор";
+}
+
+function historyTime(stamp) {
+  return element("time",dateLabel(stamp),{datetime:new Date(stamp*1000).toISOString()});
+}
+
+function sectionStatus(entry, section) {
+  if (entry.revertedBy) return ["Отменено","neutral"];
+  if (entry.publication) return ["Опубликовано","neutral"];
+  if (section.acceptedAt) return ["Принято","accepted"];
+  if (entry.role === "editor" || entry.action === "recovered") return ["На проверке","pending"];
+  return null;
+}
+
 function sectionView(entry, section, index, open) {
   const group = element("details","",{class:"history-section","data-history-section":entry.id+"-"+index});
   group.open = open;
@@ -174,9 +190,23 @@ function sectionView(entry, section, index, open) {
   const summary = element("summary");
   summary.append(element("span",section.title || chartName || "Общие данные"));
   if (section.title && chartName) summary.append(element("small",chartName));
-  if (section.acceptedAt) summary.append(element("small","Принято",{class:"history-state"}));
+  const state = sectionStatus(entry, section);
+  if (state) {
+    const badge = element("small",state[0],{class:"history-state "+state[1]});
+    if (entry.publishedAt && !entry.revertedBy) badge.title = "Публикация · " + dateLabel(entry.publishedAt);
+    summary.append(badge);
+  }
   group.append(summary);
   const contents = element("div","",{class:"history-fields"});
+  if (section.refinements.length) {
+    const chain = element("ul","",{class:"history-chain","aria-label":"Уточнения правки"});
+    for (const refinement of section.refinements) {
+      const step = element("li","Уточнение · "+authorName(refinement.actor));
+      if (refinement.editedAt) step.append(document.createTextNode(" · "),historyTime(refinement.editedAt));
+      chain.append(step);
+    }
+    contents.append(chain);
+  }
   if (section.beforeCard || section.afterCard) {
     contents.append(comparison(null,portrait(section.beforeCard),portrait(section.afterCard)));
   }
@@ -221,18 +251,18 @@ function entryView(entry, open) {
   const card = element("article","",{class:"history-entry"});
   const head = element("div","",{class:"history-entry-head"});
   const meta = element("div","",{class:"history-meta"});
-  meta.append(element("h4",entry.actor || "Автор не записан"));
-  if (entry.editedAt) {
-    meta.append(element("time",dateLabel(entry.editedAt),{datetime:new Date(entry.editedAt*1000).toISOString()}));
-  } else meta.append(element("span","Время редактирования не записано"));
-  const badges = element("div","",{class:"history-tags"});
-  if (entry.role) badges.append(element("span",entry.role === "editor" ? "Редактор" : "Владелец"));
-  if (entry.action === "revert") badges.append(element("span","Отмена правки"));
-  if (entry.action === "recovered") badges.append(element("span","Восстановлено из версий"));
-  if (entry.revertedBy) badges.append(element("span","Отменено"));
-  else if (entry.publication) badges.append(element("span","Передано на публикацию"+(entry.publishedAt ? " · "+dateLabel(entry.publishedAt) : "")));
-  else badges.append(element("span","В черновике"));
-  meta.append(badges);
+  const title = element("h4",authorName(entry.actor));
+  if (entry.action === "recovered" && entry.actor) title.title = "Автор указан по твоему уточнению";
+  meta.append(title);
+  if (entry.action === "revert") meta.append(element("span","Отмена правки"));
+  if (entry.editedAt) meta.append(historyTime(entry.editedAt));
+  else if (entry.publishedAt) {
+    const date = element("span","Публикация · ");
+    date.append(historyTime(entry.publishedAt));
+    meta.append(date);
+  } else {
+    meta.append(element("span","До появления журнала",{title:"Для этой записи доступно сравнение версий без времени редактирования."}));
+  }
   head.append(meta);
   if (!entry.revertedBy) {
     const undo = formButton("Отменить сохранение",async () => {
@@ -240,7 +270,8 @@ function entryView(entry, open) {
       const message = entry.publication
         ? "Отменить сохранение в черновике? Изменения на сайте появятся после новой публикации."
         : "Отменить это сохранение в черновике?";
-      if (!confirm(message)) return;
+      const filtered = entry.hiddenFields ? " В эту запись также входят изменения, скрытые текущим фильтром." : "";
+      if (!confirm(message+filtered)) return;
       await api("history/revert",{id:entry.id,revision});
       await syncDraft();
       status("Отмена сохранена в черновике");
@@ -249,11 +280,14 @@ function entryView(entry, open) {
     });
     undo.className = "history-undo";
     const icon = element("img","",{src:"/preview/assets/icons/history-undo.svg",alt:"",width:"16",height:"16"});
-    undo.prepend(icon);
+    undo.textContent = "";
+    undo.setAttribute("aria-label","Отменить сохранение");
+    undo.title = "Отменить сохранение";
+    undo.append(icon);
     head.append(undo);
   }
   card.append(head);
-  for (const [index,section] of entry.sections.entries()) card.append(sectionView(entry,section,index,open));
+  for (const section of entry.sections) card.append(sectionView(entry,section,section.index,open));
   return card;
 }
 
@@ -263,8 +297,14 @@ async function loadHistory(older=false, anchor=null) {
     await historyLoading.catch(() => {});
   }
   $("#history-more").disabled = true;
+  const filter = historyFilter;
   const operation = (async () => {
-    const feed = await api("history"+(older && historyCursor ? "?before="+historyCursor : ""));
+    const filters = new URLSearchParams();
+    if (filter !== "all") filters.set("type",filter);
+    if (older && historyCursor) filters.set("before",historyCursor);
+    const query = filters.toString();
+    const feed = await api("history"+(query ? "?"+query : ""));
+    if (filter !== historyFilter) return;
     const anchorSelector = anchor ? '[data-history-section="'+anchor+'"]' : null;
     const previous = anchorSelector ? historyItems.querySelector(anchorSelector) : null;
     const top = previous?.getBoundingClientRect().top;
@@ -278,13 +318,13 @@ async function loadHistory(older=false, anchor=null) {
     else {
       historyItems.replaceChildren(...entries);
       historyLatest = feed.latest;
-      historyLabel.textContent = historyNotice || (entries.length ? "" : "Сохранённых правок пока нет.");
+      historyLabel.textContent = historyNotice || (entries.length ? "" : filter === "all" ? "Сохранённых правок пока нет." : "Правок этого типа пока нет.");
       if (anchorSelector) {
         const section = historyItems.querySelector(anchorSelector);
         if (section && top != null) historyDialog.scrollTop += section.getBoundingClientRect().top - top;
         (section?.querySelector("summary") || $("#history-title")).focus({preventScroll:true});
       }
-      if (feed.unseen) {
+      if (feed.unseen && filter === "all") {
         await api("history/seen",{through:feed.latest});
         updateBadge(0);
       }
@@ -340,3 +380,25 @@ $("#history").addEventListener("click",async () => {
 });
 $("#close-history").addEventListener("click",() => historyDialog.close());
 $("#history-more").addEventListener("click",() => loadHistory(true).catch(error=>{historyError.textContent=error.message;}));
+
+
+for (const button of document.querySelectorAll("[data-history-filter]")) {
+  button.addEventListener("click",async () => {
+    const next = button.dataset.historyFilter;
+    if (historyFilter === next) return;
+    historyFilter = next;
+    historyCursor = null;
+    historyNotice = "";
+    historyError.textContent = "";
+    historyLabel.textContent = "Загружаем историю…";
+    $("#history-more").hidden = true;
+    for (const option of document.querySelectorAll("[data-history-filter]")) {
+      option.setAttribute("aria-pressed",String(option === button));
+    }
+    await historyLoading?.catch(() => {});
+    if (historyFilter !== next) return;
+    historyDialog.scrollTop = 0;
+    try {await loadHistory();}
+    catch (error) {historyError.textContent = error.message;}
+  });
+}

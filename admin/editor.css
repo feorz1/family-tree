@@ -101,7 +101,7 @@ main.auth-card{display:block;flex:none}
 .auth-card .field-error,#access-error,#invite-result{margin-top:12px}
 
 #history-badge{display:inline-grid;place-items:center;min-width:21px;height:21px;padding:0 4px;margin-left:6px;border-radius:99px;background:var(--ink);color:white;font-size:11px}
-#history-dialog{position:fixed;inset:0 0 0 auto;margin:0;width:min(680px,100%);max-width:none;height:100dvh;max-height:100dvh;padding:0;border-radius:0;border-width:0 0 0 1px;background:#ececec;scroll-padding-top:112px}
+#history-dialog{position:fixed;inset:0 0 0 auto;margin:0;width:min(680px,100%);max-width:none;height:100dvh;max-height:100dvh;padding:0;border-radius:0;border-width:0 0 0 1px;background:#ececec;scroll-padding-top:146px}
 .history-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px 12px;position:sticky;top:0;z-index:2;padding:16px 20px;background:var(--panel);border-bottom:1px solid var(--line)}
 .history-head h2{font:400 25px/1.15 Georgia,serif}
 .history-head p:empty,#crop-error:empty{display:none}
@@ -114,11 +114,16 @@ main.auth-card{display:block;flex:none}
 .history-meta h4,.history-comparison h5{line-height:1.35;margin:0}
 .history-meta h4,.history-comparison h5{font-size:14px;font-weight:600}
 .history-meta time,.history-meta>span,.history-side{color:var(--muted);font-size:12px}
-.history-tags{display:flex;gap:4px;flex-wrap:wrap}
-.history-tags span,.history-state{background:var(--hover);border-radius:20px;padding:3px 8px;font-size:11px;font-weight:500}
-.history-undo{display:inline-flex;align-items:center;justify-content:flex-end;gap:6px;flex:0 1 auto;min-width:0;padding:6px;border:0;background:transparent;color:var(--muted);font-size:13px;text-align:right;line-height:1.3}
-.history-undo img{flex:none;opacity:.8}
-.history-undo:hover:enabled{color:var(--ink)}
+.history-filters{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:5px}
+.history-filters button{min-height:38px;border:0;border-radius:99px;padding:7px 12px;background:#eee;font-size:13px}
+.history-filters button:hover{background:#e4e4e4}
+.history-filters button[aria-pressed=true]{background:var(--ink);color:white}
+.history-state{border-radius:20px;padding:3px 8px;background:#eee;color:#4b4b4b;font-size:11px;font-weight:500;white-space:nowrap}
+.history-section summary .history-state.accepted{background:#edf6ed;color:#2f5636}
+.history-section summary .history-state.pending{background:#fff1e0;color:#754515}
+.history-undo{display:grid;place-items:center;flex:none;width:44px;height:44px;padding:0;border:0;background:transparent}
+.history-undo img{display:block;opacity:.8}
+.history-chain{padding:0;margin:0;display:grid;gap:4px;list-style:none;color:var(--muted);font-size:12px}
 .history-section{margin:0;padding:0 12px}
 .history-section>summary{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
 .history-section>summary::before{content:"";flex:none;width:16px;height:16px;background:url("/preview/assets/icons/chevron-down-16.svg") center/contain no-repeat}
@@ -152,5 +157,5 @@ main.auth-card{display:block;flex:none}
   #history-more{margin-inline:12px}
   .history-section{padding-inline:8px}
   .history-value{padding:8px}
-  .history-undo{max-width:40%}
+  .history-filters button{padding-inline:9px}
 }

@@ -307,9 +307,12 @@ class Handler(BaseHTTPRequestHandler):
                     result = {"latest": latest, "unseen": unseen, "revision": revision,
                               "dirty": digest(data_script(data)) != origin, "publication": publication}
                     if path == "/api/history":
-                        cursor = parse_qs(urlsplit(self.path).query).get("before", [""])[0]
+                        query = parse_qs(urlsplit(self.path).query)
+                        cursor = query.get("before", [""])[0]
                         before = int(cursor) if cursor.isascii() and cursor.isdecimal() and len(cursor) < 19 else None
-                        result["entries"], result["more"] = history.listing(db, before)
+                        kind = query.get("type", [None])[0]
+                        demand(kind in {None, "photos", "cards", "relations", "routes"}, "Неизвестный вид правки")
+                        result["entries"], result["more"] = history.listing(db, before, kind)
                     return self.send_json(result)
                 if path == "/api/draft":
                     revision, origin, publication, data = get_draft(db)
@@ -431,11 +434,12 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/draft":
             replacement = body["data"]
             validate(replacement, db)
+            review = None
             if "review" in body:
                 self.require_admin(viewer)
-                review = body["review"]
-                history.accept(db, review["id"], review["section"])
-            return self.save_draft(db, revision, origin, data, replacement, viewer), None
+                review = (body["review"]["id"], body["review"]["section"])
+                history.accept(db, *review)
+            return self.save_draft(db, revision, origin, data, replacement, viewer, review=review), None
         if path == "/api/publish":
             commit = publish(db, revision, origin, data)
             history.publish(db, revision, commit)
@@ -443,12 +447,12 @@ class Handler(BaseHTTPRequestHandler):
         raise EditError("Неизвестный запрос", HTTPStatus.NOT_FOUND)
 
 
-    def save_draft(self, db, revision, origin, before, after, viewer, reverts=None):
+    def save_draft(self, db, revision, origin, before, after, viewer, reverts=None, review=None):
         revision += 1
         script = data_script(after)
         actor = viewer["name"] if viewer["role"] == "admin" else f'{viewer["name"]} · {viewer["username"]}'
         history.record(db, revision, before, after, actor=actor, role=viewer["role"],
-                       action="revert" if reverts is not None else "save", reverts=reverts)
+                       action="revert" if reverts is not None else "save", reverts=reverts, review=review)
         db.execute("UPDATE draft SET revision=?, payload=? WHERE id=1", (revision, script.decode()[len(PREFIX):-2]))
         return {"revision": revision, "dirty": digest(script) != origin}
 

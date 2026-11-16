@@ -39,6 +39,10 @@ CREATE TABLE IF NOT EXISTS edit_review (
     edit_id INTEGER NOT NULL, section INTEGER NOT NULL, accepted_at INTEGER NOT NULL,
     PRIMARY KEY(edit_id,section)
 );
+CREATE TABLE IF NOT EXISTS edit_refinement (
+    edit_id INTEGER PRIMARY KEY, original_id INTEGER NOT NULL, section INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS refinement_by_original ON edit_refinement(original_id, edit_id);
 """
 
 
@@ -166,17 +170,32 @@ def removed_items(left, right):
     return difference
 
 
+def section_key(path):
+    table = path[0]
+    chart = path[1]["id"] if table == "charts" and len(path) > 1 else path[1] if table in MAP_TABLES and len(path) > 1 else None
+    uid = path[2] if table in PERSON_TABLES and len(path) > 2 else None
+    if table == "charts" and len(path) > 3 and path[2] == "nodes":
+        uid = path[3]["id"]
+    return chart, uid
+
+
+def category(section, field):
+    if field["kind"] == "photos":
+        return "photos"
+    if field["kind"] == "route":
+        return "routes"
+    if section["person"] or field["label"] == "События и даты":
+        return "cards"
+    return "relations"
+
+
 def describe(before, after, patches):
     sections = {}
     for patch in patches:
         path = patch["path"]
         table = path[0]
         first, last = patch["before"], patch["after"]
-        chart = path[1]["id"] if table == "charts" and len(path) > 1 else path[1] if table in MAP_TABLES and len(path) > 1 else None
-        uid = path[2] if table in PERSON_TABLES and len(path) > 2 else None
-        if table == "charts" and len(path) > 3 and path[2] == "nodes":
-            uid = path[3]["id"]
-        key = (chart, uid)
+        chart, uid = key = section_key(path)
         if key not in sections:
             sections[key] = {"chart": chart, "person": uid, "title": person_label(before, after, chart, uid) if uid else None,
                              "beforeCard": person_card(before, chart, uid) if uid else None,
@@ -222,17 +241,41 @@ def describe(before, after, patches):
 
 
 def record(db, revision, before, after, *, actor=None, role=None, action="save",
-           reverts=None, publication=None, published_at=None):
+           reverts=None, publication=None, published_at=None, review=None):
     patches = list(diff(before, after))
-    if not patches:
-        return
-    sections = describe(before, after, patches)
-    db.execute(
-        "INSERT INTO edit_history (revision, action, actor, actor_role, edited_at, published_commit,"
-        " published_at, reverts_id, patches, sections) VALUES(?,?,?,?,?,?,?,?,?,?)",
-        (revision, action, actor, role, None if action == "recovered" else int(time.time()),
-         publication, published_at, reverts, json.dumps(patches, ensure_ascii=False), json.dumps(sections, ensure_ascii=False))
-    )
+    stamp = None if action == "recovered" else int(time.time())
+
+    def insert(changes):
+        sections = describe(before, after, changes)
+        return db.execute(
+            "INSERT INTO edit_history (revision, action, actor, actor_role, edited_at, published_commit,"
+            " published_at, reverts_id, patches, sections) VALUES(?,?,?,?,?,?,?,?,?,?)",
+            (revision, action, actor, role, stamp, publication, published_at, reverts,
+             json.dumps(changes, ensure_ascii=False), json.dumps(sections, ensure_ascii=False)),
+        ).lastrowid
+
+    if review and patches:
+        original, index = review
+        section = get_section(db, original, index)
+        selected = (section["chart"], section["person"])
+        if selected[1] is not None:
+            related = [patch for patch in patches if section_key(patch["path"]) == selected]
+            if related:
+                db.execute("INSERT INTO edit_refinement VALUES(?,?,?)", (insert(related), original, index))
+                patches = [patch for patch in patches if section_key(patch["path"]) != selected]
+    if patches:
+        insert(patches)
+
+
+def combine_section(section, refined):
+    section["afterCard"] = refined["afterCard"]
+    fields = {(f["kind"], f["label"], f["target"]): f for f in section["fields"]}
+    for field in refined["fields"]:
+        key = (field["kind"], field["label"], field["target"])
+        if key in fields:
+            fields[key]["after"] = field["after"]
+        else:
+            section["fields"].append(field)
 
 
 def status(db):
@@ -243,29 +286,52 @@ def status(db):
     return latest, unseen
 
 
-def listing(db, before=None):
+def listing(db, before=None, only=None):
     limit = 12
     rows = db.execute(
         """SELECT h.id, h.action, h.actor, h.actor_role, h.edited_at, h.published_commit, h.published_at, h.reverts_id,
                   r.id, h.sections
            FROM edit_history h LEFT JOIN edit_history r ON r.reverts_id=h.id
-           WHERE h.id < ? ORDER BY h.id DESC LIMIT ?""",
-        (before or 2**63-1, limit+1),
-    ).fetchall()
-    entries = [
-        {"id": row[0], "action": row[1], "actor": row[2], "role": row[3], "editedAt": row[4],
-         "publication": row[5], "publishedAt": row[6], "reverts": row[7], "revertedBy": row[8], "sections": json.loads(row[9])}
-        for row in rows[:limit]
-    ]
-    if entries:
-        accepted = {(edit, section): stamp for edit, section, stamp in db.execute(
-            "SELECT edit_id,section,accepted_at FROM edit_review WHERE edit_id BETWEEN ? AND ?",
-            (entries[-1]["id"], entries[0]["id"]),
-        )}
-        for entry in entries:
-            for index, section in enumerate(entry["sections"]):
-                section["acceptedAt"] = accepted.get((entry["id"], index))
-    return entries, entries[-1]["id"] if len(rows) > limit else None
+           WHERE h.id < ? AND NOT EXISTS(SELECT 1 FROM edit_refinement WHERE edit_id=h.id)
+           ORDER BY h.id DESC""",
+        (before or 2**63-1,),
+    )
+    entries = []
+    for row in rows:
+        entry_id = row[0]
+        sections = json.loads(row[9])
+        for index, section in enumerate(sections):
+            section["index"] = index
+            section["refinements"] = []
+            section["acceptedAt"] = None
+        for index, stamp in db.execute("SELECT section,accepted_at FROM edit_review WHERE edit_id=?", (entry_id,)):
+            sections[index]["acceptedAt"] = stamp
+        for index, author, stamp, payload in db.execute(
+            """SELECT link.section,h.actor,h.edited_at,h.sections FROM edit_refinement link
+               JOIN edit_history h ON h.id=link.edit_id WHERE link.original_id=? ORDER BY h.id""", (entry_id,)
+        ):
+            section = sections[index]
+            for refined in json.loads(payload):
+                combine_section(section, refined)
+            section["refinements"].append({"actor": author, "editedAt": stamp})
+
+        hidden_fields = 0
+        if only:
+            for section in sections:
+                fields = [field for field in section["fields"] if category(section, field) == only]
+                hidden_fields += len(section["fields"]) - len(fields)
+                section["fields"] = fields
+            sections = [section for section in sections if section["fields"]]
+        if not sections:
+            continue
+        if len(entries) == limit:
+            return entries, entries[-1]["id"]
+        entries.append(
+            {"id": entry_id, "action": row[1], "actor": row[2], "role": row[3], "editedAt": row[4],
+             "publication": row[5], "publishedAt": row[6], "reverts": row[7], "revertedBy": row[8],
+             "sections": sections, "hiddenFields": hidden_fields}
+        )
+    return entries, None
 
 
 def mark_seen(db, through):
@@ -280,14 +346,28 @@ def publish(db, revision, commit):
 
 def undo(db, edit_id, current):
     entry = db.execute("SELECT patches FROM edit_history WHERE id=?", (edit_id,)).fetchone()
-    if not entry or db.execute("SELECT 1 FROM edit_history WHERE reverts_id=?", (edit_id,)).fetchone():
+    if (not entry or db.execute("SELECT 1 FROM edit_history WHERE reverts_id=?", (edit_id,)).fetchone()
+        or db.execute("SELECT 1 FROM edit_refinement WHERE edit_id=?", (edit_id,)).fetchone()):
         raise Conflict
-    return inverse(current, json.loads(entry[0]))
+    result = current
+    for (patches,) in db.execute(
+        """SELECT h.patches FROM edit_refinement link JOIN edit_history h ON h.id=link.edit_id
+           WHERE link.original_id=? ORDER BY h.id DESC""", (edit_id,)
+    ):
+        result = inverse(result, json.loads(patches))
+    return inverse(result, json.loads(entry[0]))
+
+
+def get_section(db, edit_id, section):
+    entry = db.execute("SELECT sections FROM edit_history WHERE id=?", (edit_id,)).fetchone()
+    sections = json.loads(entry[0]) if entry else []
+    if (type(section) is not int or not 0 <= section < len(sections)
+        or db.execute("SELECT 1 FROM edit_history WHERE reverts_id=?", (edit_id,)).fetchone()
+        or db.execute("SELECT 1 FROM edit_refinement WHERE edit_id=?", (edit_id,)).fetchone()):
+        raise Conflict
+    return sections[section]
 
 
 def accept(db, edit_id, section):
-    entry = db.execute("SELECT sections FROM edit_history WHERE id=?", (edit_id,)).fetchone()
-    if (not entry or type(section) is not int or not 0 <= section < len(json.loads(entry[0]))
-        or db.execute("SELECT 1 FROM edit_history WHERE reverts_id=?", (edit_id,)).fetchone()):
-        raise Conflict
+    get_section(db, edit_id, section)
     db.execute("INSERT OR IGNORE INTO edit_review VALUES(?,?,?)", (edit_id, section, int(time.time())))

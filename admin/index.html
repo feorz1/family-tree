@@ -111,6 +111,13 @@
   <div class="history-head">
     <div><h2 id="history-title">История правок</h2><p id="history-summary" role="status"></p></div>
     <button type="button" id="close-history">Закрыть</button>
+    <div class="history-filters" role="group" aria-label="Вид изменений">
+      <button type="button" data-history-filter="all" aria-pressed="true">Все</button>
+      <button type="button" data-history-filter="photos" aria-pressed="false">Фото</button>
+      <button type="button" data-history-filter="cards" aria-pressed="false">Текст</button>
+      <button type="button" data-history-filter="relations" aria-pressed="false">Родство</button>
+      <button type="button" data-history-filter="routes" aria-pressed="false">Маршруты</button>
+    </div>
     <p class="field-error" id="history-error" role="alert"></p>
   </div>
   <div id="history-items"></div>
