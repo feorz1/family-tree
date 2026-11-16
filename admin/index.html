@@ -111,8 +111,8 @@
   <div class="history-head">
     <div><h2 id="history-title">История правок</h2><p id="history-summary" role="status"></p></div>
     <button type="button" id="close-history">Закрыть</button>
+    <p class="field-error" id="history-error" role="alert"></p>
   </div>
-  <p class="field-error" id="history-error" role="alert"></p>
   <div id="history-items"></div>
   <button type="button" id="history-more" hidden>Более ранние правки</button>
 </dialog>
@@ -130,10 +130,11 @@
       <label>По вертикали<input type="range" id="crop-y" min="0" max="100" step="1" value="28"></label>
     </div>
     <div class="actions">
-      <button type="submit" class="primary">Применить кадр</button>
+      <button type="submit" id="crop-apply" class="primary">Применить кадр</button>
       <button type="button" id="crop-reset">Сбросить кадр</button>
     </div>
   </form>
+  <p class="field-error" id="crop-error" role="alert"></p>
 </dialog>
 <dialog id="access-dialog" aria-labelledby="access-title">
   <div class="dialog-head">

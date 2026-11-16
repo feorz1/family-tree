@@ -746,20 +746,9 @@ function openReviewCard(context) {
   selectedPerson = section.person;
   redrawPeople();
   setReview(context);
-  if (context.field.kind === "photos") {
-    const photos = data.photoCatalog[section.chart]?.[section.person] || [];
-    const original = new Set((context.field.before || []).map(photo => photo.src));
-    const candidate = photos.find(photo => photo.portrait && !original.has(photo.src)) || photos.find(photo => photo.portrait);
-    if (candidate) openCrop(candidate, person());
-    else {
-      $("#photos").closest("details").open = true;
-      $("#photo-file").focus();
-    }
-  } else {
-    const field = personForm.elements[context.field.target];
-    if (field?.tagName === "SELECT") selectControls.get(field)?.button.focus();
-    else (field || personForm.elements.info).focus();
-  }
+  const field = personForm.elements[context.field.target];
+  if (field?.tagName === "SELECT") selectControls.get(field)?.button.focus();
+  else (field || personForm.elements.info).focus();
   return true;
 }
 

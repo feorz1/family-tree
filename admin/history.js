@@ -7,7 +7,7 @@ const historyItems = $("#history-items");
 const historyDate = new Intl.DateTimeFormat("ru-RU", {
   dateStyle:"medium",timeStyle:"short",timeZone:"Europe/Moscow"
 });
-let historyCursor = null, historyLatest = 0, historyLoading = false, historyStarted = false;
+let historyCursor = null, historyLatest = 0, historyLoading = null, historyStarted = false, historyNotice = "";
 
 function dateLabel(stamp) {
   return historyDate.format(new Date(stamp*1000));
@@ -113,8 +113,62 @@ function formButton(label, action) {
   return button;
 }
 
+function currentPortrait(snapshot, section, source) {
+  return snapshot.photoCatalog[section.chart]?.[section.person]?.find(photo => photo.portrait && photo.src === source);
+}
+
+function sameCrop(first, second) {
+  return ["x","y","zoom"].every(key => first?.[key] === second?.[key]);
+}
+
+async function finishHistoryAction(message, anchor) {
+  historyNotice = message;
+  historyLabel.textContent = message;
+  try {
+    await loadHistory(false, anchor);
+  } catch (error) {
+    historyError.textContent = "Действие сохранено. Не удалось обновить историю: " + error.message;
+  }
+}
+
+async function reviewPortrait(entry, section, index, picture) {
+  const opened = await api("draft");
+  const photo = currentPortrait(opened.data, section, picture.src);
+  if (!photo) throw new Error("Портрет на схеме уже заменён. Новый портрет можно кадрировать в карточке.");
+  const anchor = entry.id + "-" + index;
+  openCrop(photo, {name:section.title},{
+    async save(value) {
+      const latest = await api("draft");
+      const portrait = currentPortrait(latest.data, section, picture.src);
+      if (!portrait || !sameCrop(portrait.crop, photo.crop)) {
+        throw new Error("Портрет или кадр уже изменился. Закрой окно кадрирования и открой правку снова.");
+      }
+      setPortraitCrop(portrait, value);
+      const result = await api("draft",{
+        revision:latest.revision,data:latest.data,review:{id:entry.id,section:index}
+      });
+      return {result, priorRevision:latest.revision, value};
+    },
+    async afterSave({result,priorRevision,value}) {
+      // Merge only the crop into any unrelated local form edits based on the same draft revision.
+      const local = currentPortrait(data, section, picture.src);
+      if (revision === priorRevision && local && sameCrop(local.crop, photo.crop)) {
+        setPortraitCrop(local, value);
+        revision = result.revision;
+        publicDirty = result.dirty;
+        refreshPreview();
+        buttons();
+      } else {
+        try {await syncDraft();} catch {}
+      }
+      if (!localDirty) status("Кадр сохранён, правка принята");
+      await finishHistoryAction("Кадр сохранён, правка принята.", anchor);
+    }
+  });
+}
+
 function sectionView(entry, section, index, open) {
-  const group = element("details","",{class:"history-section"});
+  const group = element("details","",{class:"history-section","data-history-section":entry.id+"-"+index});
   group.open = open;
   const chartName = titles[section.chart];
   const summary = element("summary");
@@ -130,9 +184,15 @@ function sectionView(entry, section, index, open) {
     (entry.role === "editor" || entry.action === "recovered");
   for (const field of section.fields) {
     const row = comparison(field.label,describeValue(field,field.before),describeValue(field,field.after));
-    if (canReview && section.afterCard && (field.kind === "photos" || field.target)) {
+    const picture = field.kind === "photos" ? field.after?.find(photo => photo.portrait) : null;
+    if (canReview && section.afterCard && (picture || (field.kind !== "photos" && field.target))) {
       const edit = formButton(field.kind === "photos" ? "Уточнить кадр и принять" : "Уточнить и принять",async () => {
-        if (!await syncDraft()) throw new Error("Сначала сохрани открытые правки.");
+        if (picture) {
+          await reviewPortrait(entry, section, index, picture);
+          return;
+        }
+        const sameReview = reviewContext?.id === entry.id && reviewContext.section === index;
+        if (!sameReview && !await syncDraft()) throw new Error("Сначала сохрани открытые правки.");
         historyDialog.close();
         if (!openReviewCard({id:entry.id,section:index,details:section,title:section.title,field})) {
           historyDialog.showModal();
@@ -147,10 +207,9 @@ function sectionView(entry, section, index, open) {
   }
   if (canReview) {
     const approve = formButton(section.title ? "Принять изменения карточки" : "Принять изменения",async () => {
-      if (!await syncDraft()) throw new Error("Сначала сохрани открытые правки.");
-      await api("history/accept",{id:entry.id,section:index,revision});
-      await loadHistory();
-      $("#history-title").focus();
+      const latest = await api("history/status");
+      await api("history/accept",{id:entry.id,section:index,revision:latest.revision});
+      await finishHistoryAction("Изменения приняты в черновике.",entry.id + "-" + index);
     });
     contents.append(approve);
   }
@@ -176,8 +235,6 @@ function entryView(entry, open) {
   meta.append(badges);
   head.append(meta);
   if (!entry.revertedBy) {
-    const overflow = element("details","",{class:"history-more-actions"});
-    const more = element("summary","Ещё");
     const undo = formButton("Отменить сохранение",async () => {
       if (!await syncDraft()) throw new Error("Сначала сохрани открытые правки.");
       const message = entry.publication
@@ -190,26 +247,43 @@ function entryView(entry, open) {
       await loadHistory();
       $("#history-title").focus();
     });
-    overflow.append(more,undo);
-    head.append(overflow);
+    undo.className = "history-undo";
+    const icon = element("img","",{src:"/preview/assets/icons/history-undo.svg",alt:"",width:"16",height:"16"});
+    undo.prepend(icon);
+    head.append(undo);
   }
   card.append(head);
   for (const [index,section] of entry.sections.entries()) card.append(sectionView(entry,section,index,open));
   return card;
 }
 
-async function loadHistory(older=false) {
-  if (historyLoading) return;
-  historyLoading = true;
+async function loadHistory(older=false, anchor=null) {
+  if (historyLoading) {
+    if (!anchor) return historyLoading;
+    await historyLoading.catch(() => {});
+  }
   $("#history-more").disabled = true;
-  try {
+  const operation = (async () => {
     const feed = await api("history"+(older && historyCursor ? "?before="+historyCursor : ""));
-    const entries = feed.entries.map((entry,index)=>entryView(entry,!older && index === 0));
+    const anchorSelector = anchor ? '[data-history-section="'+anchor+'"]' : null;
+    const previous = anchorSelector ? historyItems.querySelector(anchorSelector) : null;
+    const top = previous?.getBoundingClientRect().top;
+    const open = new Set([...historyItems.querySelectorAll("details[data-history-section][open]")]
+      .map(section => section.dataset.historySection));
+    const entries = feed.entries.map((entry,index)=>entryView(entry,!older && !anchor && index === 0));
+    for (const card of entries) for (const section of card.querySelectorAll("details[data-history-section]")) {
+      if (open.has(section.dataset.historySection) || section.dataset.historySection === anchor) section.open = true;
+    }
     if (older) historyItems.append(...entries);
     else {
       historyItems.replaceChildren(...entries);
       historyLatest = feed.latest;
-      historyLabel.textContent = entries.length ? "" : "Сохранённых правок пока нет.";
+      historyLabel.textContent = historyNotice || (entries.length ? "" : "Сохранённых правок пока нет.");
+      if (anchorSelector) {
+        const section = historyItems.querySelector(anchorSelector);
+        if (section && top != null) historyDialog.scrollTop += section.getBoundingClientRect().top - top;
+        (section?.querySelector("summary") || $("#history-title")).focus({preventScroll:true});
+      }
       if (feed.unseen) {
         await api("history/seen",{through:feed.latest});
         updateBadge(0);
@@ -217,19 +291,24 @@ async function loadHistory(older=false) {
     }
     historyCursor = feed.more;
     $("#history-more").hidden = !historyCursor;
-  } finally {
-    historyLoading = false;
-    $("#history-more").disabled = false;
+  })();
+  historyLoading = operation;
+  try {await operation;}
+  finally {
+    if (historyLoading === operation) {
+      historyLoading = null;
+      $("#history-more").disabled = false;
+    }
   }
 }
 
 async function pollHistory() {
-  if (currentRole !== "admin" || document.hidden || historyLoading) return;
+  if (currentRole !== "admin" || document.hidden || historyLoading || $("#crop-dialog").open) return;
   try {
     const meta = await api("history/status");
     updateBadge(meta.unseen);
     if (meta.revision > revision || meta.dirty !== publicDirty) await syncDraft();
-    if (historyDialog.open && meta.latest > historyLatest) await loadHistory();
+    if (historyDialog.open && !$("#crop-dialog").open && meta.latest > historyLatest) await loadHistory();
   } catch {}
 }
 
@@ -253,6 +332,7 @@ if (data) startHistory();
 $("#history-title").tabIndex = -1;
 $("#history").addEventListener("click",async () => {
   historyError.textContent = "";
+  historyNotice = "";
   historyLabel.textContent = "Загружаем историю…";
   historyDialog.showModal();
   try {await loadHistory();}
