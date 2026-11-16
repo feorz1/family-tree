@@ -7,10 +7,14 @@
 <script defer src="/select.js"></script>
 <script defer src="/editor.js"></script>
 <script defer src="/access.js"></script>
+<script defer src="/preview/assets/portrait.js"></script>
+<script defer src="/crop.js"></script>
+<script defer src="/history.js"></script>
 <header>
   <h1>Редактор родословной</h1>
   <div class="actions">
     <span id="status" role="status">Загружаем черновик…</span>
+    <button type="button" id="history" hidden>История<span id="history-badge" hidden></span></button>
     <button type="button" id="access" hidden>Доступ</button>
     <button type="button" id="logout" hidden>Выйти</button>
     <button type="button" id="save" disabled>Сохранить черновик</button>
@@ -33,6 +37,7 @@
         <button type="button" id="new-person">Добавить</button>
       </div>
       <label>Человек<select id="person"></select></label>
+      <div id="review-note" hidden><p id="review-text"></p><button type="button" id="leave-review">Выйти из проверки</button></div>
       <form id="person-form" hidden>
         <label>Имя на карточке<input name="cardName" maxlength="160"></label>
         <label>Подпись на карточке<input name="role" placeholder="Например, бабушка"></label>
@@ -102,6 +107,34 @@
     <iframe name="family-tree-admin-preview" id="preview" title="Схема в черновике"></iframe>
   </section>
 </main>
+<dialog id="history-dialog" aria-labelledby="history-title">
+  <div class="history-head">
+    <div><h2 id="history-title">История правок</h2><p id="history-summary" role="status"></p></div>
+    <button type="button" id="close-history">Закрыть</button>
+  </div>
+  <p class="field-error" id="history-error" role="alert"></p>
+  <div id="history-items"></div>
+  <button type="button" id="history-more" hidden>Более ранние правки</button>
+</dialog>
+<dialog id="crop-dialog" aria-labelledby="crop-title">
+  <div class="dialog-head"><h2 id="crop-title">Кадр для портрета</h2><button id="crop-cancel" type="button">Закрыть</button></div>
+  <p>В квадрате видно, как портрет будет выглядеть на схеме.</p>
+  <div class="crop-preview">
+    <div id="crop-frame" class="portrait-frame"><img id="crop-image" alt=""></div>
+    <p id="crop-caption"></p>
+  </div>
+  <form id="crop-form">
+    <label>Масштаб <output id="crop-zoom-label">100%</output><input type="range" id="crop-zoom" min="100" max="300" step="1" value="100"></label>
+    <div class="columns">
+      <label>По горизонтали<input type="range" id="crop-x" min="0" max="100" step="1" value="50"></label>
+      <label>По вертикали<input type="range" id="crop-y" min="0" max="100" step="1" value="28"></label>
+    </div>
+    <div class="actions">
+      <button type="submit" class="primary">Применить кадр</button>
+      <button type="button" id="crop-reset">Сбросить кадр</button>
+    </div>
+  </form>
+</dialog>
 <dialog id="access-dialog" aria-labelledby="access-title">
   <div class="dialog-head">
     <h2 id="access-title">Кто может редактировать</h2>

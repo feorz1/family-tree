@@ -17,6 +17,7 @@ from urllib.parse import parse_qs, unquote, urlencode, urlsplit
 from urllib.request import urlopen
 
 import accounts
+import history
 
 ADMIN = Path(__file__).resolve().parent
 REPO = Path(os.environ.get("TREE_REPO", ADMIN.parent)).resolve()
@@ -115,6 +116,10 @@ def validate(data, db):
             demand(person.get("kind", "") in {"", "document", "uncertain", "adopt", "current", "group"}, "Неизвестная отметка карточки")
             photos = data["photoCatalog"].get(key, {}).get(person["id"], [])
             for photo in photos:
+                if "crop" in photo:
+                    crop = photo["crop"]
+                    demand(number(crop["x"], 0, 1) and number(crop["y"], 0, 1) and number(crop["zoom"], 1, 3),
+                           "Некорректное кадрирование фотографии")
                 path = photo["src"]
                 demand(isinstance(path, str) and PHOTO.fullmatch(path), "Недопустимое имя фотографии")
                 if UPLOAD.fullmatch(path):
@@ -210,6 +215,27 @@ def publish(db, revision, origin, data):
     return commit
 
 
+def recover_history(db):
+    if db.execute("SELECT recovered FROM history_state WHERE id=1").fetchone()[0]:
+        return
+    revision, origin, publication, current = get_draft(db)
+    for row in reversed(git("log", "-24", "--first-parent", "--format=%H%x09%ct%x09%s", "--", DATA).decode().splitlines()):
+        commit, timestamp, name = row.split("\t", 2)
+        if name != "Publish family tree updates":
+            continue
+        try:
+            before = read_data(git("show", commit + "^:" + DATA))
+            after = read_data(git("show", commit + ":" + DATA))
+        except EditError:
+            continue
+        history.record(db, 0, before, after, action="recovered", publication=commit, published_at=int(timestamp))
+    if digest(data_script(current)) != origin:
+        baseline = read_data(git("show", (publication or "HEAD") + ":" + DATA))
+        if digest(data_script(baseline)) == origin:
+            history.record(db, revision, baseline, current, action="recovered")
+    db.execute("UPDATE history_state SET recovered=1 WHERE id=1")
+
+
 def digest(blob):
     return hashlib.sha256(blob).hexdigest()
 
@@ -229,7 +255,7 @@ class Handler(BaseHTTPRequestHandler):
         if not self.server.shared:
             return {"role": "admin", "name": "Владелец", "hasSession": False}
         member = accounts.user_at(db, accounts.read_token(self.headers))
-        return {"role": member[2], "name": member[1], "hasSession": True} if member else None
+        return {"role": member[2], "name": member[1], "username": member[0], "hasSession": True} if member else None
 
     def require_admin(self, viewer):
         if viewer["role"] != "admin":
@@ -274,6 +300,17 @@ class Handler(BaseHTTPRequestHandler):
                 if path == "/api/accounts":
                     self.require_admin(viewer)
                     return self.send_json({"accounts": accounts.roster(db), "canInvite": bool(SHARED_HOST and SHARED_BIND)})
+                if path in ("/api/history", "/api/history/status"):
+                    self.require_admin(viewer)
+                    latest, unseen = history.status(db)
+                    revision, origin, publication, data = get_draft(db)
+                    result = {"latest": latest, "unseen": unseen, "revision": revision,
+                              "dirty": digest(data_script(data)) != origin, "publication": publication}
+                    if path == "/api/history":
+                        cursor = parse_qs(urlsplit(self.path).query).get("before", [""])[0]
+                        before = int(cursor) if cursor.isascii() and cursor.isdecimal() and len(cursor) < 19 else None
+                        result["entries"], result["more"] = history.listing(db, before)
+                    return self.send_json(result)
                 if path == "/api/draft":
                     revision, origin, publication, data = get_draft(db)
                     return self.send_json({"revision": revision, "publication": publication,
@@ -291,7 +328,7 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send_json({"current": current})
                 if path == "/preview/data/tree.js":
                     return self.send_content(data_script(get_draft(db)[3]), "text/javascript; charset=utf-8")
-                if path in {"/", "/editor.js", "/select.js", "/access.js"}:
+                if path in {"/", "/editor.js", "/select.js", "/access.js", "/history.js", "/crop.js"}:
                     target = ADMIN / ("index.html" if path == "/" else path[1:])
                 elif path in {"/preview/", "/preview/index.html"}:
                     target = REPO / "index.html"
@@ -342,19 +379,21 @@ class Handler(BaseHTTPRequestHandler):
                     viewer = self.viewer(db)
                     if not viewer:
                         raise EditError("Войди в редактор", 401)
-                    if path in {"/api/invite", "/api/revoke", "/api/publish"}:
+                    if path in {"/api/invite", "/api/revoke", "/api/publish"} or path.startswith("/api/history/"):
                         self.require_admin(viewer)
-                    result, session_cookie = self.edit(db, path, body)
+                    result, session_cookie = self.edit(db, path, body, viewer)
             return self.send_json(result, cookie=session_cookie)
         except (EditError, accounts.AccessError) as error:
             return self.send_json({"error": str(error)}, error.status)
+        except history.Conflict:
+            return self.send_json({"error": "Эта правка уже отменена или затронута более поздними изменениями."}, 409)
         except (ValueError, TypeError, KeyError, AttributeError):
             return self.send_json({"error": "В форме есть некорректные данные"}, 400)
         except (OSError, sqlite3.Error, subprocess.TimeoutExpired) as error:
             print(str(error), flush=True)
             return self.send_json({"error": "Не удалось завершить операцию на сервере. Черновик сохранён."}, 503)
 
-    def edit(self, db, path, body):
+    def edit(self, db, path, body, viewer):
         if path == "/api/invite":
             demand(SHARED_HOST and SHARED_BIND, "Адрес приглашений ещё не подключён")
             username, token = accounts.make_invite(db, body)
@@ -370,18 +409,48 @@ class Handler(BaseHTTPRequestHandler):
             return {"ok": True}, accounts.cookie("", 0)
         if path == "/api/photo":
             return {"path": save_photo(db, body)}, None
+        if path == "/api/history/seen":
+            through = body["through"]
+            demand(type(through) is int and through >= 0, "Некорректный номер записи")
+            history.mark_seen(db, through)
+            return {"ok": True}, None
         revision, origin, _, data = get_draft(db)
         if body["revision"] != revision:
             raise EditError("Черновик уже изменён в другом окне. Обновите редактор.", 409)
+        if path == "/api/history/accept":
+            history.accept(db, body["id"], body["section"])
+            return {"ok": True}, None
+        if path == "/api/history/revert":
+            edit_id = body["id"]
+            replacement = history.undo(db, edit_id, data)
+            try:
+                validate(replacement, db)
+            except EditError as error:
+                raise EditError("Отмена затронет связанные данные. Черновик сохранён.", 409) from error
+            return self.save_draft(db, revision, origin, data, replacement, viewer, reverts=edit_id), None
         if path == "/api/draft":
-            data = body["data"]
-            validate(data, db)
-            script = data_script(data)
-            db.execute("UPDATE draft SET revision=?, payload=? WHERE id=1", (revision + 1, script.decode()[len(PREFIX):-2]))
-            return {"revision": revision + 1, "dirty": digest(script) != origin}, None
+            replacement = body["data"]
+            validate(replacement, db)
+            if "review" in body:
+                self.require_admin(viewer)
+                review = body["review"]
+                history.accept(db, review["id"], review["section"])
+            return self.save_draft(db, revision, origin, data, replacement, viewer), None
         if path == "/api/publish":
-            return {"commit": publish(db, revision, origin, data)}, None
+            commit = publish(db, revision, origin, data)
+            history.publish(db, revision, commit)
+            return {"commit": commit}, None
         raise EditError("Неизвестный запрос", HTTPStatus.NOT_FOUND)
+
+
+    def save_draft(self, db, revision, origin, before, after, viewer, reverts=None):
+        revision += 1
+        script = data_script(after)
+        actor = viewer["name"] if viewer["role"] == "admin" else f'{viewer["name"]} · {viewer["username"]}'
+        history.record(db, revision, before, after, actor=actor, role=viewer["role"],
+                       action="revert" if reverts is not None else "save", reverts=reverts)
+        db.execute("UPDATE draft SET revision=?, payload=? WHERE id=1", (revision, script.decode()[len(PREFIX):-2]))
+        return {"revision": revision, "dirty": digest(script) != origin}
 
 
 def main():
@@ -399,6 +468,12 @@ def main():
             validate(data, db)
             script = data_script(data)
             db.execute("INSERT INTO draft VALUES (1, 0, ?, NULL, ?)", (digest(script), script.decode()[len(PREFIX):-2]))
+        db.executescript(history.SCHEMA)
+        try:
+            with db:
+                recover_history(db)
+        except EditError as error:
+            print("Не удалось восстановить предыдущие правки:", str(error), flush=True)
     local = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
     local.shared = False
     if SHARED_HOST and SHARED_BIND:

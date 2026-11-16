@@ -7,7 +7,7 @@ const titles = {
 const frame = $("#preview");
 const personForm = $("#person-form");
 const relationForm = $("#relation-form");
-let data, revision, publicDirty, localDirty = false, busy = false, currentRole;
+let data, revision, publicDirty, localDirty = false, busy = false, currentRole, reviewContext = null;
 let mode = "people", selectedPerson = "", route = null;
 let selectedPoint = null, addingPoint = false;
 
@@ -24,7 +24,8 @@ function status(message, error = false) {
 }
 
 function buttons() {
-  $("#save").disabled = busy || !localDirty;
+  $("#save").disabled = busy || !(localDirty || reviewContext);
+  $("#save").textContent = reviewContext ? "Сохранить и принять" : "Сохранить черновик";
   $("#publish").disabled = currentRole !== "admin" || busy || !(localDirty || publicDirty);
 }
 
@@ -205,7 +206,13 @@ function showPhotos() {
     remove.addEventListener("click", () => {photos.splice(index,1);showPhotos();changed();});
     const portraitLabel = createLabel("Портрет на схеме", portrait);
     portraitLabel.className = "check";
-    item.append(image,createLabel("Подпись",caption),createLabel("Описание фотографии",alt),portraitLabel,remove);
+    item.append(image,createLabel("Подпись",caption),createLabel("Описание фотографии",alt),portraitLabel);
+    if (photo.portrait) {
+      const crop = element("button","Кадрировать для схемы",{type:"button"});
+      crop.addEventListener("click", () => openCrop(photo, person()));
+      item.append(crop);
+    }
+    item.append(remove);
     return item;
   }));
 }
@@ -648,13 +655,16 @@ function refreshPreview() {
 }
 
 async function saveDraft() {
-  if (!localDirty) return;
-  const result = await api("draft", {revision,data});
+  if (!localDirty && !reviewContext) return;
+  const review = reviewContext;
+  const result = await api("draft", {revision,data,...(review ? {review:{id:review.id,section:review.section}} : {})});
   revision = result.revision;
   publicDirty = result.dirty;
   localDirty = false;
-  status("Черновик сохранён");
+  setReview(null);
+  status(review ? "Уточнение сохранено, правка принята" : "Черновик сохранён");
   refreshPreview();
+  document.dispatchEvent(new Event("historyrefresh"));
 }
 
 async function run(action) {
@@ -676,6 +686,7 @@ $("#publish").addEventListener("click", () => run(async () => {
   publicDirty = false;
   status("GitHub соберёт сайт · " + result.commit.slice(0,7));
   checkPublication(result.commit);
+  document.dispatchEvent(new Event("historyrefresh"));
 }));
 window.addEventListener("beforeunload", event => {
   if (localDirty) {event.preventDefault();event.returnValue = "";}
@@ -697,6 +708,61 @@ async function checkPublication(commit) {
   if (!localDirty && !publicDirty) status("Отправлено на GitHub · " + commit.slice(0,7));
 }
 
+
+function setReview(context) {
+  reviewContext = context;
+  $("#review-note").hidden = !context;
+  if (context) $("#review-text").textContent = "Уточнение правки · " + context.title;
+  buttons();
+}
+$("#leave-review").addEventListener("click", () => setReview(null));
+
+async function syncDraft() {
+  if (localDirty || busy || reviewContext || $("#crop-dialog").open) return false;
+  const draft = await api("draft");
+  if (localDirty || busy || reviewContext || $("#crop-dialog").open || draft.revision < revision) return false;
+  const updated = draft.revision !== revision;
+  const stateChanged = publicDirty !== draft.dirty;
+  if (updated) {
+    ({data,revision} = draft);
+    redrawPeople();
+    redrawRelations();
+    refreshPreview();
+  }
+  publicDirty = draft.dirty;
+  if (updated || stateChanged) status(publicDirty ? "Есть неопубликованный черновик" : "Опубликованная версия");
+  buttons();
+  return true;
+}
+
+function openReviewCard(context) {
+  const section = context.details;
+  const targetChart = data.charts.find(c => c.id === section.chart);
+  if (!targetChart?.nodes.some(node => node.id === section.person)) return false;
+  $("#chart").value = section.chart;
+  syncSelect($("#chart"));
+  setMode("people");
+  activeChart();
+  selectedPerson = section.person;
+  redrawPeople();
+  setReview(context);
+  if (context.field.kind === "photos") {
+    const photos = data.photoCatalog[section.chart]?.[section.person] || [];
+    const original = new Set((context.field.before || []).map(photo => photo.src));
+    const candidate = photos.find(photo => photo.portrait && !original.has(photo.src)) || photos.find(photo => photo.portrait);
+    if (candidate) openCrop(candidate, person());
+    else {
+      $("#photos").closest("details").open = true;
+      $("#photo-file").focus();
+    }
+  } else {
+    const field = personForm.elements[context.field.target];
+    if (field?.tagName === "SELECT") selectControls.get(field)?.button.focus();
+    else (field || personForm.elements.info).focus();
+  }
+  return true;
+}
+
 async function init() {
   try {
     const draft = await api("draft");
@@ -714,6 +780,7 @@ async function init() {
     status(publicDirty ? "Есть неопубликованный черновик" : "Опубликованная версия");
     $("aside").inert = false;
     buttons();
+    document.dispatchEvent(new Event("draftready"));
     if (draft.publication && !publicDirty) checkPublication(draft.publication);
   } catch (error) {status(error.message,true);}
 }
