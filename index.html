@@ -29,8 +29,6 @@
  .timeline{position:relative;z-index:4;border-right:0;border-bottom:1px solid #dae4da;padding:0}
  .timeline>strong,.timeline-hint{display:none}
  .timeline-toggle{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:44px;padding:10px 14px;border:0;background:transparent;color:#314d40;font-size:13px;font-weight:600;text-align:left;cursor:pointer}
- .timeline-toggle::after{content:'▾';font-size:15px;color:#607d69}
- .timeline-toggle[aria-expanded="true"]::after{transform:rotate(180deg)}
  .timeline-list{position:absolute;top:100%;left:0;right:0;z-index:5;margin:0;max-height:min(45vh,280px);overflow:auto;border:1px solid #dae4da;border-top:0;border-radius:0 0 10px 10px;padding:6px 10px;background:#f1f5f0;box-shadow:0 10px 18px #26433420}
  .timeline.is-collapsed .timeline-list{display:none}
  .timeline-item{grid-template-columns:42px minmax(0,1fr);gap:8px;padding:9px 7px;font-size:12px}
@@ -42,9 +40,9 @@
 .timeline{position:absolute;inset:12px auto 12px 12px;z-index:4;width:min(240px,calc(100% - 24px));padding:0;border:0;background:transparent;pointer-events:none}
 .timeline-toggle,.timeline-list{pointer-events:auto}
 .timeline>strong,.timeline-hint{display:none}
-.timeline-toggle{display:flex;align-items:center;justify-content:space-between;width:auto;min-height:44px;padding:10px 14px;border:1px solid #ddd;border-radius:9px;background:#fff;color:#333;font-size:13px;font-weight:600;text-align:left;cursor:pointer;box-shadow:0 4px 14px #0000000e}
-.timeline-toggle::after{content:'▾';margin-left:14px;font-size:15px;color:#777}
-.timeline-toggle[aria-expanded="true"]::after{transform:rotate(180deg)}
+.timeline-toggle{display:flex;align-items:center;gap:6px;width:auto;min-height:44px;padding:10px 12px 10px 14px;border:1px solid #ddd;border-radius:9px;background:#fff;color:#333;font-size:13px;font-weight:600;text-align:left;cursor:pointer;box-shadow:0 4px 14px #0000000e}
+.timeline-toggle-icon{display:block;flex:none}
+.timeline-toggle[aria-expanded="true"] .timeline-toggle-icon{transform:rotate(180deg)}
 .timeline-list{position:absolute;top:50px;left:0;right:0;z-index:5;margin:0;max-height:min(360px,calc(100% - 50px));overflow:auto;overscroll-behavior:contain;border:1px solid #ddd;border-radius:10px;padding:6px 10px;background:#fff;box-shadow:0 10px 24px #0000001a}
 .timeline.is-collapsed .timeline-list{display:none}
 .timeline-item{grid-template-columns:42px minmax(0,1fr);gap:8px;padding:9px 7px;font-size:12px}
@@ -103,7 +101,7 @@ nav a:hover{background:#e1e1e1;color:#171717}
 .node small,.node.current small{color:#707070}
 .node.group .node-avatar{outline-color:#999}
 .timeline>strong,.timeline-toggle,.timeline-item{color:#333}
-.timeline-hint,.timeline-item b,.timeline-empty,.timeline-toggle::after{color:#707070}
+.timeline-hint,.timeline-item b,.timeline-empty{color:#707070}
 .timeline-list{background:#fff;border-color:#dedede}
 .timeline-item:hover,.timeline-item.is-active{background:#f1f1f1}
 .floating-controls{background:#fff;border-color:#dedede;box-shadow:0 5px 18px #00000014}
@@ -569,7 +567,8 @@ function render(c){
  c.w=Math.max(c.w,...c.nodes.map(n=>n.x+NODE_W+100));c.h=Math.max(c.h,...c.nodes.map(n=>n.y+NODE_H+100));
  const shell=document.createElement('div');shell.className='chart-shell';
  const timeline=document.createElement('aside');timeline.className='timeline';timeline.classList.add('is-collapsed');timeline.setAttribute('aria-label','Годы рождения');
- const timelineToggle=document.createElement('button');timelineToggle.type='button';timelineToggle.className='timeline-toggle';timelineToggle.textContent='Годы рождения';timelineToggle.setAttribute('aria-expanded','false');timelineToggle.setAttribute('aria-controls','timeline-list-'+c.id);timeline.append(timelineToggle);
+ const timelineToggle=document.createElement('button');timelineToggle.type='button';timelineToggle.className='timeline-toggle';timelineToggle.textContent='Годы рождения';timelineToggle.setAttribute('aria-expanded','false');timelineToggle.setAttribute('aria-controls','timeline-list-'+c.id);
+ const timelineIcon=document.createElement('img');timelineIcon.className='timeline-toggle-icon';timelineIcon.src='assets/icons/chevron-down-16.svg';timelineIcon.alt='';timelineIcon.width=16;timelineIcon.height=16;timelineToggle.append(timelineIcon);timeline.append(timelineToggle);
  const timelineTitle=document.createElement('strong');timelineTitle.textContent='Годы рождения';timeline.append(timelineTitle);
  const timelineHint=document.createElement('span');timelineHint.className='timeline-hint';timelineHint.textContent='Нажмите на имя';timeline.append(timelineHint);
  const timelineList=document.createElement('div');timelineList.className='timeline-list';timelineList.setAttribute('id','timeline-list-'+c.id);timeline.append(timelineList);
