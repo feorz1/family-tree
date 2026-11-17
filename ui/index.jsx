@@ -1,9 +1,10 @@
 import React, {useCallback, useLayoutEffect, useSyncExternalStore} from "react";
+import {flushSync} from "react-dom";
 import {createRoot} from "react-dom/client";
 import {Drawer} from "@base-ui/react/drawer";
 import {Menu} from "@base-ui/react/menu";
 import {Tabs} from "@base-ui/react/tabs";
-import {Button, Combobox, Icon, Select} from "./components";
+import {Accordion, Button, Combobox, Icon, Select} from "./components";
 
 const selectControls = new WeakMap();
 let selectId = 0;
@@ -184,3 +185,11 @@ if (branchTabs && window.familyTreeUI) {
 }
 const modeTabs = document.querySelector("#editor-tabs");
 if (modeTabs) mountNavigation(modeTabs, [...modeTabs.querySelectorAll("[data-mode]")], "aria-pressed", button => button.dataset.mode, button => button.click());
+
+const personAccordion = document.querySelector("#person-accordion");
+if (personAccordion) {
+  const sections = [...personAccordion.children].map(body => ({body, label:body.dataset.accordionLabel}));
+  const root = createRoot(personAccordion);
+  // Existing editor scripts bind directly to the fields inside these panels.
+  flushSync(() => root.render(<Accordion sections={sections}/>));
+}

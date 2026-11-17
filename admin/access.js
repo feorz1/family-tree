@@ -12,7 +12,7 @@ async function showAccounts() {
     identity.append(element("strong",account.name),element("p",account.username+" · "+accountStates[account.state]));
     row.append(identity);
     if (["pending","active"].includes(account.state)) {
-      const revoke = element("button","Отозвать",{type:"button","aria-label":"Отозвать доступ у "+account.name});
+      const revoke = element("button","Отозвать",{type:"button","data-variant":"destructive","aria-label":"Отозвать доступ у "+account.name});
       revoke.addEventListener("click", async () => {
         if (!confirm("Отозвать доступ у "+account.name+"?")) return;
         revoke.disabled = true;

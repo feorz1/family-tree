@@ -32,22 +32,47 @@
   --edge:#9ba7ba;--edge-spouse:#d7aa67;--edge-red:#f08b99;--edge-blue:#88baff;--grid-dot:#424650
 }
 [hidden]{display:none!important}
-.ui-button,.ui-field,.ui-tab,.ui-item,.ui-combobox-input{
+[data-slot="button"],.ui-field,.ui-tab,.ui-item,.ui-combobox-input{
   font:450 14px/1.25 var(--font-ui);
   color:var(--foreground);
 }
-.ui-button,.ui-field{
-  display:inline-flex;align-items:center;justify-content:center;gap:8px;
-  min-width:0;min-height:36px;border:1px solid var(--border);border-radius:var(--radius);
-  padding:7px 10px;background:var(--card);box-shadow:0 1px 2px #171a2510;
+[data-slot="button"],.ui-field{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  min-width:0;max-width:100%;min-height:36px;border:1px solid var(--border);border-radius:var(--radius);
+  padding:6px 11px;background:var(--card);box-shadow:0 1px 2px #171a2510;
 }
-.ui-button:not(:disabled),.ui-tab:not(:disabled),.ui-select-trigger:not(:disabled){cursor:pointer}
-.ui-button[data-variant="ghost"]{background:transparent;border-color:transparent;box-shadow:none}
-.ui-button:hover:enabled,.ui-select-trigger:hover:enabled{background:var(--accent)}
-.ui-button:focus-visible,.ui-tab:focus-visible,.ui-select-trigger:focus-visible{
+.ui-accordion-body [data-slot="button"]{justify-self:start}
+[data-slot="button"]:not(:disabled),.ui-tab:not(:disabled),.ui-select-trigger:not(:disabled){cursor:pointer}
+[data-slot="button"][data-size="sm"]{min-height:32px;padding:4px 9px;font-size:13px}
+[data-slot="button"][data-size="icon-sm"]{width:32px;height:32px;min-height:32px;padding:0}
+[data-slot="button"][data-variant="default"]{background:var(--primary);border-color:var(--primary);color:var(--primary-foreground);font-weight:560}
+[data-slot="button"][data-variant="ghost"],
+[data-slot="button"][data-variant="destructive"]{background:transparent;border-color:transparent;box-shadow:none}
+[data-slot="button"][data-variant="destructive"]{color:var(--destructive)}
+[data-slot="button"]:hover:enabled,.ui-select-trigger:hover:enabled{background:var(--accent)}
+[data-slot="button"][data-variant="default"]:hover:enabled{background:color-mix(in srgb,var(--primary) 90%,var(--foreground))}
+[data-slot="button"][data-variant="destructive"]:hover:enabled{background:color-mix(in srgb,var(--destructive) 10%,transparent)}
+[data-slot="button"]:disabled{opacity:.55;cursor:default}
+[data-slot="button"]:focus-visible,.ui-tab:focus-visible,.ui-select-trigger:focus-visible{
   outline:2px solid var(--ring);outline-offset:2px
 }
 .ui-theme-button{width:36px;height:36px;padding:0}
+.ui-accordion{border:1px solid var(--border);border-radius:var(--radius);background:var(--card)}
+.ui-accordion-item + .ui-accordion-item{border-top:1px solid var(--border)}
+.ui-accordion-heading{margin:0}
+.ui-accordion-trigger{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;
+  min-height:36px;border:0;border-radius:calc(var(--radius) - 1px);padding:6px 10px;
+  color:var(--foreground);background:transparent;font:530 14px/1.35 var(--font-ui);text-align:start;cursor:pointer
+}
+.ui-accordion-trigger:hover,.ui-accordion-trigger[aria-expanded="true"]{background:var(--muted)}
+.ui-accordion-trigger:focus-visible{outline:2px solid var(--ring);outline-offset:-2px}
+.ui-accordion-trigger svg{color:var(--muted-foreground);flex:none;transition:transform var(--duration-fast)}
+.ui-accordion-trigger[aria-expanded="true"] svg{transform:rotate(180deg)}
+.ui-accordion-content{height:var(--accordion-panel-height);overflow:clip;transition:height var(--duration-fast) ease-out}
+.ui-accordion-content[data-starting-style],.ui-accordion-content[data-ending-style]{height:0}
+.ui-accordion-body{padding:10px}
+[data-accordion-label]{display:grid;gap:8px}
 .ui-select-host{display:block;min-width:0}
 .ui-field{width:100%;border-color:var(--input)}
 .ui-select-trigger{justify-content:space-between;text-align:left}
@@ -101,5 +126,5 @@
 }
 .ui-tab:hover{color:var(--foreground)}
 .ui-tab[aria-selected="true"]{background:var(--card);color:var(--foreground);border-color:var(--border);box-shadow:0 1px 2px #17203313}
-@media(prefers-reduced-motion:reduce){.ui-popup,.ui-chevron svg,.ui-chevron-button svg{transition:none}}
+@media(prefers-reduced-motion:reduce){.ui-popup,.ui-chevron svg,.ui-chevron-button svg,.ui-accordion-content,.ui-accordion-trigger svg{transition:none}}
 @media(max-width:760px){.ui-combobox .ui-combobox-input{font-size:16px}.ui-button.ui-theme-button{width:40px;height:40px}}

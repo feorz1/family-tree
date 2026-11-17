@@ -280,6 +280,8 @@ function entryView(entry, open) {
       $("#history-title").focus();
     });
     undo.className = "history-undo";
+    undo.dataset.variant = "ghost";
+    undo.dataset.size = "icon-sm";
     const icon = element("img","",{src:"/preview/assets/icons/history-undo.svg",alt:"",width:"16",height:"16"});
     undo.textContent = "";
     undo.setAttribute("aria-label","Отменить сохранение");

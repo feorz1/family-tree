@@ -18,11 +18,11 @@
   <div class="actions">
     <div id="theme-control"></div>
     <span id="status" role="status">Загружаем черновик…</span>
-    <button type="button" id="history" hidden>История<span id="history-badge" hidden></span></button>
-    <button type="button" id="access" hidden>Доступ</button>
-    <button type="button" id="logout" hidden>Выйти</button>
-    <button type="button" id="save" disabled>Сохранить черновик</button>
-    <button type="button" id="publish" class="primary" disabled>Опубликовать</button>
+    <button type="button" id="history" hidden data-slot="button" data-variant="ghost" data-size="sm">История<span id="history-badge" hidden></span></button>
+    <button type="button" id="access" hidden data-slot="button" data-variant="ghost" data-size="sm">Доступ</button>
+    <button type="button" id="logout" hidden data-slot="button" data-variant="ghost" data-size="sm">Выйти</button>
+    <button type="button" id="save" disabled data-slot="button" data-variant="outline" data-size="default">Сохранить черновик</button>
+    <button type="button" id="publish" disabled data-slot="button" data-variant="default" data-size="default">Опубликовать</button>
   </div>
 </header>
 <main>
@@ -30,18 +30,18 @@
     <div class="sidebar-head">
       <label>Семья или архив <select id="chart"></select></label>
       <nav id="editor-tabs" aria-label="Режим редактирования">
-        <button type="button" data-mode="people" aria-pressed="true">Карточки</button>
-        <button type="button" data-mode="relations" aria-pressed="false">Родство</button>
-        <button type="button" data-mode="routes" aria-pressed="false">Маршруты</button>
+        <button type="button" data-mode="people" aria-pressed="true" data-slot="button" data-variant="outline" data-size="default">Карточки</button>
+        <button type="button" data-mode="relations" aria-pressed="false" data-slot="button" data-variant="outline" data-size="default">Родство</button>
+        <button type="button" data-mode="routes" aria-pressed="false" data-slot="button" data-variant="outline" data-size="default">Маршруты</button>
       </nav>
     </div>
     <section id="people" aria-label="Карточки">
       <div class="actions">
         <label class="search-label">Поиск по семье<input type="search" id="search" placeholder="Имя или фамилия"></label>
-        <button type="button" id="new-person">Добавить</button>
+        <button type="button" id="new-person" data-slot="button" data-variant="outline" data-size="sm">Добавить</button>
       </div>
       <label>Человек<select id="person"></select></label>
-      <div id="review-note" hidden><p id="review-text"></p><button type="button" id="leave-review">Выйти из проверки</button></div>
+      <div id="review-note" hidden><p id="review-text"></p><button type="button" id="leave-review" data-slot="button" data-variant="ghost" data-size="sm">Выйти из проверки</button></div>
       <form id="person-form" hidden>
         <label>Имя на карточке<input name="cardName" maxlength="160"></label>
         <label>Подпись на карточке<input name="role" placeholder="Например, бабушка"></label>
@@ -57,30 +57,30 @@
         <label>Ссылка на источник<input name="source" type="url" placeholder="https://"></label>
         <label>Название источника<input name="sourceLabel"></label>
         <label id="sync-label" class="check" hidden><input type="checkbox" id="sync" checked> Обновлять имя, девичью фамилию и даты в связанных схемах</label>
-        <details>
-          <summary>Фотографии</summary>
-          <div id="photos"></div>
-          <label>Добавить фото<input type="file" id="photo-file" accept="image/jpeg,image/png,image/webp"></label>
-        </details>
-        <details>
-          <summary>События и даты</summary>
-          <div id="facts"></div>
-          <button type="button" id="new-fact">Добавить событие</button>
-        </details>
-        <button type="button" id="remove-person" class="danger">Убрать карточку</button>
+        <div id="person-accordion">
+          <div data-accordion-label="Фотографии">
+            <div id="photos"></div>
+            <label>Добавить фото<input type="file" id="photo-file" accept="image/jpeg,image/png,image/webp"></label>
+          </div>
+          <div data-accordion-label="События и даты">
+            <div id="facts"></div>
+            <button type="button" id="new-fact" data-slot="button" data-variant="outline" data-size="sm">Добавить событие</button>
+          </div>
+        </div>
+        <button type="button" id="remove-person" data-slot="button" data-variant="destructive" data-size="sm">Убрать карточку</button>
       </form>
     </section>
     <section id="relations" aria-label="Родство" hidden>
       <label>Связь<select id="relation"></select></label>
-      <button type="button" id="new-relation">Добавить связь</button>
+      <button type="button" id="new-relation" data-slot="button" data-variant="outline" data-size="sm">Добавить связь</button>
       <form id="relation-form" hidden>
         <label>Описание<input name="label" required></label>
         <label>Линия<select name="kind"><option value="">Подтверждённая</option><option value="red">Версия</option><option value="blue">Усыновление или крёстные</option></select></label>
         <div id="relation-members"></div>
         <label class="check" id="married-label" hidden><input type="checkbox" name="married"> Супруги</label>
         <div class="actions">
-          <button type="submit" class="primary">Применить к черновику</button>
-          <button type="button" class="danger" id="remove-relation">Убрать</button>
+          <button type="submit" data-slot="button" data-variant="default" data-size="default">Применить к черновику</button>
+          <button type="button" id="remove-relation" data-slot="button" data-variant="destructive" data-size="sm">Убрать</button>
         </div>
       </form>
     </section>
@@ -91,18 +91,18 @@
         <p>Перетащи точку на схеме или выбери её в списке и сдвинь кнопками.</p>
         <label>Точка маршрута<select id="route-point"></select></label>
         <div class="actions" aria-label="Сдвинуть точку">
-          <button type="button" data-nudge="-10,0" aria-label="Сдвинуть точку влево">←</button>
-          <button type="button" data-nudge="0,-10" aria-label="Сдвинуть точку вверх">↑</button>
-          <button type="button" data-nudge="0,10" aria-label="Сдвинуть точку вниз">↓</button>
-          <button type="button" data-nudge="10,0" aria-label="Сдвинуть точку вправо">→</button>
+          <button type="button" data-nudge="-10,0" aria-label="Сдвинуть точку влево" data-slot="button" data-variant="outline" data-size="icon-sm">←</button>
+          <button type="button" data-nudge="0,-10" aria-label="Сдвинуть точку вверх" data-slot="button" data-variant="outline" data-size="icon-sm">↑</button>
+          <button type="button" data-nudge="0,10" aria-label="Сдвинуть точку вниз" data-slot="button" data-variant="outline" data-size="icon-sm">↓</button>
+          <button type="button" data-nudge="10,0" aria-label="Сдвинуть точку вправо" data-slot="button" data-variant="outline" data-size="icon-sm">→</button>
         </div>
         <label>Скругление <output id="radius-value">8</output><input type="range" id="radius" min="0" max="80" value="8"></label>
         <div class="actions">
-          <button type="button" id="add-point" aria-pressed="false">Вставить на схеме</button>
-          <button type="button" id="add-midpoint">Вставить после выбранной</button>
-          <button type="button" id="remove-point" disabled>Убрать точку</button>
+          <button type="button" id="add-point" aria-pressed="false" data-slot="button" data-variant="outline" data-size="default">Вставить на схеме</button>
+          <button type="button" id="add-midpoint" data-slot="button" data-variant="outline" data-size="default">Вставить после выбранной</button>
+          <button type="button" id="remove-point" disabled data-slot="button" data-variant="outline" data-size="default">Убрать точку</button>
         </div>
-        <button type="button" id="reset-route">Восстановить автоматический маршрут</button>
+        <button type="button" id="reset-route" data-slot="button" data-variant="outline" data-size="default">Восстановить автоматический маршрут</button>
       </div>
     </section>
   </aside>
@@ -114,24 +114,24 @@
 <dialog id="history-dialog" aria-labelledby="history-title">
   <div class="history-head">
     <h2 id="history-title">История правок</h2>
-    <button type="button" id="close-history">Закрыть</button>
+    <button type="button" id="close-history" data-slot="button" data-variant="ghost" data-size="sm">Закрыть</button>
     <div class="history-filters" role="group" aria-label="Вид изменений">
-      <button type="button" data-history-filter="all" aria-pressed="true">Все</button>
-      <button type="button" data-history-filter="photos" aria-pressed="false">Фото</button>
-      <button type="button" data-history-filter="cards" aria-pressed="false">Текст</button>
-      <button type="button" data-history-filter="relations" aria-pressed="false">Родство</button>
-      <button type="button" data-history-filter="routes" aria-pressed="false">Маршруты</button>
+      <button type="button" data-history-filter="all" aria-pressed="true" data-slot="button" data-variant="ghost" data-size="sm">Все</button>
+      <button type="button" data-history-filter="photos" aria-pressed="false" data-slot="button" data-variant="ghost" data-size="sm">Фото</button>
+      <button type="button" data-history-filter="cards" aria-pressed="false" data-slot="button" data-variant="ghost" data-size="sm">Текст</button>
+      <button type="button" data-history-filter="relations" aria-pressed="false" data-slot="button" data-variant="ghost" data-size="sm">Родство</button>
+      <button type="button" data-history-filter="routes" aria-pressed="false" data-slot="button" data-variant="ghost" data-size="sm">Маршруты</button>
     </div>
   </div>
   <p id="history-summary" role="status"></p>
   <p class="field-error" id="history-error" role="alert"></p>
   <div id="history-body">
     <div id="history-items" aria-busy="false"></div>
-    <button type="button" id="history-more" hidden>Более ранние правки</button>
+    <button type="button" id="history-more" hidden data-slot="button" data-variant="outline" data-size="default">Более ранние правки</button>
   </div>
 </dialog>
 <dialog id="crop-dialog" aria-labelledby="crop-title">
-  <div class="dialog-head"><h2 id="crop-title">Кадр для портрета</h2><button id="crop-cancel" type="button">Закрыть</button></div>
+  <div class="dialog-head"><h2 id="crop-title">Кадр для портрета</h2><button id="crop-cancel" type="button" data-slot="button" data-variant="ghost" data-size="sm">Закрыть</button></div>
   <p>В квадрате видно, как портрет будет выглядеть на схеме.</p>
   <div class="crop-preview">
     <div id="crop-frame" class="portrait-frame"><img id="crop-image" alt=""></div>
@@ -144,8 +144,8 @@
       <label>По вертикали<input type="range" id="crop-y" min="0" max="100" step="1" value="28"></label>
     </div>
     <div class="actions">
-      <button type="submit" id="crop-apply" class="primary">Применить кадр</button>
-      <button type="button" id="crop-reset">Сбросить кадр</button>
+      <button type="submit" id="crop-apply" data-slot="button" data-variant="default" data-size="default">Применить кадр</button>
+      <button type="button" id="crop-reset" data-slot="button" data-variant="outline" data-size="default">Сбросить кадр</button>
     </div>
   </form>
   <p class="field-error" id="crop-error" role="alert"></p>
@@ -153,7 +153,7 @@
 <dialog id="access-dialog" aria-labelledby="access-title">
   <div class="dialog-head">
     <h2 id="access-title">Кто может редактировать</h2>
-    <button type="button" id="close-access">Закрыть</button>
+    <button type="button" id="close-access" data-slot="button" data-variant="ghost" data-size="sm">Закрыть</button>
   </div>
   <p>Ты управляешь доступом и публикуешь древо. Редакторы могут менять карточки, родство и маршруты во всех семьях и сохранять общий черновик.</p>
   <div id="account-items" class="account-items"></div>
@@ -162,13 +162,13 @@
     <label>Имя<input name="displayName" required maxlength="80"></label>
     <label>Логин<input name="username" autocomplete="off" required pattern="[a-zA-Z0-9_.\-]{3,40}" maxlength="40" aria-describedby="username-hint"></label>
     <p id="username-hint">Латинские буквы, цифры, точка, дефис или подчёркивание.</p>
-    <button type="submit" class="primary">Создать приглашение</button>
+    <button type="submit" data-slot="button" data-variant="default" data-size="default">Создать приглашение</button>
   </form>
   <p class="field-error" id="access-error" role="alert"></p>
   <div id="invite-result" class="editor-item" hidden>
     <label>Одноразовая ссылка<input id="invite-link" readonly></label>
     <p>Действует 7 дней. Получатель задаст собственный пароль.</p>
-    <button type="button" id="copy-invite">Скопировать ссылку</button>
+    <button type="button" id="copy-invite" data-slot="button" data-variant="outline" data-size="default">Скопировать ссылку</button>
     <p id="copy-status" role="status"></p>
   </div>
 </dialog>

@@ -1,4 +1,5 @@
 import React from "react";
+import {Accordion as AccordionPrimitive} from "@base-ui/react/accordion";
 import {Button as ButtonPrimitive} from "@base-ui/react/button";
 import {Combobox as ComboboxPrimitive} from "@base-ui/react/combobox";
 import {Select as SelectPrimitive} from "@base-ui/react/select";
@@ -23,9 +24,25 @@ export function Icon({name}) {
   </svg>;
 }
 
-export function Button({variant = "outline", className = "", ...props}) {
-  return <ButtonPrimitive data-slot="button" data-variant={variant}
+export function Button({variant = "outline", size = "default", className = "", ...props}) {
+  return <ButtonPrimitive data-slot="button" data-variant={variant} data-size={size}
     className={`ui-button ${className}`} {...props}/>;
+}
+
+export function Accordion({sections}) {
+  return <AccordionPrimitive.Root data-slot="accordion" className="ui-accordion" multiple keepMounted>
+    {sections.map(({label, body}) => <AccordionPrimitive.Item key={label} value={label}
+      data-slot="accordion-item" className="ui-accordion-item">
+      <AccordionPrimitive.Header className="ui-accordion-heading">
+        <AccordionPrimitive.Trigger data-slot="accordion-trigger" className="ui-accordion-trigger">
+          {label}<Icon name="chevron"/>
+        </AccordionPrimitive.Trigger>
+      </AccordionPrimitive.Header>
+      <AccordionPrimitive.Panel data-slot="accordion-content" className="ui-accordion-content">
+        <div className="ui-accordion-body" ref={host => {if (host) host.append(body);}}/>
+      </AccordionPrimitive.Panel>
+    </AccordionPrimitive.Item>)}
+  </AccordionPrimitive.Root>;
 }
 
 export function Combobox({items, value, onValueChange, labelledBy, label, placeholder, disabled, id, search = false}) {
@@ -61,7 +78,9 @@ export function Select({items, value, onValueChange, disabled, id, labelledBy, l
   return <SelectPrimitive.Root items={items} value={value} onValueChange={onValueChange} disabled={disabled}>
     <SelectPrimitive.Trigger id={id} aria-labelledby={labelledBy} aria-label={label}
       data-slot="select-trigger" className="ui-field ui-select-trigger">
-      <SelectPrimitive.Value className="ui-value" placeholder="Нет вариантов"/>
+      <SelectPrimitive.Value className="ui-value">
+        {selected => items.find(item => item.value === selected)?.label || "Нет вариантов"}
+      </SelectPrimitive.Value>
       <SelectPrimitive.Icon className="ui-chevron"><Icon name="chevron"/></SelectPrimitive.Icon>
     </SelectPrimitive.Trigger>
     <SelectPrimitive.Portal>

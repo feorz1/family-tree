@@ -14,15 +14,8 @@ nav{display:flex;gap:4px;border-radius:9px;background:var(--hover);padding:4px}
 nav button{flex:1;border-color:transparent;background:transparent}
 nav button[aria-pressed=true]{background:var(--panel);border-color:var(--line);font-weight:550}
 button,input,textarea,select{font:inherit;font-weight:400;color:inherit;min-width:0}
-button{cursor:pointer;width:max-content;max-width:100%;min-height:44px;border:1px solid var(--line);padding:8px 12px;border-radius:8px;background:var(--panel)}
-button:hover:enabled{background:var(--hover)}
-button:active:enabled{background:var(--active)}
-button:disabled{opacity:.55;cursor:default}
-button.primary{background:var(--ink);color:var(--panel);border-color:var(--ink);font-weight:550}
-button.primary:hover:enabled{background:#404040}
-button.danger{color:var(--danger)}
 :focus-visible{outline:2px solid var(--ring);outline-offset:2px}
-select,textarea,input:not([type=checkbox]):not([type=range]){width:100%;min-height:44px;border:1px solid var(--control-line);border-radius:8px;padding:9px 11px;background:var(--panel)}
+select,textarea,input:not([type=checkbox]):not([type=range]){width:100%;min-height:36px;border:1px solid var(--control-line);border-radius:var(--radius);padding:6px 10px;background:var(--panel)}
 input::placeholder,textarea::placeholder{color:var(--muted-foreground)}
 input[type=search]{flex:1}
 input[type=checkbox],input[type=range]{accent-color:var(--ink)}
@@ -35,7 +28,7 @@ label.check{display:flex;align-items:center;gap:8px;min-height:44px;font-weight:
 .columns{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 details{border-top:1px solid var(--line);padding:6px 0}
 details>*+*{margin-top:8px}
-summary{display:list-item;min-height:44px;padding-block:10px;cursor:pointer;font-weight:500}
+summary{min-height:32px;padding-block:6px;cursor:pointer;font-weight:500}
 .editor-item{padding:12px;border:1px solid var(--line);margin-bottom:8px;border-radius:8px;display:grid;gap:10px}
 .editor-item img{width:76px;height:76px;object-fit:cover;border-radius:6px}
 fieldset{min-width:0;border:1px solid var(--line);border-radius:8px;margin:0;padding:8px}
@@ -89,19 +82,17 @@ main.auth-card{display:block;flex:none}
 .history-meta h4,.history-comparison h5{font-size:14px;font-weight:600}
 .history-meta time,.history-meta>span,.history-side{color:var(--muted-foreground);font-size:12px}
 .history-filters{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:5px}
-.history-filters button{min-height:38px;border:0;border-radius:99px;padding:7px 12px;background:var(--muted);font-size:13px}
-.history-filters button:hover{background:var(--accent)}
-.history-filters button[aria-pressed=true]{background:var(--primary);color:var(--primary-foreground)}
+.history-filters button[aria-pressed=true]{background:var(--accent);color:var(--primary);border-color:var(--border)}
 .history-state{border-radius:20px;padding:3px 8px;background:var(--muted);color:var(--muted-foreground);font-size:11px;font-weight:500;white-space:nowrap}
 .history-section summary .history-state.accepted{background:var(--success-surface);color:var(--success)}
 .history-section summary .history-state.pending{background:var(--warning-surface);color:var(--warning)}
-.history-undo{display:grid;place-items:center;flex:none;width:44px;height:44px;padding:0;border:0;background:transparent}
+.history-undo{flex:none}
 .history-undo img{display:block;opacity:.8}
 .history-chain{padding:0;margin:0;display:grid;gap:4px;list-style:none;color:var(--muted-foreground);font-size:12px}
 .history-section{margin:0;padding:0 12px}
 .history-section>summary{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
-.history-section>summary::before{content:"";flex:none;width:16px;height:16px;background:url("/preview/assets/icons/chevron-down-16.svg") center/contain no-repeat}
-.history-section[open]>summary::before{transform:rotate(180deg)}
+.history-section>summary::after{content:"";flex:none;margin-inline-start:auto;width:16px;height:16px;background:url("/preview/assets/icons/chevron-down-16.svg") center/contain no-repeat}
+.history-section[open]>summary::after{transform:rotate(180deg)}
 .history-section summary small{color:var(--muted-foreground);font-weight:400}
 .history-fields{display:grid;gap:12px;padding-bottom:12px}
 .history-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}

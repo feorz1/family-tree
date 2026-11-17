@@ -13,6 +13,11 @@ let selectedPoint = null, addingPoint = false;
 
 function element(tag, text, attributes = {}) {
   const node = document.createElement(tag);
+  if (tag === "button") {
+    node.dataset.slot = "button";
+    node.dataset.variant = "outline";
+    node.dataset.size = "sm";
+  }
   if (text) node.textContent = text;
   for (const [key, value] of Object.entries(attributes)) node.setAttribute(key, value);
   return node;
@@ -202,7 +207,7 @@ function showPhotos() {
       showPhotos();
       changed();
     });
-    const remove = element("button", "Убрать фото", {type:"button"});
+    const remove = element("button", "Убрать фото", {type:"button","data-variant":"destructive"});
     remove.addEventListener("click", () => {photos.splice(index,1);showPhotos();changed();});
     const portraitLabel = createLabel("Портрет на схеме", portrait);
     portraitLabel.className = "check";
@@ -252,7 +257,7 @@ function showFacts() {
     text.addEventListener("input", () => {fact.text = text.value; changed();});
     const link = element("input", "", {type:"url",value:fact.url || ""});
     link.addEventListener("input", () => {fact.url = link.value; changed();});
-    const remove = element("button", "Убрать событие у этой карточки", {type:"button"});
+    const remove = element("button", "Убрать событие у этой карточки", {type:"button","data-variant":"destructive"});
     remove.addEventListener("click", () => {
       fact.people = fact.people.filter(item => item !== ref);
       if (fact.birthChild) fact.birthChild = fact.birthChild.filter(item => item !== ref);

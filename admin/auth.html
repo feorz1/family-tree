@@ -15,13 +15,13 @@
   <form id="login">
     <label>Логин<input name="username" autocomplete="username" required maxlength="40"></label>
     <label>Пароль<input name="password" type="password" autocomplete="current-password" required maxlength="128"></label>
-    <button type="submit" class="primary">Войти</button>
+    <button type="submit" data-slot="button" data-variant="default" data-size="default">Войти</button>
   </form>
   <form id="activate" hidden>
     <label>Твой логин<input name="username" autocomplete="username" readonly></label>
     <label>Пароль<input name="password" type="password" autocomplete="new-password" required minlength="12" maxlength="128" aria-describedby="password-hint"></label>
     <p id="password-hint">От 12 до 128 символов. Можно использовать менеджер паролей.</p>
-    <button type="submit" class="primary">Принять приглашение</button>
+    <button type="submit" data-slot="button" data-variant="default" data-size="default">Принять приглашение</button>
   </form>
   <p id="auth-error" class="field-error" role="alert"></p>
 </main>
