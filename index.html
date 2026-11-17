@@ -48,38 +48,43 @@
 .timeline-item{grid-template-columns:42px minmax(0,1fr);gap:8px;padding:9px 7px;font-size:12px}
 @media(max-width:700px){.timeline{inset:8px auto 8px 8px}}
 
-/* Person details follow the approved Figma modal. The optical-size axis matches
-   the text and display static cuts included with the Medeo family. */
+/* The optical-size axis matches the Medeo text and display cuts. */
 @font-face{font-family:"Medeo Sans";src:url("assets/fonts/MedeoSansVariable.woff2") format("woff2");font-style:normal;font-weight:100 900;font-display:swap}
-#person-dialog{width:calc(100% - 32px);max-width:520px;max-height:90vh;border:0;border-radius:14px;padding:0;color:#242424}
-#person-dialog .dialog-inner{display:flex;flex-direction:column;gap:20px;padding:24px}
+#person-details{
+ grid-column:1;grid-row:1;min-width:0;min-height:0;margin:8px 0 8px 8px;
+ overflow:auto;overscroll-behavior:contain;scrollbar-width:thin;color:var(--ink);
+ background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 2px 8px #0000000b
+}
+#person-details[hidden]{display:none}
+#person-details .dialog-inner{display:flex;flex-direction:column;gap:16px;padding:18px}
 .dialog-header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
 .dialog-heading{min-width:0;flex:1;display:flex;flex-direction:column;gap:8px}
 .dialog-name-row{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:8px;row-gap:0;min-width:0}
-#person-dialog h3,.dialog-maiden{margin:0;overflow-wrap:anywhere;font:400 28px/34px "Medeo Sans",sans-serif;font-variation-settings:"opsz" 14}
-#person-dialog h3{color:#242424}.dialog-maiden{color:#787878}
-.dialog-relationship,.dialog-date{font:400 20px/1.2 "Medeo Sans",sans-serif;font-variation-settings:"opsz" 14}
-.dialog-relationship{color:#787878}.dialog-date{color:#877130}
+#person-details h3,.dialog-maiden{margin:0;overflow-wrap:anywhere;font:400 24px/1.2 "Medeo Sans",sans-serif;font-variation-settings:"opsz" 14}
+#person-details h3{color:#242424}.dialog-maiden{color:var(--muted)}
+.dialog-relationship,.dialog-date{font:400 16px/1.2 "Medeo Sans",sans-serif;font-variation-settings:"opsz" 14}
+.dialog-relationship{color:var(--muted)}.dialog-date{color:#877130}
 .dialog-heading>:empty{display:none}
-#person-dialog .close{flex:0 0 32px;display:grid;place-items:center;float:none;padding:0;width:32px;height:32px;border:0;border-radius:50%;background:#f5f5f5;color:#242424}
-#person-dialog .person-photos{margin:0;display:flex;flex-direction:column;align-items:center;gap:16px}
-#person-dialog .person-photos:empty{display:none}
-#person-dialog .person-photos figure{width:auto;max-width:100%;min-width:0;flex:none}
-#person-dialog .person-photos a{width:225px;max-width:100%}
-#person-dialog .person-photos img{display:block;width:225px;max-width:100%;height:300px;object-fit:cover;border-radius:9px;background:#f5f5f5}
-#person-dialog .person-photos img[src*="memorial"]{object-fit:contain}
-#person-dialog .person-photos figcaption{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-#person-dialog .photo-controls{box-sizing:border-box;width:154px;height:54px;margin:0;padding:0 10px;display:flex;justify-content:space-between;gap:0;border:0;border-radius:27px;background:#f5f5f5}
-#person-dialog .photo-controls button{width:36px;height:36px;flex:0 0 36px;color:#787878}
-#person-dialog .photo-controls button img{display:block;width:18px;height:18px}
-#person-dialog .photo-count{min-width:36px;color:#787878;font:600 14px/20px "Medeo Sans",sans-serif;font-variation-settings:"opsz" 32;letter-spacing:0}
-#dialog-description{margin:0;color:#787878;font:400 16px/24px "Medeo Sans",sans-serif;font-variation-settings:"opsz" 32}
+#person-details .close{flex:0 0 44px;display:grid;place-items:center;padding:0;width:44px;height:44px;border:0;border-radius:50%;background:#f5f5f5;color:#242424;cursor:pointer}
+#person-details .close:hover{background:#eaeaea}
+#person-details .person-photos{margin:0;display:flex;flex-direction:column;align-items:center;gap:16px}
+#person-details .person-photos:empty{display:none}
+#person-details .person-photos figure{width:auto;max-width:100%;min-width:0;flex:none}
+#person-details .person-photos a{width:208px;max-width:100%}
+#person-details .person-photos img{display:block;width:100%;height:auto;aspect-ratio:3/4;object-fit:cover;border-radius:9px;background:#f5f5f5}
+#person-details .person-photos img[src*="memorial"]{object-fit:contain}
+#person-details .person-photos figcaption{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+#person-details .photo-controls{box-sizing:border-box;width:154px;height:54px;margin:0;padding:0 10px;display:flex;justify-content:space-between;gap:0;border:0;border-radius:27px;background:#f5f5f5}
+#person-details .photo-controls button{width:36px;height:36px;flex:0 0 36px;color:#787878}
+#person-details .photo-controls button img{display:block;width:18px;height:18px}
+#person-details .photo-count{min-width:36px;color:#787878;font:600 14px/20px "Medeo Sans",sans-serif;font-variation-settings:"opsz" 32;letter-spacing:0}
+#dialog-description{margin:0;color:var(--muted);font:400 16px/24px "Medeo Sans",sans-serif;font-variation-settings:"opsz" 32}
 #dialog-facts:empty{display:none}
 #dialog-facts{display:grid;gap:12px;margin:0;font:400 15px/22px "Medeo Sans",sans-serif;color:#383838}
 #dialog-facts h4{margin:0;font:600 16px/22px "Medeo Sans",sans-serif;color:#242424}
 #dialog-facts ul{list-style:none;display:grid;gap:12px;margin:0;padding:0}
 #dialog-facts li{display:grid;grid-template-columns:48px minmax(0,1fr);gap:10px}
-#dialog-facts .fact-year{color:#787878;font-weight:600}
+#dialog-facts .fact-year{color:var(--muted);font-weight:600}
 #dialog-facts .fact-text{min-width:0}
 #dialog-facts a{margin-left:6px;color:#555;font-size:13px;white-space:nowrap}
 .high-contrast #dialog-facts{font-size:17px;line-height:24px;color:#222}
@@ -112,9 +117,8 @@ nav a:hover{background:#e1e1e1;color:#171717}
 .detail-button,.clear-button{color:#454545}
 .related-item{background:#fff;border-color:#dedede;color:#454545}
 .related-item.is-uncertain{color:#a14141;border-color:#d9aaaa;background:#fff8f7}
-dialog::backdrop{background:#0009}
-#person-dialog .photo-controls button:hover{background:#e6e6e6;color:#242424}
-#person-dialog .photo-controls button:active{background:#dcdcdc}
+#person-details .photo-controls button:hover{background:#e6e6e6;color:#242424}
+#person-details .photo-controls button:active{background:#dcdcdc}
 #dialog-links a{color:#555}
 /* Keep the explanatory strips out of every tree. */
 .canvas-hint,.selection-panel{display:none}
@@ -133,7 +137,7 @@ dialog::backdrop{background:#0009}
 body.high-contrast{--ink:#111;--muted:#333;--paper:#fff;--line:#aaa}
 .high-contrast .legend,.high-contrast .sources{color:#303030}
 .high-contrast nav a{background:#e3e3e3;color:#111}
-.high-contrast .chart-shell,.high-contrast .floating-controls,.high-contrast .timeline-toggle,.high-contrast .contrast-switch{border-color:#777}
+.high-contrast #person-details,.high-contrast .chart-shell,.high-contrast .floating-controls,.high-contrast .timeline-toggle,.high-contrast .contrast-switch{border-color:#777}
 .high-contrast .canvas{background-image:radial-gradient(#d5d5d5 .8px,transparent .9px)}
 .high-contrast .node,.high-contrast .node.current,.high-contrast .node.document,.high-contrast .node.adopt,.high-contrast .node.uncertain,.high-contrast .node.group,.high-contrast .node.has-portrait{color:#111}
 .high-contrast .node .node-avatar{background:#dedede;color:#111;font-weight:700}
@@ -151,8 +155,8 @@ body.high-contrast{--ink:#111;--muted:#333;--paper:#fff;--line:#aaa}
 .high-contrast .swatch.red{border-top:3px dashed #a61b1b}
 .high-contrast .swatch.blue{border-top:3px dashed #005cba}
 .high-contrast .timeline-item,.high-contrast .timeline-item b,.high-contrast .controls button,.high-contrast .controls output{color:#111}
-.high-contrast #person-dialog .dialog-maiden,.high-contrast #person-dialog .dialog-relationship,.high-contrast #dialog-description,.high-contrast #dialog-links a,.high-contrast #person-dialog .photo-count{color:#333}
-.high-contrast #person-dialog .dialog-date{color:#6e4900}
+.high-contrast #person-details .dialog-maiden,.high-contrast #person-details .dialog-relationship,.high-contrast #dialog-description,.high-contrast #dialog-links a,.high-contrast #person-details .photo-count{color:#333}
+.high-contrast #person-details .dialog-date{color:#6e4900}
 .high-contrast :focus-visible{outline-color:#005cba}
 
 /* Only the selected diagram uses the space below the navigation. */
@@ -182,6 +186,25 @@ main{display:flex;flex-direction:column;flex:1;min-height:0;gap:24px;padding:24p
  h1{font-size:clamp(28px,6vw,38px)}
  main{gap:8px;padding-block:8px}
  .archive-tabs{margin-bottom:8px}
+}
+
+/* Reserve space inside the diagram only while person details are open. */
+.chart-shell.details-open{
+ display:grid;grid-template-columns:clamp(275px,30%,348px) minmax(0,1fr);grid-template-rows:minmax(0,1fr);
+ background:#f5f5f5
+}
+.chart-shell.details-open .workspace{
+ grid-column:2;grid-row:1;min-height:0;margin-left:8px;width:calc(100% - 8px)
+}
+@media(max-width:760px){
+ .chart-shell.details-open{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) minmax(0,min(42%,360px))}
+ .chart-shell.details-open .workspace{grid-column:1;margin:0;width:100%;height:calc(100% - 6px)}
+ #person-details{grid-row:2;margin:0 6px 6px}
+ #person-details .dialog-inner{padding:14px}
+}
+@media(prefers-reduced-motion:no-preference){
+ #person-details:not([hidden]){animation:person-details-enter 160ms ease-out}
+ @keyframes person-details-enter{from{opacity:0;transform:translateY(6px)}}
 }
 </style></head>
 <body>
@@ -225,7 +248,7 @@ main{display:flex;flex-direction:column;flex:1;min-height:0;gap:24px;padding:24p
     </div>
   </section>
 </main>
-<dialog id="person-dialog" aria-labelledby="dialog-name"><div class="dialog-inner"><div class="dialog-header"><div class="dialog-heading"><div class="dialog-name-row"><h3 id="dialog-name"></h3><span id="dialog-maiden" class="dialog-maiden"></span></div><div id="dialog-relationship" class="dialog-relationship"></div><div id="dialog-date" class="dialog-date"></div><div id="dialog-state" class="state"></div></div><button type="button" class="close" aria-label="Закрыть"><img src="assets/icons/modal-close.svg" width="16" height="16" alt=""></button></div><div id="dialog-photos" class="person-photos"></div><p id="dialog-description"></p><section id="dialog-facts" aria-label="События и даты"></section><div id="dialog-links" class="doc-links"></div></div></dialog>
+<aside id="person-details" aria-label="Сведения о человеке" hidden><div class="dialog-inner"><div class="dialog-header"><div class="dialog-heading"><div class="dialog-name-row"><h3 id="dialog-name" tabindex="-1"></h3><span id="dialog-maiden" class="dialog-maiden"></span></div><div id="dialog-relationship" class="dialog-relationship"></div><div id="dialog-date" class="dialog-date"></div><div id="dialog-state" class="state"></div></div><button type="button" class="close" aria-label="Закрыть карточку"><img src="assets/icons/modal-close.svg" width="16" height="16" alt=""></button></div><div id="dialog-photos" class="person-photos"></div><p id="dialog-description"></p><section id="dialog-facts" aria-label="События и даты"></section><div id="dialog-links" class="doc-links"></div></div></aside>
 <script src="assets/portrait.js"></script>
 <script src="data/tree.js"></script>
 <script>
@@ -242,7 +265,53 @@ function cardText(chart,node){
  return [node.name,role||''];
 }
 function cardInitials(name){return name.replace(/«[^»]*»/g,'').trim().split(/\s+/).filter(Boolean).slice(0,2).map(word=>Array.from(word)[0].toLocaleUpperCase('ru')).join('')}
-const dlg=document.querySelector('#person-dialog');
+
+const personPanel=document.querySelector('#person-details');
+const personName=document.querySelector('#dialog-name');
+const editPreview=typeof window!=='undefined'&&window.name==='family-tree-admin-preview';
+let openDetails=null;
+
+function closePerson(restoreFocus=false){
+ if(!openDetails)return;
+ const {shell,trigger,refit}=openDetails;
+ openDetails=null;
+ trigger.setAttribute('aria-expanded','false');
+ personPanel.hidden=true;
+ shell.classList.remove('details-open');
+ refit();
+ if(restoreFocus)trigger.focus({preventScroll:true});
+}
+
+function openPerson(n,trigger,shell,view,refit,{keyboard=false,center=false}={}){
+ const original=trigger.getBoundingClientRect();
+ const opening=openDetails?.shell!==shell;
+ if(opening){
+  closePerson();
+  shell.prepend(personPanel);
+  shell.classList.add('details-open');
+ }
+ if(openDetails?.trigger!==trigger){
+  openDetails?.trigger.setAttribute('aria-expanded','false');
+  openDetails={shell,trigger,refit};
+  trigger.setAttribute('aria-expanded','true');
+  personInfo(n);
+  personPanel.hidden=false;
+  personPanel.scrollTop=0;
+ }
+ if(opening)refit();
+
+ // Keep the portrait near its previous position when the diagram changes width.
+ const frame=view.getBoundingClientRect(),card=trigger.getBoundingClientRect();
+ const aim=(start,size,cardSize,position)=>{
+  if(center)return start+size/2;
+  const inset=Math.min(size/2,cardSize/2+20);
+  return Math.max(start+inset,Math.min(start+size-inset,position));
+ };
+ view.scrollLeft+=card.left+card.width/2-aim(frame.left,view.clientWidth,card.width,original.left+original.width/2);
+ view.scrollTop+=card.top+card.height/2-aim(frame.top,view.clientHeight,card.height,original.top+original.height/2);
+ if(keyboard)personName.focus({preventScroll:true});
+}
+
 function showPhotos(n){
  const container=document.querySelector('#dialog-photos'),photos=n.photos||[];container.replaceChildren();
  if(!photos.length)return;
@@ -268,7 +337,7 @@ function showPhotos(n){
 // Names shown with a maiden surname are limited to relationships confirmed in the family records.
 function personInfo(n){
  const chart=n.chartId||'',label=cardText(chart,n),name=modalNames[chart]?.[n.id];
- document.querySelector('#dialog-name').textContent=name?.[0]||label[0];
+ personName.textContent=name?.[0]||label[0];
  document.querySelector('#dialog-maiden').textContent=name?.[1]?'('+name[1]+')':'';
  document.querySelector('#dialog-relationship').textContent=label[1]||'';
  document.querySelector('#dialog-date').textContent=(births[chart]||{})[n.id]?.[0]||'';
@@ -276,8 +345,8 @@ function personInfo(n){
  document.querySelector('#dialog-description').textContent=n.info||family;
  showPhotos(n);
  showDocumentFacts(n);
- const links=document.querySelector('#dialog-links');links.replaceChildren();if(n.source){const a=document.createElement('a');a.href=n.source;a.textContent=n.sourceLabel||'Открыть метрическую запись';links.append(a)}const r=document.createElement('a');r.href='research.md';r.textContent='Исследовательские заметки';links.append(r);if(!dlg.open)dlg.showModal()}
-document.querySelector('.close').addEventListener('click',()=>dlg.close());dlg.addEventListener('click',e=>{if(e.target===dlg)dlg.close()});
+ const links=document.querySelector('#dialog-links');links.replaceChildren();if(n.source){const a=document.createElement('a');a.href=n.source;a.textContent=n.sourceLabel||'Открыть метрическую запись';links.append(a)}const r=document.createElement('a');r.href='research.md';r.textContent='Исследовательские заметки';links.append(r)}
+personPanel.querySelector('.close').addEventListener('click',()=>closePerson(true));
 // Each observation stays attached to its record and says when a reading is uncertain.
 function exactBirth(value){
  const raw=String(value||'');if(/или|возможн|уточн|предполож|сверк|оценк|ок\.|\?/i.test(raw))return null;
@@ -553,7 +622,6 @@ function setHighContrast(enabled){
  for(const button of contrastButtons)button.setAttribute('aria-checked',String(enabled));
  try{localStorage.setItem('family-tree-high-contrast',enabled?'1':'0')}catch(e){}
 }
-let lastTouchTap=null;
 function render(c){
  // Give routes enough space to pass cards and each other.
  if(c.id==='family'){for(const n of c.nodes){n.y+=450;if(!['an','konst_an','oleg_an'].includes(n.id))n.x+=420}c.w+=420;c.h+=450}
@@ -582,7 +650,7 @@ function render(c){
  const stage=document.createElement('div');stage.className='stage';const canvas=document.createElement('div');canvas.className='canvas';canvas.style.width=c.w+'px';canvas.style.height=c.h+'px';
  const svg=document.createElementNS(SVG,'svg');svg.setAttribute('width',c.w);svg.setAttribute('height',c.h);canvas.append(svg);stage.append(canvas);view.append(stage);
  const toolbar=document.createElement('div');toolbar.className='controls floating-controls';
- const out=document.createElement('output');out.setAttribute('aria-live','polite');let scale=1;
+ const out=document.createElement('output');out.setAttribute('aria-live','polite');let scale=1,fitMode=null;
  const minimumScale=()=>Math.min(.01,view.clientWidth/c.w||.01,view.clientHeight/c.h||.01);
  const resize=()=>{
   canvas.style.transform=`scale(${scale})`;
@@ -591,11 +659,13 @@ function render(c){
   out.textContent=(percent<1?Math.max(.1,Number(percent.toFixed(1))):Math.round(percent))+'%';
  };
  const zoom=(factor,x=view.clientWidth/2,y=view.clientHeight/2)=>{
+  fitMode=null;
   const beforeX=(view.scrollLeft+x)/scale,beforeY=(view.scrollTop+y)/scale;
   scale=Math.max(minimumScale(),Math.min(1.8,scale*factor));
   resize();view.scrollLeft=beforeX*scale-x;view.scrollTop=beforeY*scale-y;
  };
- const fit=(whole)=>{
+ const fit=whole=>{
+  fitMode=whole;
   scale=Math.min(1,view.clientWidth/c.w,whole?view.clientHeight/c.h:Infinity);
   resize();view.scrollLeft=0;view.scrollTop=0;
  };
@@ -604,11 +674,12 @@ function render(c){
  control('Увеличить масштаб','+',()=>zoom(1.2));
  control('Подогнать по ширине','По ширине',()=>fit(false));
  control('Показать всю схему','Вся схема',()=>fit(true));
- control('Масштаб 100 процентов','100%',()=>{scale=1;resize()});
- workspace.append(contrastButton,view,toolbar);shell.append(timeline,workspace);host.append(shell);
- const hint=document.createElement('p');hint.className='canvas-hint';const desktopHint=document.createElement('span');desktopHint.className='desktop-gesture-hint';desktopHint.textContent='Перетаскивайте фон · Ctrl/⌘ + колёсико или щипок — масштаб · наведите на человека или нажмите на линию · Esc или нажатие на фон — снять выделение · разрыв линии означает, что связи не соединены';const mobileHint=document.createElement('span');mobileHint.className='mobile-gesture-hint';mobileHint.textContent='Касание — связи · двойное касание — подробности · перетаскивайте фон для перемещения';hint.append(desktopHint,mobileHint);host.append(hint);
+ control('Масштаб 100 процентов','100%',()=>{fitMode=null;scale=1;resize()});
+ const refit=()=>{if(fitMode!==null&&view.clientWidth&&view.clientHeight)fit(fitMode)};
+ workspace.append(timeline,contrastButton,view,toolbar);shell.append(workspace);host.append(shell);
+ const hint=document.createElement('p');hint.className='canvas-hint';const desktopHint=document.createElement('span');desktopHint.className='desktop-gesture-hint';desktopHint.textContent='Перетаскивайте фон · Ctrl/⌘ + колёсико или щипок — масштаб · нажмите на человека или на линию · Esc или нажатие на фон — снять выделение · разрыв линии означает, что связи не соединены';const mobileHint=document.createElement('span');mobileHint.className='mobile-gesture-hint';mobileHint.textContent='Коснитесь карточки, чтобы открыть подробности · перетаскивайте фон для перемещения';hint.append(desktopHint,mobileHint);host.append(hint);
  const panel=document.createElement('div');panel.className='selection-panel';panel.setAttribute('aria-live','polite');host.append(panel);
- const edges=graphEdges(c),families=familyRoutes(c,map),nodeElements=new Map(),edgeElements=[];let selection=null,keyboardPerson=null;
+ const edges=graphEdges(c),families=familyRoutes(c,map),nodeElements=new Map(),edgeElements=[];let selection=null;
  const familyForEdge=e=>families.find(f=>f.parents.includes(e.a)&&f.children.includes(e.b)&&e.kind===(f.uncertainChildren?.includes(e.b)?'red':f.kind));
  // Keep individual connections for non-family relations, including godparents and single-child links.
  const individual=edges.filter(e=>!familyForEdge(e)),ports=edgePorts(individual,map);
@@ -651,9 +722,8 @@ function render(c){
   simpleRoutes[i]=path;
  });
  const editedPaths=new Map();
- const editPreview=typeof window!=='undefined'&&window.name==='family-tree-admin-preview';
  const unionFor=(e,f)=>e&&(!e.kind||e.label==='общие усыновители')&&f.parents.includes(e.a)&&f.parents.includes(e.b);
- function clear(){selection=null;keyboardPerson=null;lastTouchTap=null;panel.replaceChildren();const message=document.createElement('span');message.textContent='Выберите человека или связь, чтобы увидеть связанных людей.';panel.append(message);nodeElements.forEach(el=>el.classList.remove('is-dim','is-selected','is-related'));edgeElements.forEach(el=>el.group.classList.remove('is-dim','is-selected'))}
+ function clear(){selection=null;panel.replaceChildren();const message=document.createElement('span');message.textContent='Выберите человека или связь, чтобы увидеть связанных людей.';panel.append(message);nodeElements.forEach(el=>el.classList.remove('is-dim','is-selected','is-related'));edgeElements.forEach(el=>el.group.classList.remove('is-dim','is-selected'))}
  function focusPeople(ids,edgeIndex=null,familySelection=null){
   const set=new Set(ids),primary=ids[0];
   nodeElements.forEach((el,id)=>{el.classList.toggle('is-dim',!set.has(id));el.classList.toggle('is-selected',id===primary);el.classList.toggle('is-related',set.has(id)&&id!==primary)});
@@ -672,9 +742,13 @@ function render(c){
  function button(name,fn,cls=''){const el=document.createElement('button');el.type='button';el.textContent=name;el.className=cls;el.addEventListener('click',fn);return el}
  function previewPerson(id){const related=[...new Set(edges.filter(e=>e.a===id||e.b===id).map(e=>e.a===id?e.b:e.a))];focusPeople([id,...related])}
  function restoreSelection(){if(selection?.person)showPerson(selection.person);else if(selection?.family)showFamily(selection.family,selection.child);else if(selection&&selection.edge!==undefined)showEdge(selection.edge);else clear()}
- function showPerson(id){selection={person:id};const near=edges.map((e,i)=>({e,i})).filter(x=>x.e.a===id||x.e.b===id);const related=[...new Set(near.map(({e})=>e.a===id?e.b:e.a))];focusPeople([id,...related]);panel.replaceChildren();const title=document.createElement('strong');title.textContent=cardText(c.id,map[id])[0];panel.append(title);panel.append(button('Подробнее',()=>personInfo(map[id]),'detail-button'));panel.append(button('Показать всё',clear,'clear-button'));const items=document.createElement('div');items.className='related-list';if(!near.length)items.textContent='Связанные люди пока не установлены.';for(const {e} of near){const other=e.a===id?e.b:e.a;const b=button(cardText(c.id,map[other])[0]+' · '+e.label,()=>showEdge(edges.indexOf(e)),'related-item'+(e.kind==='red'?' is-uncertain':''));items.append(b)}panel.append(items)}
- function showFamily(family,child=null){lastTouchTap=null;selection={family,child};const people=[...family.parents,...(child?[child]:family.children)];focusPeople(people,null,{family,child});panel.replaceChildren();const title=document.createElement('strong');title.textContent=family.label+(family.kind==='red'||family.uncertainChildren?.includes(child)?' · требует проверки':'');panel.append(title);panel.append(button('Показать всё',clear,'clear-button'));const items=document.createElement('div');items.className='related-list';for(const id of people)items.append(button(map[id].name,()=>showPerson(id),'related-item'+(family.kind==='red'?' is-uncertain':'')));panel.append(items)}
- function showEdge(i){lastTouchTap=null;const e=edges[i],family=familyForEdge(e);if(family){showFamily(family,e.b);return}selection={edge:i};focusPeople([e.a,e.b],i);panel.replaceChildren();const title=document.createElement('strong');title.textContent=e.label+(e.kind==='red'?' · требует проверки':'');panel.append(title);panel.append(button('Показать всё',clear,'clear-button'));const items=document.createElement('div');items.className='related-list';for(const id of [e.a,e.b])items.append(button(map[id].name,()=>showPerson(id),'related-item'));panel.append(items)}
+ function selectPerson(id,options){
+  showPerson(id);
+  if(!editPreview)openPerson(map[id],nodeElements.get(id),shell,view,refit,options);
+ }
+ function showPerson(id){selection={person:id};const near=edges.map((e,i)=>({e,i})).filter(x=>x.e.a===id||x.e.b===id);const related=[...new Set(near.map(({e})=>e.a===id?e.b:e.a))];focusPeople([id,...related]);panel.replaceChildren();const title=document.createElement('strong');title.textContent=cardText(c.id,map[id])[0];panel.append(title);panel.append(button('Подробнее',()=>selectPerson(id,{keyboard:true}),'detail-button'));panel.append(button('Показать всё',clear,'clear-button'));const items=document.createElement('div');items.className='related-list';if(!near.length)items.textContent='Связанные люди пока не установлены.';for(const {e} of near){const other=e.a===id?e.b:e.a;const b=button(cardText(c.id,map[other])[0]+' · '+e.label,()=>showEdge(edges.indexOf(e)),'related-item'+(e.kind==='red'?' is-uncertain':''));items.append(b)}panel.append(items)}
+ function showFamily(family,child=null){selection={family,child};const people=[...family.parents,...(child?[child]:family.children)];focusPeople(people,null,{family,child});panel.replaceChildren();const title=document.createElement('strong');title.textContent=family.label+(family.kind==='red'||family.uncertainChildren?.includes(child)?' · требует проверки':'');panel.append(title);panel.append(button('Показать всё',clear,'clear-button'));const items=document.createElement('div');items.className='related-list';for(const id of people)items.append(button(map[id].name,()=>showPerson(id),'related-item'+(family.kind==='red'?' is-uncertain':'')));panel.append(items)}
+ function showEdge(i){const e=edges[i],family=familyForEdge(e);if(family){showFamily(family,e.b);return}selection={edge:i};focusPeople([e.a,e.b],i);panel.replaceChildren();const title=document.createElement('strong');title.textContent=e.label+(e.kind==='red'?' · требует проверки':'');panel.append(title);panel.append(button('Показать всё',clear,'clear-button'));const items=document.createElement('div');items.className='related-list';for(const id of [e.a,e.b])items.append(button(map[id].name,()=>showPerson(id),'related-item'));panel.append(items)}
  function addPath(path,info){
   const group=document.createElementNS(SVG,'g');group.classList.add('edge');if(info.family)group.classList.add('family-edge');if(info.edge?.spouse)group.classList.add('edge-spouse');const kind=info.kind||info.family?.kind||info.edge?.kind;if(kind)group.classList.add('edge-'+kind);
   const halo=document.createElementNS(SVG,'path');halo.classList.add('edge-halo');const visible=document.createElementNS(SVG,'path');visible.classList.add('edge-line');const hit=document.createElementNS(SVG,'path');hit.classList.add('link-hit');hit.setAttribute('tabindex','0');hit.setAttribute('role','button');
@@ -717,7 +791,7 @@ function render(c){
     }
    };
   }
-  const select=()=>info.family?showFamily(info.family,info.child||null):showEdge(info.index);
+  const select=()=>{closePerson();if(info.family)showFamily(info.family,info.child||null);else showEdge(info.index)};
   hit.addEventListener('click',ev=>{ev.stopPropagation();select()});hit.addEventListener('keydown',ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();select()}});group.append(halo,visible,hit);svg.append(group);edgeElements.push({group,...info})
  }
  const drawIndividual=e=>{const index=edges.indexOf(e),path=simpleRoutes[index];if(!path){console.warn('Не удалось провести связь',c.id,e.a,e.b);return}addPath(path,{edge:e,index})};
@@ -727,26 +801,34 @@ function render(c){
  for(const e of unionEdges)drawIndividual(e);
  for(const f of families){addPath(f.stem,{family:f,role:'stem',children:f.children});for(const [segmentIndex,segment] of f.bus.entries()){const kind=segment.children.length&&segment.children.every(id=>f.uncertainChildren?.includes(id))?'red':'';addPath(segment.points,{family:f,role:'bus',segment:String(segmentIndex),children:segment.children,kind})}for(const branch of f.branches){const kind=f.uncertainChildren?.includes(branch.child)?'red':'';addPath(branch.points,{family:f,role:'branch',children:[branch.child],child:branch.child,kind})}}
  for(const e of individual)if(!unionEdges.includes(e))drawIndividual(e);
- for(const n of c.nodes){n.chartId=c.id;n.photos=(photoCatalog[c.id]||{})[n.id]||[];const b=document.createElement('button');b.type='button';b.className='node '+(n.kind||'');b.setAttribute('data-person',n.id);const [displayName,relationship]=cardText(c.id,n),portrait=n.photos.find(photo=>photo.portrait);const avatar=document.createElement('span');avatar.className='node-avatar';avatar.setAttribute('aria-hidden','true');if(portrait){b.classList.add('has-portrait');const img=document.createElement('img');img.className='node-portrait';img.src=portrait.src;img.alt='';img.loading='lazy';if(portrait.crop)framePortrait(img,portrait.crop);avatar.append(img)}else avatar.textContent=cardInitials(displayName);b.append(avatar);b.style.left=n.x+'px';b.style.top=n.y+'px';b.setAttribute('aria-label',displayName+(relationship?', '+relationship:'')+(n.kind==='uncertain'?', связь требует проверки':''));b.setAttribute('aria-description','Нажмите Enter или пробел повторно, чтобы открыть подробности.');const name=document.createElement('strong');name.textContent=displayName;const sub=document.createElement('small');sub.textContent=relationship;b.append(name,sub);let pointerKind=null,lastInputKind=null,touchStart=null,touchMoved=false;
- b.addEventListener('pointerdown',e=>{pointerKind=e.pointerType;lastInputKind=e.pointerType;touchMoved=false;touchStart=e.pointerType==='touch'?{x:e.clientX,y:e.clientY}:null});
- b.addEventListener('pointermove',e=>{if(touchStart&&Math.hypot(e.clientX-touchStart.x,e.clientY-touchStart.y)>10){touchMoved=true;lastTouchTap=null}});
- b.addEventListener('pointercancel',()=>{pointerKind=null;touchStart=null;touchMoved=false;lastTouchTap=null});
+ for(const n of c.nodes){n.chartId=c.id;n.photos=(photoCatalog[c.id]||{})[n.id]||[];const b=document.createElement('button');b.type='button';b.className='node '+(n.kind||'');b.setAttribute('data-person',n.id);const [displayName,relationship]=cardText(c.id,n),portrait=n.photos.find(photo=>photo.portrait);const avatar=document.createElement('span');avatar.className='node-avatar';avatar.setAttribute('aria-hidden','true');if(portrait){b.classList.add('has-portrait');const img=document.createElement('img');img.className='node-portrait';img.src=portrait.src;img.alt='';img.loading='lazy';if(portrait.crop)framePortrait(img,portrait.crop);avatar.append(img)}else avatar.textContent=cardInitials(displayName);b.append(avatar);b.style.left=n.x+'px';b.style.top=n.y+'px';b.setAttribute('aria-label',displayName+(relationship?', '+relationship:'')+(n.kind==='uncertain'?', связь требует проверки':''));if(!editPreview){b.setAttribute('aria-controls','person-details');b.setAttribute('aria-expanded','false')}const name=document.createElement('strong');name.textContent=displayName;const sub=document.createElement('small');sub.textContent=relationship;b.append(name,sub);let touchStart=null,touchMoved=false;
+ b.addEventListener('pointerdown',e=>{touchMoved=false;touchStart=e.pointerType==='touch'?{x:e.clientX,y:e.clientY}:null});
+ b.addEventListener('pointermove',e=>{if(touchStart&&Math.hypot(e.clientX-touchStart.x,e.clientY-touchStart.y)>10)touchMoved=true});
+ b.addEventListener('pointercancel',()=>{touchStart=null;touchMoved=false});
  b.addEventListener('pointerenter',e=>{if(e.pointerType==='mouse'||e.pointerType==='pen')previewPerson(n.id)});b.addEventListener('pointerleave',e=>{if(e.pointerType==='mouse'||e.pointerType==='pen')restoreSelection()});
- b.addEventListener('click',e=>{const touch=pointerKind==='touch'&&e?.detail!==0,moved=touch&&touchMoved;pointerKind=null;touchStart=null;touchMoved=false;if(moved){lastTouchTap=null;return}
-  // A second keyboard activation opens details after selecting a person.
-  const keyboard=e?.detail===0;if(keyboard&&keyboardPerson===n.id&&selection?.person===n.id){keyboardPerson=null;lastTouchTap=null;personInfo(n);return}keyboardPerson=keyboard?n.id:null;showPerson(n.id);
-  if(touch){const now=Date.now();if(lastTouchTap&&lastTouchTap.id===n.id&&now>=lastTouchTap.time&&now-lastTouchTap.time<=500){lastTouchTap=null;personInfo(n)}else lastTouchTap={id:n.id,time:now}}else lastTouchTap=null
- });b.addEventListener('dblclick',()=>{if(lastInputKind!=='touch')personInfo(n)});canvas.append(b);nodeElements.set(n.id,b)}
+ b.addEventListener('click',e=>{
+  const keyboard=e?.detail===0,moved=touchMoved;touchStart=null;touchMoved=false;
+  if(moved&&!keyboard)return;
+  selectPerson(n.id,{keyboard});
+ });
+ canvas.append(b);nodeElements.set(n.id,b)}
  const dated=c.nodes.filter(n=>(births[c.id]||{})[n.id]?.[1]).sort((a,b)=>Number(births[c.id][a.id][1])-Number(births[c.id][b.id][1]));
  if(!dated.length){const empty=document.createElement('p');empty.className='timeline-empty';empty.textContent='Даты рождения пока уточняются';timelineList.append(empty)}
- for(const n of dated){const item=document.createElement('button');item.type='button';item.className='timeline-item';const year=document.createElement('b');year.textContent=births[c.id][n.id][2]||births[c.id][n.id][1];const name=document.createElement('span');name.textContent=cardText(c.id,n)[0];item.append(year,name);item.addEventListener('click',()=>{lastTouchTap=null;setTimelineOpen(false);showPerson(n.id);view.scrollLeft=Math.max(0,(n.x+NODE_W/2)*scale-view.clientWidth/2);view.scrollTop=Math.max(0,(n.y+NODE_H/2)*scale-view.clientHeight/2)});timelineList.append(item)}
+ for(const n of dated){const item=document.createElement('button');item.type='button';item.className='timeline-item';const year=document.createElement('b');year.textContent=births[c.id][n.id][2]||births[c.id][n.id][1];const name=document.createElement('span');name.textContent=cardText(c.id,n)[0];item.append(year,name);item.addEventListener('click',e=>{
+  setTimelineOpen(false);
+  selectPerson(n.id,{center:true,keyboard:e?.detail===0});
+  if(editPreview){
+   view.scrollLeft=Math.max(0,(n.x+NODE_W/2)*scale-view.clientWidth/2);
+   view.scrollTop=Math.max(0,(n.y+NODE_H/2)*scale-view.clientHeight/2);
+  }
+ });timelineList.append(item)}
  view.addEventListener('wheel',e=>{if(!e.ctrlKey&&!e.metaKey)return;e.preventDefault();const rect=view.getBoundingClientRect();zoom(Math.exp(-e.deltaY*.003),e.clientX-rect.left,e.clientY-rect.top)},{passive:false});
  const pointers=new Map();let drag=null,pinch=null,suppressClick=false;const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
- view.addEventListener('pointerdown',e=>{setTimelineOpen(false);if(!e.target.closest('.node'))lastTouchTap=null;if(e.button!==0||e.target.closest('.node,.link-hit,.floating-controls'))return;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===1)suppressClick=false;view.setPointerCapture(e.pointerId);if(pointers.size===1){drag={x:e.clientX,y:e.clientY,left:view.scrollLeft,top:view.scrollTop};view.classList.add('dragging')}else if(pointers.size===2){suppressClick=true;const [a,b]=[...pointers.values()];pinch={distance:distance(a,b),scale};drag=null}});
+ view.addEventListener('pointerdown',e=>{setTimelineOpen(false);if(e.button!==0||e.target.closest('.node,.link-hit,.floating-controls'))return;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===1)suppressClick=false;view.setPointerCapture(e.pointerId);if(pointers.size===1){drag={x:e.clientX,y:e.clientY,left:view.scrollLeft,top:view.scrollTop};view.classList.add('dragging')}else if(pointers.size===2){suppressClick=true;const [a,b]=[...pointers.values()];pinch={distance:distance(a,b),scale};drag=null}});
  view.addEventListener('pointermove',e=>{if(!pointers.has(e.pointerId))return;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pinch&&pointers.size>=2){const [a,b]=[...pointers.values()],rect=view.getBoundingClientRect(),next=pinch.scale*distance(a,b)/Math.max(1,pinch.distance);zoom(next/scale,(a.x+b.x)/2-rect.left,(a.y+b.y)/2-rect.top)}else if(drag&&pointers.size===1){if(Math.hypot(e.clientX-drag.x,e.clientY-drag.y)>5)suppressClick=true;view.scrollLeft=drag.left-(e.clientX-drag.x);view.scrollTop=drag.top-(e.clientY-drag.y)}});
  const stopPointer=e=>{pointers.delete(e.pointerId);pinch=null;if(pointers.size===1){const [remaining]=pointers.values();drag={x:remaining.x,y:remaining.y,left:view.scrollLeft,top:view.scrollTop}}else{drag=null;view.classList.remove('dragging')}};for(const ev of ['pointerup','pointercancel','lostpointercapture'])view.addEventListener(ev,stopPointer);
- view.addEventListener('click',e=>{if(suppressClick){suppressClick=false;return}if(!e.target.closest('.node,.link-hit'))clear()});
- document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!dlg.open){setTimelineOpen(false);if(selection)clear()}});
+ view.addEventListener('click',e=>{if(suppressClick){suppressClick=false;return}if(!e.target.closest('.node,.link-hit')){closePerson();clear()}});
+ document.addEventListener('keydown',e=>{if(e.key==='Escape'){setTimelineOpen(false);if(openDetails?.shell===shell)closePerson(true);if(selection)clear()}});
  clear();scale=c.id==='family'?.8:1;resize();
  const initial=map[c.id==='family'?'ol':c.nodes[0]?.id];
  let centered=false;
@@ -776,6 +858,7 @@ function selectLink(links,id){
 }
 
 function showSection(){
+ closePerson();
  const hash=location.hash.slice(1).replace(/^chart-/,'');
  const chartId=centerCharts.has(hash)||hash==='sources'?hash:'family';
  const sectionId=chartId==='leviny'?'perikov':chartId;

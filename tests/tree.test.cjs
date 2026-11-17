@@ -1,7 +1,7 @@
 const fs=require('fs'),vm=require('vm');
 class CL {constructor(){this.s=new Set()} add(...x){x.forEach(t=>this.s.add(t))} remove(...x){x.forEach(t=>this.s.delete(t))} toggle(x,on){if(on===undefined)on=!this.s.has(x);on?this.s.add(x):this.s.delete(x)} contains(x){return this.s.has(x)}}
-class E {constructor(tag){this.tag=tag;this.style={};this.children=[];this.attrs={};this.handlers={};this.clientWidth=1000;this.clientHeight=560;this.scrollLeft=0;this.scrollTop=0;this.classList=new CL();this.namespaceURI='http://www.w3.org/2000/svg'}setAttribute(k,v){this.attrs[k]=v}append(...v){this.children.push(...v)}replaceChildren(...v){this.children=[...v]}addEventListener(k,f){this.handlers[k]=f}showModal(){this.open=true}close(){this.open=false}getBoundingClientRect(){return{left:0,top:0}}setPointerCapture(){}}
-const roots={},warnings=[],storage=new Map(),localStorage={getItem:k=>storage.get(k)??null,setItem:(k,v)=>storage.set(k,v)},document={body:new E('body'),handlers:{},addEventListener(k,f){(this.handlers[k]??=[]).push(f)},querySelector:s=>roots[s]??=new E('root'),createElement:t=>new E(t),createElementNS:(ns,t)=>new E(t)},file=fs.readFileSync(require('path').join(__dirname,'..','index.html'),'utf8');let ctx={document,localStorage,console:{warn:(...x)=>warnings.push(x.join(' ')),log:console.log},Uint8Array,Float64Array,Int32Array};const dataSource=fs.readFileSync(require('path').join(__dirname,'..','data','tree.js'),'utf8');vm.createContext(ctx);vm.runInContext(dataSource,ctx);vm.runInContext(file.match(/<script>([\s\S]*?)<\/script>/)[1],ctx,{timeout:30000});
+class E {constructor(tag){this.tag=tag;this.style={};this.children=[];this.attrs={};this.handlers={};this.clientWidth=1000;this.clientHeight=560;this.scrollLeft=0;this.scrollTop=0;this.classList=new CL();this.namespaceURI='http://www.w3.org/2000/svg'}setAttribute(k,v){this.attrs[k]=v}append(...v){this.children.push(...v)}prepend(el){if(el.parent)el.parent.children=el.parent.children.filter(child=>child!==el);el.parent=this;this.children.unshift(el)}replaceChildren(...v){this.children=[...v]}addEventListener(k,f){this.handlers[k]=f}querySelector(selector){return this.children.find(el=>selector==="."+el.className)??(this.closeButton??=new E("button"))}focus(){this.focused=true}getBoundingClientRect(){return{left:0,top:0,width:0,height:0}}setPointerCapture(){}}
+const roots={},warnings=[],storage=new Map(),localStorage={getItem:k=>storage.get(k)??null,setItem:(k,v)=>storage.set(k,v)},document={body:new E('body'),handlers:{},addEventListener(k,f){(this.handlers[k]??=[]).push(f)},querySelector:s=>roots[s]??=new E('root'),createElement:t=>new E(t),createElementNS:(ns,t)=>new E(t)},file=fs.readFileSync(require('path').join(__dirname,'..','index.html'),'utf8');let ctx={document,localStorage,console:{warn:(...x)=>warnings.push(x.join(' ')),log:console.log},Uint8Array,Float64Array,Int32Array};const dataSource=fs.readFileSync(require('path').join(__dirname,'..','data','tree.js'),'utf8');const portraitSource=fs.readFileSync(require('path').join(__dirname,'..','assets','portrait.js'),'utf8');vm.createContext(ctx);vm.runInContext(dataSource,ctx);vm.runInContext(portraitSource,ctx);vm.runInContext(file.match(/<script>([\s\S]*?)<\/script>/)[1],ctx,{timeout:30000});
 const charts=vm.runInContext('charts',ctx),graph=vm.runInContext('graphEdges',ctx),route=vm.runInContext('routeEdge',ctx),births=vm.runInContext('births',ctx);
 const {NODE_W,NODE_H,PORTRAIT,PORTRAIT_INSET}=vm.runInContext('({NODE_W,NODE_H,PORTRAIT,PORTRAIT_INSET})',ctx);
 if(NODE_W!==196||NODE_H!==220||PORTRAIT!==150||PORTRAIT_INSET!==23)throw Error('The portrait card geometry differs from the agreed layout');
@@ -12,7 +12,7 @@ if(contrastButtons.some(b=>!b||b.attrs.role!=='switch'||b.attrs['aria-label']!==
 contrastButtons[0].handlers.click();
 if(!document.body.classList.contains('high-contrast')||storage.get('family-tree-high-contrast')!=='1'||contrastButtons.some(b=>b.attrs['aria-checked']!=='true'))throw Error('Contrast must turn on and synchronise across charts');
 const reloadRoots={},reloadDocument={body:new E('body'),handlers:{},addEventListener(k,f){(this.handlers[k]??=[]).push(f)},querySelector:s=>reloadRoots[s]??=new E('root'),createElement:t=>new E(t),createElementNS:(ns,t)=>new E(t)};
-const reloadContext={document:reloadDocument,localStorage,console,Uint8Array,Float64Array,Int32Array};vm.createContext(reloadContext);vm.runInContext(dataSource,reloadContext);vm.runInContext(file.match(/<script>([\s\S]*?)<\/script>/)[1],reloadContext,{timeout:30000});
+const reloadContext={document:reloadDocument,localStorage,console,Uint8Array,Float64Array,Int32Array};vm.createContext(reloadContext);vm.runInContext(dataSource,reloadContext);vm.runInContext(portraitSource,reloadContext);vm.runInContext(file.match(/<script>([\s\S]*?)<\/script>/)[1],reloadContext,{timeout:30000});
 if(!reloadDocument.body.classList.contains('high-contrast')||!walk(reloadRoots['#chart-khramov']).some(e=>e.className==='contrast-switch'&&e.attrs['aria-checked']==='true'))throw Error('Contrast must be restored after reopening the page');
 contrastButtons[1].handlers.click();
 if(document.body.classList.contains('high-contrast')||storage.get('family-tree-high-contrast')!=='0'||contrastButtons.some(b=>b.attrs['aria-checked']!=='false'))throw Error('Contrast must turn off from any chart');
@@ -25,7 +25,7 @@ for(const chart of charts){
 }
 function cardBoxes(n){return [{left:n.x+PORTRAIT_INSET,right:n.x+PORTRAIT_INSET+PORTRAIT,top:n.y,bottom:n.y+PORTRAIT},{left:n.x,right:n.x+NODE_W,top:n.y+PORTRAIT+5,bottom:n.y+NODE_H}];}
 function checkPath(points,nodes,a,b){for(let i=1;i<points.length;i++){let [x1,y1]=points[i-1],[x2,y2]=points[i];if(x1!==x2&&y1!==y2)throw Error('diagonal path');for(const n of nodes)for(const {left,right,top,bottom} of cardBoxes(n)){const hits=x1===x2 ? x1>left&&x1<right&&Math.max(y1,y2)>top&&Math.min(y1,y2)<bottom : y1>top&&y1<bottom&&Math.max(x1,x2)>left&&Math.min(x1,x2)<right;if(hits)throw Error(`${a} -> ${b} crosses ${n.id} (${x1},${y1})-(${x2},${y2})`)}}}
-for(const c of charts){const ids=new Set(c.nodes.map(x=>x.id));if(ids.size!==c.nodes.length)throw Error('duplicates');const edges=graph(c),occ=new Map(),ports=vm.runInContext('edgePorts',ctx)(edges,Object.fromEntries(c.nodes.map(n=>[n.id,n])));let missing=0;for(const e of edges){if(!ids.has(e.a)||!ids.has(e.b))throw Error('unknown person');let p=route(c.nodes.find(n=>n.id===e.a),c.nodes.find(n=>n.id===e.b),c.nodes,c.w,c.h,occ,ports[edges.indexOf(e)]);if(!p){missing++;continue}checkPath(p,c.nodes,e.a,e.b)}const all=walk(roots['#chart-'+c.id]);const cards=all.filter(e=>e.tag==='button' && e.className && String(e.className).startsWith('node '));if(cards.length!==c.nodes.length)throw Error('bad node count');cards[0].handlers.click();const panel=all.find(e=>e.className==='selection-panel');if(!panel.children.some(e=>e.tag==='strong'))throw Error('selection not shown');const details=panel.children.find(e=>e.textContent==='Подробнее');details.handlers.click();if(!roots['#person-dialog'].open)throw Error('details');const controls=all.filter(e=>e.tag==='button'&&e.attrs['aria-label']==='Увеличить масштаб');if(controls.length!==1)throw Error('zoom');controls[0].handlers.click();console.log(c.id, 'people',ids.size,'edges',edges.length,'failed',missing,'birth years',Object.keys(births[c.id]).length);if(missing)throw Error('missing route');}
+for(const c of charts){const ids=new Set(c.nodes.map(x=>x.id));if(ids.size!==c.nodes.length)throw Error('duplicates');const edges=graph(c),occ=new Map(),ports=vm.runInContext('edgePorts',ctx)(edges,Object.fromEntries(c.nodes.map(n=>[n.id,n])));let missing=0;for(const e of edges){if(!ids.has(e.a)||!ids.has(e.b))throw Error('unknown person');let p=route(c.nodes.find(n=>n.id===e.a),c.nodes.find(n=>n.id===e.b),c.nodes,c.w,c.h,occ,ports[edges.indexOf(e)]);if(!p){missing++;continue}checkPath(p,c.nodes,e.a,e.b)}const all=walk(roots['#chart-'+c.id]);const cards=all.filter(e=>e.tag==='button' && e.className && String(e.className).startsWith('node '));if(cards.length!==c.nodes.length)throw Error('bad node count');cards[0].handlers.click();const panel=all.find(e=>e.className==='selection-panel');if(!panel.children.some(e=>e.tag==='strong'))throw Error('selection not shown');if(roots['#person-details'].hidden)throw Error('details');const controls=all.filter(e=>e.tag==='button'&&e.attrs['aria-label']==='Увеличить масштаб');if(controls.length!==1)throw Error('zoom');controls[0].handlers.click();console.log(c.id, 'people',ids.size,'edges',edges.length,'failed',missing,'birth years',Object.keys(births[c.id]).length);if(missing)throw Error('missing route');}
 if(warnings.length)throw Error(warnings.join('\n'));
 const marriedPairs=vm.runInContext('marriedPairs',ctx);
 for(const c of charts){
@@ -217,7 +217,7 @@ for(const id of ['@I_evd_candidate@','@I_ant_candidate@'])if(!gedRecords.get(id)
 console.log('All routes avoid unrelated cards; selection, details, zoom and timelines validated.');
 const host=roots['#chart-family'];const all=walk(host),view=all.find(e=>e.className==='viewport'),output=all.find(e=>e.tag==='output');const original=output.textContent;let prevented=false;view.handlers.wheel({ctrlKey:true,metaKey:false,deltaY:-120,clientX:300,clientY:200,preventDefault(){prevented=true}});if(!prevented||output.textContent===original)throw Error('wheel zoom failed');let target={closest:()=>false};view.handlers.pointerdown({button:0,pointerId:1,clientX:200,clientY:200,target});view.handlers.pointerdown({button:0,pointerId:2,clientX:300,clientY:200,target});const beforePinch=output.textContent;view.handlers.pointermove({pointerId:2,clientX:350,clientY:200});if(output.textContent===beforePinch)throw Error('pinch zoom failed');view.handlers.pointerup({pointerId:2});view.handlers.pointerup({pointerId:1});const timeline=all.find(e=>e.className==='timeline-item');timeline.handlers.click();const panel=all.find(e=>e.className==='selection-panel');if(!panel.children.some(e=>e.tag==='strong'))throw Error('timeline focus failed');const edgeHit=all.find(e=>e.classList.contains('link-hit'));edgeHit.handlers.click({stopPropagation(){}});if(!panel.children.some(e=>e.className==='related-list'))throw Error('edge selection failed');console.log('Wheel zoom, pinch, drag, timeline focus and selected relation validated.');
 
-roots['#person-dialog'].close();
+vm.runInContext('closePerson()',ctx);
 const isSelected=()=>panel.children.some(e=>e.tag==='strong');
 edgeHit.handlers.click({stopPropagation(){}});document.handlers.keydown.forEach(f=>f({key:'Escape'}));if(isSelected())throw Error('Escape did not clear selection');
 edgeHit.handlers.click({stopPropagation(){}});view.handlers.pointerdown({button:0,pointerId:3,clientX:100,clientY:100,target});view.handlers.pointerup({pointerId:3});view.handlers.click({target:{closest:()=>false}});if(isSelected())throw Error('background click did not clear selection');
@@ -428,37 +428,39 @@ for(const c of charts){
  toggle.handlers.click();document.handlers.keydown.forEach(f=>f({key:'Escape'}));if(toggle.attrs['aria-expanded']!=='false')throw Error(`${c.id}: Escape should close the timeline`);
 }
 console.log('Mobile birth-year panel opens, selects, and closes without taking chart width.');
-// One tap selects; a second tap on the same card opens details.
-const modal=roots['#person-dialog'];modal.close();let now=1000;ctx.Date={now:()=>now};
+// One activation opens the non-modal details and a different card replaces them.
+const personPanel=roots['#person-details'];
+const closeDetails=vm.runInContext('closePerson',ctx);
 const tap=person=>{person.handlers.pointerdown({pointerType:'touch',clientX:10,clientY:10});person.handlers.click({detail:1})};
 tap(mishaCard);
-if(modal.open||!panel.children.some(e=>e.textContent==='Миша Никифоров'))throw Error('One tap must select without opening details');
-now+=250;tap(mishaCard);
-if(!modal.open||roots['#dialog-name'].textContent!=='Миша Никифоров')throw Error('Two taps on one card must open details');modal.close();mishaCard.handlers.dblclick();if(modal.open)throw Error('Native touch double-click must not reopen details');
-now+=1000;tap(mishaCard);const more=panel.children.find(e=>e.textContent==='Подробнее');more.handlers.click();if(!modal.open)throw Error('Details button must remain available');modal.close();
-mishaCard.handlers.pointerdown({pointerType:'mouse'});mishaCard.handlers.click({detail:1});if(modal.open)throw Error('Mouse single-click must only select');
-mishaCard.handlers.dblclick();if(!modal.open)throw Error('Mouse double-click must open details');modal.close();
-now+=1000;tap(mishaCard);now+=100;tap(katyaCard);now+=100;tap(mishaCard);if(modal.open)throw Error('Taps on different people must not count as a double tap');
-now+=1000;tap(mishaCard);now+=501;tap(mishaCard);if(modal.open)throw Error('Taps outside the time window must remain single');
-now+=250;tap(mishaCard);if(!modal.open)throw Error('A quick second tap should open details');modal.close();
-now+=1000;tap(mishaCard);now+=100;mishaCard.handlers.pointerdown({pointerType:'touch',clientX:10,clientY:10});mishaCard.handlers.pointermove({pointerType:'touch',clientX:35,clientY:10});mishaCard.handlers.click({detail:1});now+=100;tap(mishaCard);if(modal.open)throw Error('A swipe must interrupt the double-tap sequence');
-now+=1000;tap(mishaCard);now+=100;mishaCard.handlers.pointerdown({pointerType:'touch',clientX:10,clientY:10});mishaCard.handlers.pointercancel();now+=100;tap(mishaCard);if(modal.open)throw Error('A cancelled touch must interrupt the double-tap sequence');
-mishaCard.handlers.pointerdown({pointerType:'touch',clientX:10,clientY:10});mishaCard.handlers.click({detail:0});if(modal.open)throw Error('Keyboard activation must not be treated as a touch');
-mishaCard.handlers.click({detail:0});if(!modal.open||roots['#dialog-name'].textContent!=='Миша Никифоров')throw Error('A second keyboard activation must open the selected person');modal.close();
-now+=1000;tap(mishaCard);now+=100;view.handlers.pointerdown({pointerType:'touch',button:0,pointerId:99,clientX:50,clientY:50,target:{closest:()=>false}});view.handlers.pointerup({pointerId:99});now+=100;tap(mishaCard);if(modal.open)throw Error('Touching the background must interrupt the double-tap sequence');
-const tatiana=card('Татьяна Перикова'),tatianaData=charts[0].nodes.find(n=>n.id==='tan');now+=1000;tap(tatiana);now+=200;tap(tatiana);
-if(!modal.open||roots['#dialog-description'].textContent!==tatianaData.info)throw Error('Double-tap details must contain the person’s story');modal.close();
+if(personPanel.hidden||mishaCard.attrs['aria-expanded']!=='true'||roots['#dialog-name'].textContent!=='Миша Никифоров')throw Error('A single tap must open person details');
+tap(katyaCard);
+if(personPanel.hidden||mishaCard.attrs['aria-expanded']!=='false'||katyaCard.attrs['aria-expanded']!=='true')throw Error('Another card must replace the current details');
+closeDetails(true);
+if(!personPanel.hidden||katyaCard.attrs['aria-expanded']!=='false'||!katyaCard.focused)throw Error('Closing details must restore focus to the trigger');
+mishaCard.handlers.pointerdown({pointerType:'touch',clientX:10,clientY:10});
+mishaCard.handlers.pointermove({pointerType:'touch',clientX:35,clientY:10});
+mishaCard.handlers.click({detail:1});
+if(!personPanel.hidden)throw Error('A swipe must not open person details');
+mishaCard.handlers.click({detail:1});
+if(personPanel.hidden)throw Error('A single mouse click must open person details');
+closeDetails();
+const tatiana=card('Татьяна Перикова'),tatianaData=charts[0].nodes.find(n=>n.id==='tan');
+tap(tatiana);
+if(personPanel.hidden||roots['#dialog-description'].textContent!==tatianaData.info)throw Error('Details must contain the person’s story');
+closeDetails();
 const archiveTree=charts.find(c=>c.id==='perikov'),archivePerson=archiveTree.nodes.find(n=>n.id==='io'),archiveCard=walk(roots['#chart-perikov']).find(e=>e.tag==='button'&&e.attrs['aria-label']?.startsWith(archivePerson.name+','));
 for(const chart of charts){
- document.handlers.keydown.forEach(f=>f({key:'Escape'}));
  const personCard=walk(roots['#chart-'+chart.id]).find(e=>e.tag==='button'&&e.className?.startsWith('node '));
- if(!personCard?.attrs['aria-description'])throw Error(`${chart.id}: keyboard instructions missing`);
- personCard.handlers.click({detail:0});if(modal.open)throw Error(`${chart.id}: first keyboard activation should select`);
- personCard.handlers.click({detail:0});if(!modal.open)throw Error(`${chart.id}: second keyboard activation should open details`);modal.close();
+ personCard.handlers.click({detail:0});
+ if(personPanel.hidden||personCard.attrs['aria-controls']!=='person-details'||!roots['#dialog-name'].focused)throw Error(`${chart.id}: keyboard activation must open and focus details`);
+ document.handlers.keydown.forEach(f=>f({key:'Escape'}));
+ if(!personPanel.hidden||personCard.attrs['aria-expanded']!=='false')throw Error(`${chart.id}: Escape must close details`);
 }
-now+=1000;tap(archiveCard);now+=200;tap(archiveCard);if(!modal.open||!roots['#dialog-links'].children.some(e=>e.href===archivePerson.source))throw Error('Double-tap details must retain archive sources');modal.close();
-now+=1000;tap(mishaCard);now+=100;tap(archiveCard);now+=100;tap(mishaCard);if(modal.open)throw Error('Taps in different branches must not count as a double tap');
-console.log('One tap selects; two taps open details. Other inputs do not cause accidental openings.');
+tap(archiveCard);
+if(personPanel.hidden||!roots['#dialog-links'].children.some(e=>e.href===archivePerson.source))throw Error('Details must retain archive sources');
+closeDetails();
+console.log('One activation opens details; switching, keyboard focus and closing verified.');
 // Check real assigned photos, including the memorial which is a document, not a portrait.
 const photoCatalog=vm.runInContext('photoCatalog',ctx),path=require('path');
 const redactedTable='assets/sources/khramov-family-table-redacted.png';
@@ -475,11 +477,10 @@ for(const [chartId,people] of Object.entries(photoCatalog))for(const [personId,p
  if(portrait&&!walk(cardElement).some(e=>e.className==='node-portrait'&&e.src===portrait.src))throw Error('Missing thumbnail for '+person.name);
  for(const photo of photos)if(!fs.existsSync(path.join(__dirname,'..',photo.src)))throw Error('Missing photo file: '+photo.src);
  cardElement.handlers.pointerdown({pointerType:'mouse'});cardElement.handlers.click({detail:1});
- subtree.find(e=>e.className==='selection-panel').children.find(e=>e.textContent==='Подробнее').handlers.click();
  const parts=roots['#dialog-photos'].children,figure=parts[0],link=figure?.children[0],img=link?.children[0];
  if(!figure||link.href!==photos[0].src||img.src!==photos[0].src)throw Error('First photo details missing for '+person.name);
  if(parts.length!==(photos.length>1?2:1))throw Error('Unexpected photo controls for '+person.name);
- modal.close();
+ closeDetails();
 }
 console.log('Portraits and memorial image are assigned, accessible in details, and present on disk.');
 
@@ -519,7 +520,7 @@ const anatoly=charts.find(c=>c.id==='family').nodes.find(n=>n.id==='an'),olga=ch
 const yuri=charts.find(c=>c.id==='family').nodes.find(n=>n.id==='yu');
 if(anatoly.photos.length!==2||olga.photos.length!==1||yuri.photos.length!==1||yuri.photos[0].src!=='assets/photos/yuri-perikov-hat.png')throw Error('Real photo fixtures missing or incorrect');
 personInfo(anatoly);
-if(!modal.open||roots['#dialog-name'].textContent!==anatoly.name||photoPanel.children.length!==2)throw Error('Anatoly details should show a slider');
+if(roots['#dialog-name'].textContent!==anatoly.name||photoPanel.children.length!==2)throw Error('Anatoly details should show a slider');
 let realLink=photoPanel.children[0].children[0],realControls=photoPanel.children[1];
 for(let i=0;i<anatoly.photos.length;i++){
  if(realLink.href!==anatoly.photos[i].src||realLink.children[0].src!==anatoly.photos[i].src||photoPanel.children[0].children[1].textContent!==anatoly.photos[i].caption||realControls.children[1].textContent!==`${i+1} / 2`)throw Error('Incorrect Anatoly slide '+i);
@@ -531,22 +532,22 @@ personInfo(anatoly);
 if(photoPanel.children[0].children[0].href!==anatoly.photos[0].src||photoPanel.children[1].children[1].textContent!=='1 / 2')throw Error('Reopening Anatoly must reset slider');
 personInfo(yuri);
 if(roots['#dialog-name'].textContent!==yuri.name||photoPanel.children.length!==1||photoPanel.children[0].children[0].href!=='assets/photos/yuri-perikov-hat.png')throw Error('Yuri must display the corrected photograph without extra slider controls');
-modal.close();
+closeDetails();
 console.log('Photo slider navigation, labels, touch gestures and reset validated.');
 
-// Modal data must follow the person and chart, including after opening a different person.
+// Details must follow the person and chart, including after opening a different person.
 const person=(chart,id)=>charts.find(c=>c.id===chart).nodes.find(n=>n.id===id);
 const dateText=()=>roots['#dialog-date'].textContent, maidenText=()=>roots['#dialog-maiden'].textContent;
 personInfo(person('family','tan'));
-if(roots['#dialog-name'].textContent!=='Татьяна Фитисова'||maidenText()!=='(Перикова)'||dateText()!=='28.05.1950'||roots['#dialog-relationship'].textContent!=='Бабушка')throw Error('Tatiana modal needs confirmed name, maiden surname, relationship and birth date');
+if(roots['#dialog-name'].textContent!=='Татьяна Фитисова'||maidenText()!=='(Перикова)'||dateText()!=='28.05.1950'||roots['#dialog-relationship'].textContent!=='Бабушка')throw Error('Tatiana details need confirmed name, maiden surname, relationship and birth date');
 personInfo(person('family','nast'));
-if(roots['#dialog-name'].textContent!=='Анастасия Сергеевна Видянова'||maidenText()!=='(Бойко)'||dateText()!=='08.09.2002')throw Error('Anastasia modal needs confirmed maiden surname and birth date');
+if(roots['#dialog-name'].textContent!=='Анастасия Сергеевна Видянова'||maidenText()!=='(Бойко)'||dateText()!=='08.09.2002')throw Error('Anastasia details need confirmed maiden surname and birth date');
 personInfo(person('family','and'));
 if(maidenText()!==''||dateText()!=='11.07.1974 — 02.08.2015')throw Error('Birth and death must appear without carrying over previous maiden name');
 personInfo(person('family','du'));
 if(roots['#dialog-name'].textContent!=='Евдокия Ефимовна Перикова'||dateText()!==''||maidenText()!=='(Никифорова)')throw Error('Family patronymic must be shown without inferring an unknown date');
 personInfo(person('boyko','nina'));
-if(roots['#dialog-name'].textContent!=='Нина Анатольевна Бойко'||maidenText()!=='(Попова)')throw Error('Nina modal must retain her patronymic and maiden name');
+if(roots['#dialog-name'].textContent!=='Нина Анатольевна Бойко'||maidenText()!=='(Попова)')throw Error('Nina’s details must retain her patronymic and maiden name');
 personInfo(person('nikiforov','d1909'));
 if(dateText()!=='16.02.1909 · ст. стиль'||roots['#dialog-state'].textContent!=='Требует проверки')throw Error('Historical date and uncertainty must retain their qualification');
 personInfo(person('khramov','fyodor'));
@@ -554,10 +555,10 @@ if(dateText()!=='1915 — 1996'||roots['#dialog-relationship'].textContent!=='О
 personInfo({id:'fyodor',chartId:'family',name:'Без даты',sub:'',photos:[]});
 if(dateText()!=='')throw Error('The same id in another chart must not inherit Fyodor’s date');
 personInfo(person('perikov','io'));
-if(!roots['#dialog-links'].children.some(e=>e.href===person('perikov','io').source))throw Error('Archive links must remain accessible from the modal');
+if(!roots['#dialog-links'].children.some(e=>e.href===person('perikov','io').source))throw Error('Archive links must remain accessible from the details panel');
 personInfo(person('perikov','petr'));
 if(!roots['#dialog-links'].children.some(e=>e.href===person('perikov','petr').source&&e.textContent==='Метрика 1896 года · запись 19')||!person('perikov','petr').info.includes('Родители Петра в этой записи не названы')||perikovFamilyEdges.some(e=>(e.a==='petr'&&['pn','nn'].includes(e.b))||(e.b==='petr'&&['pn','nn'].includes(e.a))))throw Error('Peter must cite the metric and stay unlinked while his parents are unknown');
-modal.close();
+closeDetails();
 console.log('Modal names, relationships, qualified dates, sources and chart-specific data validated.');
 
 // Historical observations and relatives' dated births are visible in each person's details.
@@ -582,8 +583,8 @@ if(!['pn','nn'].every(id=>perikovFamilyEdges.some(e=>e.a===id&&e.b==='nik20')))t
 if(personFacts(person('family','ef')).some(f=>f.year===1893&&/19|20/.test(f.text)))throw Error('Do not silently transfer archival ages to the unproven family match');
 personInfo(person('family','ni'));
 const factsPanel=roots['#dialog-facts'];
-if(factsPanel.children[0]?.textContent!=='События и даты'||!walk(factsPanel).some(e=>e.tag==='a'&&e.href?.includes('/116')))throw Error('Dated evidence and its source must be available in the modal');
+if(factsPanel.children[0]?.textContent!=='События и даты'||!walk(factsPanel).some(e=>e.tag==='a'&&e.href?.includes('/116')))throw Error('Dated evidence and its source must be available in the details panel');
 personInfo({id:'unlisted',chartId:'family',name:'Нет сведений',sub:'',photos:[]});
 if(factsPanel.children.length)throw Error('Changing person must clear the previous chronology');
-modal.close();
+closeDetails();
 console.log('Source chronology, qualified matches and derived family ages validated.');
