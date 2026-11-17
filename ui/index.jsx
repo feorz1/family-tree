@@ -5,6 +5,8 @@ import {Drawer} from "@base-ui/react/drawer";
 import {Menu} from "@base-ui/react/menu";
 import {Tabs} from "@base-ui/react/tabs";
 import {Accordion, Button, Combobox, Icon, Select} from "./components";
+import {mountEditorControls} from "./editor-controls";
+import {mountEditorOverlays} from "./editor-overlays";
 
 const selectControls = new WeakMap();
 let selectId = 0;
@@ -172,6 +174,9 @@ function MobileDrawer({tree}) {
     </Drawer.Portal>
   </Drawer.Root>;
 }
+
+mountEditorControls();
+mountEditorOverlays();
 
 const settings = document.querySelector("#theme-control");
 if (settings) createRoot(settings).render(<ThemeMenu/>);

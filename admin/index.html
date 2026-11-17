@@ -111,10 +111,10 @@
     <iframe name="family-tree-admin-preview" id="preview" title="Схема в черновике"></iframe>
   </section>
 </main>
-<dialog id="history-dialog" aria-labelledby="history-title">
+<div id="history-dialog" data-editor-overlay="sheet" aria-labelledby="history-title" hidden>
   <div class="history-head">
     <h2 id="history-title">История правок</h2>
-    <button type="button" id="close-history" data-slot="button" data-variant="ghost" data-size="sm">Закрыть</button>
+    <button type="button" id="close-history" data-dialog-close data-slot="button" data-variant="ghost" data-size="sm">Закрыть</button>
     <div class="history-filters" role="group" aria-label="Вид изменений">
       <button type="button" data-history-filter="all" aria-pressed="true" data-slot="button" data-variant="ghost" data-size="sm">Все</button>
       <button type="button" data-history-filter="photos" aria-pressed="false" data-slot="button" data-variant="ghost" data-size="sm">Фото</button>
@@ -129,9 +129,9 @@
     <div id="history-items" aria-busy="false"></div>
     <button type="button" id="history-more" hidden data-slot="button" data-variant="outline" data-size="default">Более ранние правки</button>
   </div>
-</dialog>
-<dialog id="crop-dialog" aria-labelledby="crop-title">
-  <div class="dialog-head"><h2 id="crop-title">Кадр для портрета</h2><button id="crop-cancel" type="button" data-slot="button" data-variant="ghost" data-size="sm">Закрыть</button></div>
+</div>
+<div id="crop-dialog" data-editor-overlay="dialog" aria-labelledby="crop-title" hidden>
+  <div class="dialog-head"><h2 id="crop-title">Кадр для портрета</h2><button id="crop-cancel" data-dialog-close type="button" data-slot="button" data-variant="ghost" data-size="sm">Закрыть</button></div>
   <p>В квадрате видно, как портрет будет выглядеть на схеме.</p>
   <div class="crop-preview">
     <div id="crop-frame" class="portrait-frame"><img id="crop-image" alt=""></div>
@@ -149,19 +149,22 @@
     </div>
   </form>
   <p class="field-error" id="crop-error" role="alert"></p>
-</dialog>
-<dialog id="access-dialog" aria-labelledby="access-title">
+</div>
+<div id="access-dialog" data-editor-overlay="dialog" aria-labelledby="access-title" hidden>
   <div class="dialog-head">
     <h2 id="access-title">Кто может редактировать</h2>
-    <button type="button" id="close-access" data-slot="button" data-variant="ghost" data-size="sm">Закрыть</button>
+    <button type="button" id="close-access" data-dialog-close data-slot="button" data-variant="ghost" data-size="sm">Закрыть</button>
   </div>
   <p>Ты управляешь доступом и публикуешь древо. Редакторы могут менять карточки, родство и маршруты во всех семьях и сохранять общий черновик.</p>
   <div id="account-items" class="account-items"></div>
   <form id="invite-form">
     <h2>Пригласить редактора</h2>
     <label>Имя<input name="displayName" required maxlength="80"></label>
-    <label>Логин<input name="username" autocomplete="off" required pattern="[a-zA-Z0-9_.\-]{3,40}" maxlength="40" aria-describedby="username-hint"></label>
-    <p id="username-hint">Латинские буквы, цифры, точка, дефис или подчёркивание.</p>
+    <div class="ui-field-stack">
+      <label for="invite-username">Логин</label>
+      <input id="invite-username" name="username" autocomplete="off" required pattern="[a-zA-Z0-9_.\-]{3,40}" maxlength="40" aria-describedby="username-hint">
+      <span class="ui-field-description" id="username-hint">Латинские буквы, цифры, точка, дефис или подчёркивание.</span>
+    </div>
     <button type="submit" data-slot="button" data-variant="default" data-size="default">Создать приглашение</button>
   </form>
   <p class="field-error" id="access-error" role="alert"></p>
@@ -171,5 +174,5 @@
     <button type="button" id="copy-invite" data-slot="button" data-variant="outline" data-size="default">Скопировать ссылку</button>
     <p id="copy-status" role="status"></p>
   </div>
-</dialog>
+</div>
 </html>

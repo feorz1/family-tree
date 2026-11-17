@@ -1,6 +1,6 @@
 "use strict";
 
-const cropDialog = $("#crop-dialog");
+const cropDialog = editorOverlays.get("crop-dialog");
 const cropFrame = $("#crop-frame");
 const cropImage = $("#crop-image");
 const defaultCrop = {x:.5, y:.28, zoom:1};
@@ -9,7 +9,7 @@ const cropApply = $("#crop-apply");
 const cropError = $("#crop-error");
 let cropPhoto = null, crop = null, pan = null, cropReset = false, cropActions = null, cropSaving = false;
 
-function openCrop(photo, node, actions = null) {
+function openCrop(photo, node, actions = null, trigger) {
   if (cropDialog.open) return;
   cropPhoto = photo;
   crop = {...(photo.crop || defaultCrop)};
@@ -19,22 +19,21 @@ function openCrop(photo, node, actions = null) {
   cropApply.textContent = actions ? "Сохранить кадр и принять" : "Применить кадр";
   $("#crop-caption").textContent = node.name;
   cropImage.src = "/preview/" + photo.src;
-  cropDialog.showModal();
+  cropDialog.show(trigger);
   drawCrop();
-  $("#crop-zoom").focus();
 }
 
 function drawCrop() {
   if (!crop) return;
-  $("#crop-zoom").value = Math.round(crop.zoom*100);
+  updateEditorControl($("#crop-zoom"),{value:Math.round(crop.zoom*100)});
   $("#crop-zoom-label").value = Math.round(crop.zoom*100)+"%";
-  $("#crop-x").value = Math.round(crop.x*100);
-  $("#crop-y").value = Math.round(crop.y*100);
+  updateEditorControl($("#crop-x"),{value:Math.round(crop.x*100)});
+  updateEditorControl($("#crop-y"),{value:Math.round(crop.y*100)});
   if (cropImage.complete && cropImage.naturalWidth) {
     framePortrait(cropImage,crop);
     const geometry = portraitGeometry(cropImage.naturalWidth,cropImage.naturalHeight,crop);
-    $("#crop-x").disabled = geometry.width <= 100.01;
-    $("#crop-y").disabled = geometry.height <= 100.01;
+    updateEditorControl($("#crop-x"),{disabled:geometry.width <= 100.01});
+    updateEditorControl($("#crop-y"),{disabled:geometry.height <= 100.01});
   }
 }
 
@@ -71,7 +70,6 @@ $("#crop-reset").addEventListener("click",() => {
   cropReset = true;
   drawCrop();
 });
-$("#crop-cancel").addEventListener("click",() => cropDialog.close());
 function setPortraitCrop(photo, value) {
   if (value) photo.crop = value;
   else delete photo.crop;
@@ -105,8 +103,8 @@ cropForm.addEventListener("submit", async event => {
     setPortraitCrop(cropPhoto, value);
     changed();
   }
-  cropDialog.close();
+  cropDialog.close({restoreFocus:!actions});
   if (actions) await actions.afterSave(result);
 });
-cropDialog.addEventListener("cancel", event => {if (cropSaving) event.preventDefault();});
-cropDialog.addEventListener("close", () => {crop = cropPhoto = pan = cropActions = null;});
+cropDialog.element.addEventListener("cancel", event => {if (cropSaving) event.preventDefault();});
+cropDialog.element.addEventListener("close", () => {crop = cropPhoto = pan = cropActions = null;});

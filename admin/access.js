@@ -1,5 +1,5 @@
 "use strict";
-const accessDialog = $("#access-dialog");
+const accessDialog = editorOverlays.get("access-dialog");
 const accessError = $("#access-error");
 const inviteForm = $("#invite-form");
 const accountStates = {pending:"Ждёт активации",active:"Есть доступ",revoked:"Доступ отозван",expired:"Приглашение истекло"};
@@ -14,7 +14,7 @@ async function showAccounts() {
     if (["pending","active"].includes(account.state)) {
       const revoke = element("button","Отозвать",{type:"button","data-variant":"destructive","aria-label":"Отозвать доступ у "+account.name});
       revoke.addEventListener("click", async () => {
-        if (!confirm("Отозвать доступ у "+account.name+"?")) return;
+        if (!await confirmEditorAction({title:"Отозвать доступ у "+account.name+"?",action:"Отозвать доступ",trigger:revoke})) return;
         revoke.disabled = true;
         accessError.textContent = "";
         try {
@@ -27,7 +27,7 @@ async function showAccounts() {
           revoke.disabled = false;
         }
       });
-      row.append(revoke);
+      row.append(controlHost(revoke));
     }
     return row;
   }));
@@ -36,15 +36,14 @@ async function showAccounts() {
   if (!result.canInvite) accessError.textContent = "Внешний адрес редактора ещё не подключён.";
 }
 
-$("#access").addEventListener("click", async () => {
+$("#access").addEventListener("click", async event => {
   accessError.textContent = "";
   $("#invite-result").hidden = true;
   $("#invite-link").value = "";
-  accessDialog.showModal();
+  accessDialog.show(event.currentTarget);
   try {await showAccounts();}
   catch (error) {accessError.textContent = error.message;}
 });
-$("#close-access").addEventListener("click", () => accessDialog.close());
 
 inviteForm.addEventListener("submit", async event => {
   event.preventDefault();
@@ -75,8 +74,11 @@ $("#copy-invite").addEventListener("click", async () => {
   }
 });
 
-$("#logout").addEventListener("click", async () => {
-  if (localDirty && !confirm("Выйти? Несохранённые правки в этом окне будут потеряны.")) return;
+$("#logout").addEventListener("click", async event => {
+  if (localDirty && !await confirmEditorAction({
+    title:"Выйти из редактора?",description:"Несохранённые правки в этом окне будут потеряны.",
+    action:"Выйти",trigger:event.currentTarget
+  })) return;
   try {
     await api("logout",{});
     localDirty = false;

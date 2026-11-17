@@ -12,12 +12,9 @@ let mode = "people", selectedPerson = "", route = null;
 let selectedPoint = null, addingPoint = false;
 
 function element(tag, text, attributes = {}) {
+  if (tag === "button") return editorControl(tag,text,{"data-size":"sm",...attributes});
+  if (tag === "input" || tag === "textarea") return editorControl(tag,text,attributes);
   const node = document.createElement(tag);
-  if (tag === "button") {
-    node.dataset.slot = "button";
-    node.dataset.variant = "outline";
-    node.dataset.size = "sm";
-  }
   if (text) node.textContent = text;
   for (const [key, value] of Object.entries(attributes)) node.setAttribute(key, value);
   return node;
@@ -67,7 +64,7 @@ function displayName(node) {
 
 function createLabel(title, input) {
   const label = element("label", title);
-  label.append(input);
+  label.append(controlHost(input));
   return label;
 }
 
@@ -166,10 +163,10 @@ function newId(prefix) {
   return prefix + Array.from(crypto.getRandomValues(new Uint32Array(2)), value => value.toString(16)).join("");
 }
 
-$("#remove-person").addEventListener("click", () => {
+$("#remove-person").addEventListener("click", async event => {
   const current = chart(), id = selectedPerson, ref = current.id + ":" + id;
   if (current.nodes.length === 1) return status("В схеме должна остаться хотя бы одна карточка", true);
-  if (!confirm("Убрать карточку и её связи из этой схемы?")) return;
+  if (!await confirmEditorAction({title:"Убрать карточку и её связи из этой схемы?",action:"Убрать карточку",trigger:event.currentTarget})) return;
   current.nodes = current.nodes.filter(node => node.id !== id);
   current.groups = current.groups
     .map(group => ({...group, parents:group.parents.filter(parent => parent !== id),
@@ -200,7 +197,7 @@ function showPhotos() {
     const alt = element("input", "", {value:photo.alt || ""});
     alt.addEventListener("input", () => {photo.alt = alt.value; image.alt = alt.value; changed();});
     const portrait = element("input", "", {type:"checkbox"});
-    portrait.checked = Boolean(photo.portrait);
+    updateEditorControl(portrait,{checked:Boolean(photo.portrait)});
     portrait.addEventListener("change", () => {
       if (portrait.checked) photos.forEach(p => {p.portrait = false;});
       photo.portrait = portrait.checked;
@@ -214,10 +211,10 @@ function showPhotos() {
     item.append(image,createLabel("Подпись",caption),createLabel("Описание фотографии",alt),portraitLabel);
     if (photo.portrait) {
       const crop = element("button","Кадрировать для схемы",{type:"button"});
-      crop.addEventListener("click", () => openCrop(photo, person()));
-      item.append(crop);
+      crop.addEventListener("click", () => openCrop(photo, person(), null, crop));
+      item.append(controlHost(crop));
     }
-    item.append(remove);
+    item.append(controlHost(remove));
     return item;
   }));
 }
@@ -265,7 +262,7 @@ function showFacts() {
       showFacts();
       changed();
     });
-    item.append(createLabel("Год",year),createLabel("Что произошло",text),createLabel("Источник",link),remove);
+    item.append(createLabel("Год",year),createLabel("Что произошло",text),createLabel("Источник",link),controlHost(remove));
     return item;
   }));
 }
@@ -339,15 +336,15 @@ function drawRelation(value) {
       const choices = element("div", "", {class:"children-options",id:"children"});
       for (const node of [...current.nodes].sort((a,b) => displayName(a).localeCompare(displayName(b),"ru"))) {
         const check = element("input","",{type:"checkbox",value:node.id});
-        check.checked = original?.children.includes(node.id) || false;
+        updateEditorControl(check,{checked:original?.children.includes(node.id) || false});
         const label = element("label","",{class:"check"});
-        label.append(check,document.createTextNode(displayName(node)));
+        label.append(controlHost(check),document.createTextNode(displayName(node)));
         choices.append(label);
       }
       group.append(element("legend","Дети"),choices);
       fields.append(group);
       $("#married-label").hidden = false;
-      relationForm.elements.married.checked = (data.marriedPairs[current.id] || []).some(ids => pair.length === 2 && ids.every(member => pair.includes(member)));
+      updateEditorControl(relationForm.elements.married,{checked:(data.marriedPairs[current.id] || []).some(ids => pair.length === 2 && ids.every(member => pair.includes(member)))});
     } else $("#married-label").hidden = true;
     fields.querySelectorAll("select").forEach(enhanceSelect);
   };
@@ -392,8 +389,8 @@ relationForm.addEventListener("submit", event => {
   changed();
 });
 
-$("#remove-relation").addEventListener("click", () => {
-  if (!confirm("Убрать связь из черновика?")) return;
+$("#remove-relation").addEventListener("click", async event => {
+  if (!await confirmEditorAction({title:"Убрать связь из черновика?",action:"Убрать связь",trigger:event.currentTarget})) return;
   const current = chart();
   const {type,original} = relationEdit;
   const list = type === "group" ? current.groups : current.extra;
@@ -493,7 +490,7 @@ function selectRoute(hit) {
   route = {svg,handles,model,override};
   $("#route-form").hidden = false;
   $("#route-name").textContent = hit.getAttribute("aria-label");
-  $("#radius").value = override.radius;
+  updateEditorControl($("#radius"),{value:override.radius});
   $("#radius-value").value = override.radius;
   drawHandles();
 }
@@ -639,7 +636,7 @@ $("#reset-route").addEventListener("click", () => {
   if (data.routes[model.chart]) delete data.routes[model.chart][model.key];
   model.update(null);
   route.override = {points:structuredClone(model.autoPoints.slice(1,-1)),radius:8};
-  $("#radius").value = 8;
+  updateEditorControl($("#radius"),{value:8});
   $("#radius-value").value = 8;
   selectedPoint = null;
   changed();
@@ -683,8 +680,12 @@ async function run(action) {
   finally {busy = false;$("aside").inert = false;frame.inert = false;buttons();}
 }
 $("#save").addEventListener("click", () => run(saveDraft));
-$("#publish").addEventListener("click", () => run(async () => {
-  if (!confirm("Опубликовать этот черновик, включая выбранные фотографии, на открытом сайте?")) return;
+$("#publish").addEventListener("click", event => run(async () => {
+  if (!await confirmEditorAction({
+    title:"Опубликовать этот черновик?",
+    description:"Выбранные фотографии тоже появятся на открытом сайте.",
+    action:"Опубликовать",variant:"default",trigger:event.currentTarget
+  })) return;
   await saveDraft();
   status("Отправляем версию на GitHub…");
   const result = await api("publish", {revision});
@@ -723,9 +724,9 @@ function setReview(context) {
 $("#leave-review").addEventListener("click", () => setReview(null));
 
 async function syncDraft() {
-  if (localDirty || busy || reviewContext || $("#crop-dialog").open) return false;
+  if (localDirty || busy || reviewContext || confirmationOpen() || editorOverlays.get("crop-dialog").open) return false;
   const draft = await api("draft");
-  if (localDirty || busy || reviewContext || $("#crop-dialog").open || draft.revision < revision) return false;
+  if (localDirty || busy || reviewContext || confirmationOpen() || editorOverlays.get("crop-dialog").open || draft.revision < revision) return false;
   const updated = draft.revision !== revision;
   const stateChanged = publicDirty !== draft.dirty;
   if (updated) {

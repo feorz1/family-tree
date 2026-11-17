@@ -1,6 +1,6 @@
 "use strict";
 
-const historyDialog = $("#history-dialog");
+const historyDialog = editorOverlays.get("history-dialog");
 const historyLabel = $("#history-summary");
 const historyError = $("#history-error");
 const historyItems = $("#history-items");
@@ -74,10 +74,11 @@ function describeValue(field, value) {
     const info = element("div","",{class:"history-route"});
     info.append(element("p","Точки изгиба: "+value.points.length+" · Скругление: "+(value.radius ?? 8)));
     if (value.points.length || value.start || value.end) {
-      const details = element("details");
       const coordinates = value.points.map(point=>point.join(", ")).join(" · ");
-      details.append(element("summary","Положение точек"),element("p",coordinates || summaryText([value.start,value.end].filter(Boolean))));
-      info.append(details);
+      info.append(editorCollapsible({
+        summary:element("span","Положение точек"),
+        content:element("p",coordinates || summaryText([value.start,value.end].filter(Boolean)))
+      }));
     }
     return info;
   }
@@ -107,7 +108,7 @@ function formButton(label, action) {
   button.addEventListener("click",async () => {
     button.disabled = true;
     historyError.textContent = "";
-    try {await action();}
+    try {await action(button);}
     catch (error) {historyError.textContent = error.message;}
     finally {button.disabled = false;}
   });
@@ -132,7 +133,7 @@ async function finishHistoryAction(message, anchor) {
   }
 }
 
-async function reviewPortrait(entry, section, index, picture) {
+async function reviewPortrait(entry, section, index, picture, trigger) {
   const opened = await api("draft");
   const photo = currentPortrait(opened.data, section, picture.src);
   if (!photo) throw new Error("Портрет на схеме уже заменён. Новый портрет можно кадрировать в карточке.");
@@ -165,7 +166,7 @@ async function reviewPortrait(entry, section, index, picture) {
       if (!localDirty) status("Кадр сохранён, правка принята");
       await finishHistoryAction("Кадр сохранён, правка принята.", anchor);
     }
-  });
+  },trigger);
 }
 
 function authorName(actor) {
@@ -185,10 +186,8 @@ function sectionStatus(entry, section) {
 }
 
 function sectionView(entry, section, index, open) {
-  const group = element("details","",{class:"history-section","data-history-section":entry.id+"-"+index});
-  group.open = open;
   const chartName = titles[section.chart];
-  const summary = element("summary");
+  const summary = element("span");
   summary.append(element("span",section.title || chartName || "Общие данные"));
   if (section.title && chartName) summary.append(element("small",chartName));
   const state = sectionStatus(entry, section);
@@ -197,7 +196,6 @@ function sectionView(entry, section, index, open) {
     if (entry.publishedAt && !entry.revertedBy) badge.title = "Публикация · " + dateLabel(entry.publishedAt);
     summary.append(badge);
   }
-  group.append(summary);
   const contents = element("div","",{class:"history-fields"});
   if (section.refinements.length) {
     const chain = element("ul","",{class:"history-chain","aria-label":"Уточнения правки"});
@@ -217,22 +215,22 @@ function sectionView(entry, section, index, open) {
     const row = comparison(field.label,describeValue(field,field.before),describeValue(field,field.after));
     const picture = field.kind === "photos" ? field.after?.find(photo => photo.portrait) : null;
     if (canReview && section.afterCard && (picture || (field.kind !== "photos" && field.target))) {
-      const edit = formButton(field.kind === "photos" ? "Уточнить кадр и принять" : "Уточнить и принять",async () => {
+      const edit = formButton(field.kind === "photos" ? "Уточнить кадр и принять" : "Уточнить и принять",async trigger => {
         if (picture) {
-          await reviewPortrait(entry, section, index, picture);
+          await reviewPortrait(entry, section, index, picture, trigger);
           return;
         }
         const sameReview = reviewContext?.id === entry.id && reviewContext.section === index;
         if (!sameReview && !await syncDraft()) throw new Error("Сначала сохрани открытые правки.");
-        historyDialog.close();
+        historyDialog.close({restoreFocus:false});
         if (!openReviewCard({id:entry.id,section:index,details:section,title:section.title,field})) {
-          historyDialog.showModal();
+          historyDialog.show();
           throw new Error("Этой карточки больше нет в текущем черновике.");
         }
       });
       edit.className = "history-edit";
       edit.setAttribute("aria-label",edit.textContent+" · "+field.label+" · "+section.title);
-      row.append(edit);
+      row.append(controlHost(edit));
     }
     contents.append(row);
   }
@@ -242,13 +240,13 @@ function sectionView(entry, section, index, open) {
       await api("history/accept",{id:entry.id,section:index,revision:latest.revision});
       await finishHistoryAction("Изменения приняты в черновике.",entry.id + "-" + index);
     });
-    contents.append(approve);
+    contents.append(controlHost(approve));
   }
-  group.append(contents);
-  return group;
+  return editorCollapsible({summary,content:contents,open,
+    attributes:{class:"history-section","data-history-section":entry.id+"-"+index}});
 }
 
-function entryView(entry, open) {
+function entryView(entry, openSections, initiallyOpen) {
   const card = element("article","",{class:"history-entry"});
   const head = element("div","",{class:"history-entry-head"});
   const meta = element("div","",{class:"history-meta"});
@@ -266,13 +264,15 @@ function entryView(entry, open) {
   }
   head.append(meta);
   if (!entry.revertedBy) {
-    const undo = formButton("Отменить сохранение",async () => {
+    const undo = formButton("Отменить сохранение",async trigger => {
       if (!await syncDraft()) throw new Error("Сначала сохрани открытые правки.");
-      const message = entry.publication
-        ? "Отменить сохранение в черновике? Изменения на сайте появятся после новой публикации."
-        : "Отменить это сохранение в черновике?";
-      const filtered = entry.hiddenFields ? " В эту запись также входят изменения, скрытые текущим фильтром." : "";
-      if (!confirm(message+filtered)) return;
+      const notes = [];
+      if (entry.publication) notes.push("Изменения на сайте появятся после новой публикации.");
+      if (entry.hiddenFields) notes.push("В эту запись также входят изменения, скрытые текущим фильтром.");
+      if (!await confirmEditorAction({
+        title:"Отменить это сохранение в черновике?",description:notes.join(" "),
+        action:"Отменить сохранение",trigger
+      })) return;
       await api("history/revert",{id:entry.id,revision});
       await syncDraft();
       status("Отмена сохранена в черновике");
@@ -287,10 +287,13 @@ function entryView(entry, open) {
     undo.setAttribute("aria-label","Отменить сохранение");
     undo.title = "Отменить сохранение";
     undo.append(icon);
-    head.append(undo);
+    head.append(controlHost(undo));
   }
   card.append(head);
-  for (const section of entry.sections) card.append(sectionView(entry,section,section.index,open));
+  for (const section of entry.sections) {
+    const key = entry.id + "-" + section.index;
+    card.append(sectionView(entry,section,section.index,initiallyOpen || openSections.has(key)));
+  }
   return card;
 }
 
@@ -312,12 +315,10 @@ async function loadHistory(older=false, anchor=null) {
     const anchorSelector = anchor ? '[data-history-section="'+anchor+'"]' : null;
     const previous = anchorSelector ? historyItems.querySelector(anchorSelector) : null;
     const top = previous?.getBoundingClientRect().top;
-    const open = new Set([...historyItems.querySelectorAll("details[data-history-section][open]")]
+    const open = new Set([...historyItems.querySelectorAll("[data-history-section][data-open]")]
       .map(section => section.dataset.historySection));
-    const entries = feed.entries.map((entry,index)=>entryView(entry,!older && !anchor && index === 0));
-    for (const card of entries) for (const section of card.querySelectorAll("details[data-history-section]")) {
-      if (open.has(section.dataset.historySection) || section.dataset.historySection === anchor) section.open = true;
-    }
+    if (anchor) open.add(anchor);
+    const entries = feed.entries.map((entry,index)=>entryView(entry,open,!older && !anchor && index === 0));
     if (older) historyItems.append(...entries);
     else {
       historyItems.replaceChildren(...entries);
@@ -326,7 +327,7 @@ async function loadHistory(older=false, anchor=null) {
       if (anchorSelector) {
         const section = historyItems.querySelector(anchorSelector);
         if (section && top != null) historyBody.scrollTop += section.getBoundingClientRect().top - top;
-        (section?.querySelector("summary") || $("#history-title")).focus({preventScroll:true});
+        (section?.querySelector('[data-disclosure-trigger]') || $("#history-title")).focus({preventScroll:true});
       }
       if (feed.unseen && filter === "all") {
         await api("history/seen",{through:feed.latest});
@@ -348,12 +349,12 @@ async function loadHistory(older=false, anchor=null) {
 }
 
 async function pollHistory() {
-  if (currentRole !== "admin" || document.hidden || historyLoading || $("#crop-dialog").open) return;
+  if (currentRole !== "admin" || document.hidden || historyLoading || confirmationOpen() || editorOverlays.get("crop-dialog").open) return;
   try {
     const meta = await api("history/status");
     updateBadge(meta.unseen);
     if (meta.revision > revision || meta.dirty !== publicDirty) await syncDraft();
-    if (historyDialog.open && !$("#crop-dialog").open && meta.latest > historyLatest) await loadHistory();
+    if (historyDialog.open && !editorOverlays.get("crop-dialog").open && meta.latest > historyLatest) await loadHistory();
   } catch {}
 }
 
@@ -375,15 +376,14 @@ window.addEventListener("focus",pollHistory);
 if (data) startHistory();
 
 $("#history-title").tabIndex = -1;
-$("#history").addEventListener("click",async () => {
+$("#history").addEventListener("click",async event => {
   historyError.textContent = "";
   historyNotice = "";
   historyLabel.textContent = "";
-  historyDialog.showModal();
+  historyDialog.show(event.currentTarget);
   try {await loadHistory();}
   catch (error) {historyError.textContent = error.message;}
 });
-$("#close-history").addEventListener("click",() => historyDialog.close());
 $("#history-more").addEventListener("click",() => loadHistory(true).catch(error=>{historyError.textContent=error.message;}));
 
 

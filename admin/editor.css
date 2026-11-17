@@ -38,10 +38,8 @@ p{margin:0;color:var(--muted-foreground)}
 #status.error,.field-error{color:var(--danger)}
 .preview{min-height:0;min-width:0;padding:16px;display:flex;flex-direction:column;gap:10px}
 .preview-bar{justify-content:space-between;color:var(--muted-foreground);font-size:13px}
-.preview-bar a,dialog a{color:var(--ink);text-underline-offset:3px}
+.preview-bar a,[role="dialog"] a{color:var(--ink);text-underline-offset:3px}
 iframe{min-height:0;flex:1;width:100%;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
-dialog{color:var(--ink);width:min(520px,calc(100% - 32px));max-height:calc(100dvh - 32px);border:1px solid var(--line);border-radius:12px;padding:20px}
-dialog::backdrop{background:#0006}
 .dialog-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}
 .account-items{display:grid;gap:8px;margin-block:16px}
 .account-item{display:flex;justify-content:space-between;align-items:center;gap:12px;border-top:1px solid var(--line);padding-top:8px}
@@ -66,7 +64,6 @@ main.auth-card{display:block;flex:none}
 
 #history-badge{display:inline-grid;place-items:center;min-width:21px;height:21px;padding:0 4px;margin-left:6px;border-radius:99px;background:var(--ink);color:white;font-size:11px}
 #history-dialog{position:fixed;inset:0 0 0 auto;margin:0;width:min(680px,100%);max-width:none;height:100dvh;max-height:100dvh;padding:0;border-radius:0;border-width:0 0 0 1px;background:var(--background);overflow:hidden}
-#history-dialog[open]{display:flex;flex-direction:column}
 .history-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px 12px;flex:none;padding:16px 20px;background:var(--panel);border-bottom:1px solid var(--line)}
 .history-head h2{font:400 25px/1.15 Georgia,serif}
 #crop-error:empty{display:none}
@@ -84,16 +81,13 @@ main.auth-card{display:block;flex:none}
 .history-filters{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:5px}
 .history-filters button[aria-pressed=true]{background:var(--accent);color:var(--primary);border-color:var(--border)}
 .history-state{border-radius:20px;padding:3px 8px;background:var(--muted);color:var(--muted-foreground);font-size:11px;font-weight:500;white-space:nowrap}
-.history-section summary .history-state.accepted{background:var(--success-surface);color:var(--success)}
-.history-section summary .history-state.pending{background:var(--warning-surface);color:var(--warning)}
+.history-section .ui-disclosure-trigger .history-state.accepted{background:var(--success-surface);color:var(--success)}
+.history-section .ui-disclosure-trigger .history-state.pending{background:var(--warning-surface);color:var(--warning)}
 .history-undo{flex:none}
 .history-undo img{display:block;opacity:.8}
 .history-chain{padding:0;margin:0;display:grid;gap:4px;list-style:none;color:var(--muted-foreground);font-size:12px}
 .history-section{margin:0;padding:0 12px}
-.history-section>summary{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
-.history-section>summary::after{content:"";flex:none;margin-inline-start:auto;width:16px;height:16px;background:url("/preview/assets/icons/chevron-down-16.svg") center/contain no-repeat}
-.history-section[open]>summary::after{transform:rotate(180deg)}
-.history-section summary small{color:var(--muted-foreground);font-weight:400}
+.history-section .ui-disclosure-trigger small{color:var(--muted-foreground);font-weight:400}
 .history-fields{display:grid;gap:12px;padding-bottom:12px}
 .history-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .history-value{display:grid;align-content:start;gap:5px;min-width:0;padding:10px;border:1px solid var(--line);border-radius:8px;background:var(--paper);white-space:pre-wrap}
@@ -111,7 +105,6 @@ main.auth-card{display:block;flex:none}
 .history-photo a{display:block;width:min(108px,100%);aspect-ratio:1;overflow:hidden;border-radius:8px;background:var(--muted);position:relative}
 .history-photo img{display:block;width:100%;height:100%;object-fit:cover;object-position:center 28%}
 .history-photo small{color:var(--muted-foreground)}
-.history-route details{font-size:13px}
 #review-note{display:grid;gap:6px;border:1px solid var(--control-line);padding:10px;border-radius:8px}
 .crop-preview{display:grid;justify-items:center;gap:8px;margin:14px 0}
 #crop-frame{width:min(214px,100%);touch-action:none;cursor:move}
