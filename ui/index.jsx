@@ -4,7 +4,8 @@ import {createRoot} from "react-dom/client";
 import {Drawer} from "@base-ui/react/drawer";
 import {Menu} from "@base-ui/react/menu";
 import {Tabs} from "@base-ui/react/tabs";
-import {Accordion, Button, Combobox, Icon, Select} from "./components";
+import {Accordion, Button, Combobox, Icon, Select, Switch} from "./components";
+import {tabsRootStyle,tabsListStyle,tabsTriggerStyle} from "./nova";
 import {mountEditorControls} from "./editor-controls";
 import {mountEditorOverlays} from "./editor-overlays";
 
@@ -113,10 +114,10 @@ function Navigation({subscribe, get, items, label, onValueChange}) {
   useLayoutEffect(() => {
     document.getElementById("branch-tab-" + value)?.scrollIntoView({block:"nearest",inline:"nearest"});
   }, [value]);
-  return <Tabs.Root value={value} onValueChange={onValueChange}>
-    <Tabs.List data-slot="tabs-list" className="ui-tabs-list" aria-label={label}>
+  return <Tabs.Root value={value} onValueChange={onValueChange} data-slot="tabs" className={tabsRootStyle}>
+    <Tabs.List data-slot="tabs-list" data-variant="line" className={`ui-tabs-list ${tabsListStyle}`} aria-label={label}>
       {items.map(item => <Tabs.Tab key={item.value} value={item.value} id={"branch-tab-" + item.value}
-        aria-controls={item.value} data-slot="tabs-trigger" className="ui-tab">{item.label}</Tabs.Tab>)}
+        aria-controls={item.value} data-slot="tabs-trigger" className={`ui-tab ${tabsTriggerStyle}`}>{item.label}</Tabs.Tab>)}
     </Tabs.List>
   </Tabs.Root>;
 }
@@ -175,6 +176,14 @@ function MobileDrawer({tree}) {
   </Drawer.Root>;
 }
 
+function ContrastSwitch({contrast}) {
+  const checked = useSyncExternalStore(contrast.subscribe,contrast.get);
+  return <label className="contrast-label">
+    <span>Контраст</span>
+    <Switch checked={checked} onCheckedChange={contrast.set} aria-label="Контрастный режим"/>
+  </label>;
+}
+
 mountEditorControls();
 mountEditorOverlays();
 
@@ -197,4 +206,9 @@ if (personAccordion) {
   const root = createRoot(personAccordion);
   // Existing editor scripts bind directly to the fields inside these panels.
   flushSync(() => root.render(<Accordion sections={sections}/>));
+}
+
+const contrast = window.familyContrastUI;
+if (contrast) for (const host of document.querySelectorAll(".contrast-control")) {
+  createRoot(host).render(<ContrastSwitch contrast={contrast}/>);
 }

@@ -3,6 +3,8 @@ import {Accordion as AccordionPrimitive} from "@base-ui/react/accordion";
 import {Button as ButtonPrimitive} from "@base-ui/react/button";
 import {Combobox as ComboboxPrimitive} from "@base-ui/react/combobox";
 import {Select as SelectPrimitive} from "@base-ui/react/select";
+import {Switch as SwitchPrimitive} from "@base-ui/react/switch";
+import {buttonStyle,buttonVariants,buttonSizes,inputGroupStyle,selectStyle,switchStyle,switchThumbStyle} from "./nova";
 
 // shadcn/ui Base UI composition, styled with the shared CSS variables.
 export function Icon({name}) {
@@ -26,7 +28,13 @@ export function Icon({name}) {
 
 export function Button({variant = "outline", size = "default", className = "", ...props}) {
   return <ButtonPrimitive data-slot="button" data-variant={variant} data-size={size}
-    className={`ui-button ${className}`} {...props}/>;
+    className={`ui-button ${buttonStyle} ${buttonVariants[variant]} ${buttonSizes[size]} ${className}`} {...props}/>;
+}
+
+export function Switch(props) {
+  return <SwitchPrimitive.Root data-slot="switch" data-size="default" className={`ui-switch ${switchStyle}`} {...props}>
+    <SwitchPrimitive.Thumb data-slot="switch-thumb" className={switchThumbStyle}/>
+  </SwitchPrimitive.Root>;
 }
 
 export function Accordion({sections}) {
@@ -49,10 +57,10 @@ export function Combobox({items, value, onValueChange, labelledBy, label, placeh
   return <ComboboxPrimitive.Root items={items} value={value} onValueChange={onValueChange} disabled={disabled}
     itemToStringLabel={item => item.label}
     isItemEqualToValue={(item, selected) => item.value === selected.value}>
-    <ComboboxPrimitive.InputGroup data-slot="combobox-input-group" className="ui-field ui-combobox">
+    <ComboboxPrimitive.InputGroup data-slot="input-group" className={`ui-combobox ${inputGroupStyle}`}>
       {search && <span className="ui-search-icon"><Icon name="search"/></span>}
       <ComboboxPrimitive.Input id={id} aria-labelledby={labelledBy} aria-label={label}
-        className="ui-combobox-input" placeholder={placeholder}
+        data-slot="input-group-control" className="ui-combobox-input" placeholder={placeholder}
         onFocus={event => event.currentTarget.select()}/>
       <ComboboxPrimitive.Trigger type="button" aria-label="Показать варианты" className="ui-chevron-button">
         <Icon name="chevron"/>
@@ -77,7 +85,7 @@ export function Combobox({items, value, onValueChange, labelledBy, label, placeh
 export function Select({items, value, onValueChange, disabled, id, labelledBy, label}) {
   return <SelectPrimitive.Root items={items} value={value} onValueChange={onValueChange} disabled={disabled}>
     <SelectPrimitive.Trigger id={id} aria-labelledby={labelledBy} aria-label={label}
-      data-slot="select-trigger" className="ui-field ui-select-trigger">
+      data-slot="select-trigger" data-size="default" className={`ui-select-trigger ${selectStyle}`}>
       <SelectPrimitive.Value className="ui-value">
         {selected => items.find(item => item.value === selected)?.label || "Нет вариантов"}
       </SelectPrimitive.Value>

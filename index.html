@@ -124,21 +124,11 @@ nav a:hover{background:#e1e1e1;color:#171717}
 /* Keep the explanatory strips out of every tree. */
 .canvas-hint,.selection-panel{display:none}
 
-/* Each tree has the same switch; its state is shared and saved on this device. */
-.contrast-switch{position:absolute;top:12px;right:12px;z-index:4;display:inline-flex;align-items:center;gap:9px;min-height:44px;padding:8px 11px;border:1px solid #d8d8d8;border-radius:9px;background:#fff;color:#242424;font-size:13px;font-weight:600;cursor:pointer;box-shadow:0 4px 14px #0000000e}
-.contrast-track{position:relative;display:block;flex:none;width:34px;height:20px;border-radius:99px;background:#777}
-.contrast-track::after{content:'';position:absolute;left:3px;top:3px;width:14px;height:14px;border-radius:50%;background:#fff;transition:transform .15s}
-.contrast-switch[aria-checked="true"] .contrast-track{background:#111}
-.contrast-switch[aria-checked="true"] .contrast-track::after{transform:translateX(14px)}
-@media(max-width:700px){.contrast-switch{top:8px;right:8px}}
-@media(max-width:370px){.contrast-switch{gap:5px;padding-inline:8px;font-size:12px}.contrast-track{width:30px}.contrast-switch[aria-checked="true"] .contrast-track::after{transform:translateX(10px)}}
-@media(prefers-reduced-motion:reduce){.contrast-track::after{transition:none}}
-
 /* Stronger text and relationship colours for viewing from farther away. */
 body.high-contrast{--ink:#111;--muted:#333;--paper:#fff;--line:#aaa}
 .high-contrast .legend,.high-contrast .sources{color:#303030}
 .high-contrast nav a{background:#e3e3e3;color:#111}
-.high-contrast #person-details,.high-contrast .chart-shell,.high-contrast .floating-controls,.high-contrast .timeline-toggle,.high-contrast .contrast-switch{border-color:#777}
+.high-contrast #person-details,.high-contrast .chart-shell,.high-contrast .floating-controls,.high-contrast .timeline-toggle{border-color:#777}
 .high-contrast .canvas{background-image:radial-gradient(#d5d5d5 .8px,transparent .9px)}
 .high-contrast .node,.high-contrast .node.current,.high-contrast .node.document,.high-contrast .node.adopt,.high-contrast .node.uncertain,.high-contrast .node.group,.high-contrast .node.has-portrait{color:#111}
 .high-contrast .node .node-avatar{background:#dedede;color:#111;font-weight:700}
@@ -630,14 +620,20 @@ function focusRoute(a,b,visibleNodes,usedPaths){
  const pts=candidates[0].points;usedPaths.push(pts);return pts;
 }
 
-const contrastButtons=[];
+const contrastButtons=[],contrastListeners=new Set();
 let highContrast=false;
 try{highContrast=localStorage.getItem('family-tree-high-contrast')==='1'}catch(e){}
 document.body.classList.toggle('high-contrast',highContrast);
+if(typeof window!=='undefined')window.familyContrastUI={
+ get:()=>highContrast,
+ subscribe(listener){contrastListeners.add(listener);return ()=>contrastListeners.delete(listener)},
+ set:setHighContrast
+};
 function setHighContrast(enabled){
  highContrast=enabled;document.body.classList.toggle('high-contrast',enabled);
  for(const button of contrastButtons)button.setAttribute('aria-checked',String(enabled));
  try{localStorage.setItem('family-tree-high-contrast',enabled?'1':'0')}catch(e){}
+ for(const listener of contrastListeners)listener();
 }
 function render(c){
  // Give routes enough space to pass cards and each other.
@@ -720,7 +716,9 @@ function render(c){
   if(view.scrollTo)view.scrollTo({left:nextLeft,top:nextTop,behavior});
   else {view.scrollLeft=nextLeft;view.scrollTop=nextTop}
  }
- workspace.append(timeline,contrastButton,view,toolbar);
+ const contrastHost=document.createElement('div');contrastHost.className='contrast-control';
+ contrastHost.append(contrastButton);
+ workspace.append(timeline,contrastHost,view,toolbar);
  const drawerSlot=document.createElement('div');drawerSlot.className='person-drawer-slot';
  shell.append(workspace,drawerSlot);host.append(shell);
  const hint=document.createElement('p');hint.className='canvas-hint';const desktopHint=document.createElement('span');desktopHint.className='desktop-gesture-hint';desktopHint.textContent='Перетаскивайте фон · Ctrl/⌘ + колёсико или щипок — масштаб · нажмите на человека или на линию · Esc или нажатие на фон — снять выделение · разрыв линии означает, что связи не соединены';const mobileHint=document.createElement('span');mobileHint.className='mobile-gesture-hint';mobileHint.textContent='Коснитесь карточки, чтобы открыть подробности · перетаскивайте фон для перемещения';hint.append(desktopHint,mobileHint);host.append(hint);

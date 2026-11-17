@@ -10,7 +10,6 @@ h1{font:570 22px/1.15 var(--font-ui);letter-spacing:-.026em}
 .tree-actions{min-width:0;display:flex;align-items:center;gap:8px}
 #person-search{width:min(28vw,270px);min-width:0}
 #person-search:empty{display:none}
-#person-search .ui-field{border-color:var(--border);background:var(--canvas)}
 main{gap:12px;padding-block:14px 20px}
 .section-tabs a{background:var(--muted);color:var(--foreground)}
 .section-tabs a:hover{background:var(--accent);color:var(--foreground)}
@@ -31,17 +30,29 @@ body.high-contrast{--muted-foreground:#292e39;--border:#8a93a3}
 .node .node-avatar,.high-contrast .node .node-avatar{background:var(--muted);color:var(--foreground);border-radius:21px}
 .node[aria-expanded="true"] .node-avatar{outline:2px solid var(--ring);outline-offset:4px}
 .node.uncertain .node-avatar,.high-contrast .node.uncertain .node-avatar{box-shadow:0 0 0 2px var(--edge-red)}
-.timeline-toggle,.contrast-switch,.floating-controls,.timeline-list,.sources{
+.timeline-toggle,.floating-controls,.timeline-list,.sources{
  background:var(--card);color:var(--foreground);border-color:var(--border);box-shadow:0 1px 2px #14182a12
 }
-.timeline-toggle,.contrast-switch{font-weight:520}
+.timeline-toggle{font-weight:520}
+.contrast-control{
+ position:absolute;top:12px;right:12px;z-index:4;
+}
+.contrast-label,.contrast-switch{
+ display:flex;align-items:center;gap:8px;min-height:34px;border:0;border-radius:var(--radius-md);
+ padding:4px 8px;color:var(--foreground);background:var(--card);
+ font:500 13px/1.3 var(--font-ui)
+}
+.contrast-label{cursor:pointer}
+.contrast-track{display:flex;align-items:center;width:32px;height:18px;border-radius:12px;background:var(--input)}
+.contrast-track::after{content:"";width:16px;height:16px;border-radius:50%;background:var(--card)}
+.contrast-switch[aria-checked="true"] .contrast-track::after{margin-inline-start:auto}
+.contrast-switch[aria-checked="true"] .contrast-track{background:var(--primary)}
 .timeline-item,.timeline-item b,.timeline-empty,.controls output,
 .high-contrast .timeline-item,.high-contrast .timeline-item b,.high-contrast .controls output,.high-contrast .sources{
  color:var(--muted-foreground)
 }
 .controls button,.high-contrast .controls button{background:transparent;color:var(--foreground)}
 .controls button:hover,.timeline-item:hover,.timeline-item.is-active{color:var(--foreground);background:var(--accent)}
-.contrast-switch[aria-checked="true"] .contrast-track{background:var(--primary)}
 .dark .timeline-toggle-icon,.dark #person-details .close img,.dark .photo-controls button img{filter:invert(1)}
 a,#dialog-links a,.high-contrast #dialog-links a,#dialog-facts a{color:var(--primary)}
 #person-details,.high-contrast #person-details{background:var(--card);border-color:var(--border)}
@@ -76,7 +87,7 @@ a,#dialog-links a,.high-contrast #dialog-links a,#dialog-facts a{color:var(--pri
  h1{font-size:17px;white-space:nowrap}
  .tree-actions{gap:4px}
  #person-search{width:auto;max-width:200px}
- #person-search .ui-field{min-width:0}
+ .contrast-control{top:8px;right:8px}
  main{padding-block:9px 12px;gap:8px}
  .ui-tab{font-size:13px}
  [data-ui-ready] .chart-shell.details-open .person-drawer-slot{

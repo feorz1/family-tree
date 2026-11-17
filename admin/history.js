@@ -103,8 +103,8 @@ function comparison(title, before, after) {
   return block;
 }
 
-function formButton(label, action) {
-  const button = element("button",label,{type:"button"});
+function formButton(label, action, attributes = {}) {
+  const button = element("button",label,{type:"button",...attributes});
   button.addEventListener("click",async () => {
     button.disabled = true;
     historyError.textContent = "";
@@ -227,8 +227,7 @@ function sectionView(entry, section, index, open) {
           historyDialog.show();
           throw new Error("Этой карточки больше нет в текущем черновике.");
         }
-      });
-      edit.className = "history-edit";
+      },{class:"history-edit"});
       edit.setAttribute("aria-label",edit.textContent+" · "+field.label+" · "+section.title);
       row.append(controlHost(edit));
     }
@@ -278,10 +277,7 @@ function entryView(entry, openSections, initiallyOpen) {
       status("Отмена сохранена в черновике");
       await loadHistory();
       $("#history-title").focus();
-    });
-    undo.className = "history-undo";
-    undo.dataset.variant = "ghost";
-    undo.dataset.size = "icon-sm";
+    },{class:"history-undo","data-variant":"ghost","data-size":"icon-sm"});
     const icon = element("img","",{src:"/preview/assets/icons/history-undo.svg",alt:"",width:"16",height:"16"});
     undo.textContent = "";
     undo.setAttribute("aria-label","Отменить сохранение");

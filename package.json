@@ -2,7 +2,7 @@
   "name": "family-tree",
   "private": true,
   "scripts": {
-    "build:ui": "esbuild ui/index.jsx --bundle --minify --define:process.env.NODE_ENV=\"'production'\" --legal-comments=eof --outfile=assets/ui/components.js"
+    "build:ui": "esbuild ui/index.jsx --bundle --minify --define:process.env.NODE_ENV=\"'production'\" --legal-comments=eof --outfile=assets/ui/components.js && tailwindcss -i ui/theme.css -o assets/ui/theme.css --minify"
   },
   "dependencies": {
     "@base-ui/react": "1.9.0",
@@ -10,6 +10,8 @@
     "react-dom": "19.3.1"
   },
   "devDependencies": {
-    "esbuild": "0.28.2"
+    "@tailwindcss/cli": "4.3.5",
+    "esbuild": "0.28.2",
+    "tailwindcss": "4.3.5"
   }
 }

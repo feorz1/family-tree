@@ -6,6 +6,7 @@ import {Checkbox as CheckboxPrimitive} from "@base-ui/react/checkbox";
 import {Input as InputPrimitive} from "@base-ui/react/input";
 import {Slider as SliderPrimitive} from "@base-ui/react/slider";
 import {Button, Icon} from "./components";
+import {inputStyle,textareaStyle} from "./nova";
 
 const propertyNames = {
   class:"className", readonly:"readOnly", autocomplete:"autoComplete", inputmode:"inputMode",
@@ -85,7 +86,7 @@ function buildControl(tag, attributes, text, source, inputRef) {
     </Button>;
   }
   if (tag === "textarea") {
-    return <textarea {...props} data-slot="textarea" className="ui-input" defaultValue={text} ref={inputRef}/>;
+    return <textarea {...props} data-slot="textarea" className={`ui-input ${textareaStyle}`} defaultValue={text} ref={inputRef}/>;
   }
   const {value, ...other} = props;
   if (props.type === "checkbox") {
@@ -95,7 +96,7 @@ function buildControl(tag, attributes, text, source, inputRef) {
       inputRef(node);
     }}/>;
   }
-  return <InputPrimitive {...other} defaultValue={value} data-slot="input" className="ui-input" ref={inputRef}/>;
+  return <InputPrimitive {...other} defaultValue={value} data-slot="input" className={`ui-input ${inputStyle}`} ref={inputRef}/>;
 }
 
 function mountStaticControl(source, index) {
