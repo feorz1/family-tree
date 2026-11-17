@@ -3,8 +3,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Редактор родословной</title>
+<script src="/preview/assets/ui/theme.js"></script>
+<link rel="stylesheet" href="/preview/assets/ui/theme.css">
 <link rel="stylesheet" href="/editor.css">
-<script defer src="/select.js"></script>
+<link rel="stylesheet" href="/preview/assets/ui/editor.css">
+<script defer src="/preview/assets/ui/components.js"></script>
 <script defer src="/editor.js"></script>
 <script defer src="/access.js"></script>
 <script defer src="/preview/assets/portrait.js"></script>
@@ -13,6 +16,7 @@
 <header>
   <h1>Редактор родословной</h1>
   <div class="actions">
+    <div id="theme-control"></div>
     <span id="status" role="status">Загружаем черновик…</span>
     <button type="button" id="history" hidden>История<span id="history-badge" hidden></span></button>
     <button type="button" id="access" hidden>Доступ</button>
@@ -25,7 +29,7 @@
   <aside inert aria-label="Редактирование">
     <div class="sidebar-head">
       <label>Семья или архив <select id="chart"></select></label>
-      <nav aria-label="Режим редактирования">
+      <nav id="editor-tabs" aria-label="Режим редактирования">
         <button type="button" data-mode="people" aria-pressed="true">Карточки</button>
         <button type="button" data-mode="relations" aria-pressed="false">Родство</button>
         <button type="button" data-mode="routes" aria-pressed="false">Маршруты</button>

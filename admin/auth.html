@@ -3,10 +3,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Вход в редактор родословной</title>
+<script src="/preview/assets/ui/theme.js"></script>
+<link rel="stylesheet" href="/preview/assets/ui/theme.css">
 <link rel="stylesheet" href="/editor.css">
+<link rel="stylesheet" href="/preview/assets/ui/editor.css">
+<script defer src="/preview/assets/ui/components.js"></script>
 <script defer src="/auth.js"></script>
 <main class="auth-card">
-  <h1 id="auth-title">Редактор родословной</h1>
+  <div class="auth-head"><h1 id="auth-title">Редактор родословной</h1><div id="theme-control"></div></div>
   <p id="auth-description">Введи логин и пароль, чтобы открыть семейный черновик.</p>
   <form id="login">
     <label>Логин<input name="username" autocomplete="username" required maxlength="40"></label>

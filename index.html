@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Семейное древо</title>
+<script src="assets/ui/theme.js"></script>
 <style>
 :root{--ink:#243631;--muted:#64766f;--green:#305c4e;--paper:#f5f7f3;--line:#cbd6ce;--red:#a83e3e;--redbg:#fff4f1;--blue:#426a85}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}a{color:#315e50}button{font:inherit}h1{font:400 clamp(38px,5vw,64px)/1.05 Georgia,serif;margin:0;letter-spacing:-.03em}nav a{background:#e5ece5;color:#335648;text-decoration:none;border-radius:100px;padding:8px 14px;font-size:13px}nav a:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid #d69b3c;outline-offset:3px}.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:#4a5c54}.legend span{display:inline-flex;align-items:center;gap:6px}.swatch{width:20px;border-top:2px solid #6b8979}.swatch.red{border-top:2px dashed var(--red)}.swatch.blue{border-top:2px dashed #1499f7}.canvas{position:relative;transform-origin:top left;background-image:radial-gradient(#cbd8ce 0.7px,transparent .8px);background-size:24px 24px}.canvas svg{position:absolute;top:0;left:0;overflow:visible;pointer-events:none}.node{position:absolute;text-align:left;width:174px;min-height:82px;padding:10px 11px;border:1px solid #c9d7cd;border-radius:9px;color:var(--ink);background:#fff;box-shadow:0 3px 10px #2b493810;cursor:pointer}.node strong{font:600 14px/1.25 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;display:block}.node small{font-size:11px;line-height:1.3;color:#677970;display:block;margin-top:5px}.node .flag{display:block;font-size:10px;font-weight:700;color:#85622b;margin-top:4px}.node.uncertain{border-color:#c87070;background:var(--redbg)}.node.uncertain .flag{color:var(--red)}.node.document{background:#f3f8f3;border-color:#99b8a2}.node.adopt{border-color:#8eacbf;background:#f5f9fc}.node.group{border-style:dashed}.node.current{background:#254d3e;color:white;border-color:#254d3e}.node.current small{color:#d5e8dc}.node.current .flag{color:#cce7d4}.controls{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:9px}.controls button{background:white;border:1px solid #d4dfd6;border-radius:7px;color:#31594a;padding:5px 11px;cursor:pointer}.controls output{min-width:43px;text-align:center;font-size:12px;color:var(--muted)}.warning{color:#913f3f}dialog{border:0;border-radius:14px;padding:0;max-width:520px;width:calc(100% - 32px);box-shadow:0 18px 80px #10231b50;color:var(--ink)}dialog::backdrop{background:#13271dc0}.dialog-inner{padding:24px}dialog h3{font:400 28px/1.15 Georgia,serif;margin:0 36px 8px 0}dialog p{color:#52645b}.close{float:right;background:#eff3ee;border:0;border-radius:50%;width:32px;height:32px;cursor:pointer}dialog .state{font-size:12px;font-weight:700;color:var(--red)}dialog .state.family{color:#756329}.doc-links{display:flex;gap:12px;flex-wrap:wrap;font-size:13px}noscript{display:block;padding:20px;background:#fff4f1;color:#913f3f}
 
@@ -206,9 +207,12 @@ main{display:flex;flex-direction:column;flex:1;min-height:0;gap:24px;padding:24p
  #person-details:not([hidden]){animation:person-details-enter 160ms ease-out}
  @keyframes person-details-enter{from{opacity:0;transform:translateY(6px)}}
 }
-</style></head>
+</style>
+<link rel="stylesheet" href="assets/ui/theme.css">
+<link rel="stylesheet" href="assets/ui/tree.css">
+</head>
 <body>
-<header><h1>Семейное древо</h1></header>
+<header><h1>Семейное древо</h1><div class="tree-actions"><div id="person-search"></div><div id="theme-control"></div></div></header>
 <main>
   <nav class="section-tabs" id="section-tabs" aria-label="Разделы">
     <a href="#family" aria-current="page">Наша семья</a>
@@ -270,19 +274,36 @@ const personPanel=document.querySelector('#person-details');
 const personName=document.querySelector('#dialog-name');
 const editPreview=typeof window!=='undefined'&&window.name==='family-tree-admin-preview';
 let openDetails=null;
+const chartActions=new Map(),uiListeners=new Set();
+const isNarrow=typeof matchMedia==="function"?matchMedia("(max-width:760px)"):null;
+let activeChart="family",mobileDrawer=null;
+function notifyUI(){for(const listener of uiListeners)listener()}
+if(typeof window!=="undefined"&&!editPreview){
+ window.familyTreeUI={
+  subscribe(listener){uiListeners.add(listener);return ()=>uiListeners.delete(listener)},
+  getChart:()=>activeChart,
+  getOptions:id=>chartActions.get(id)?.items||[],
+  select:id=>chartActions.get(activeChart)?.select(id),
+  getDrawer:()=>mobileDrawer,
+  getPanel:()=>personPanel,
+  close:()=>closePerson(true)
+ };
+ isNarrow?.addEventListener("change",()=>closePerson());
+}
 
 function closePerson(restoreFocus=false){
  if(!openDetails)return;
- const {shell,trigger,refit}=openDetails;
+ const {shell,trigger}=openDetails;
  openDetails=null;
  trigger.setAttribute('aria-expanded','false');
  personPanel.hidden=true;
  shell.classList.remove('details-open');
- refit();
+ mobileDrawer=null;
+ notifyUI();
  if(restoreFocus)trigger.focus({preventScroll:true});
 }
 
-function openPerson(n,trigger,shell,view,refit,{keyboard=false,center=false}={}){
+function openPerson(n,trigger,shell,placePerson,{keyboard=false,center=false}={}){
  const original=trigger.getBoundingClientRect();
  const opening=openDetails?.shell!==shell;
  if(opening){
@@ -292,24 +313,20 @@ function openPerson(n,trigger,shell,view,refit,{keyboard=false,center=false}={})
  }
  if(openDetails?.trigger!==trigger){
   openDetails?.trigger.setAttribute('aria-expanded','false');
-  openDetails={shell,trigger,refit};
+  openDetails={shell,trigger};
   trigger.setAttribute('aria-expanded','true');
   personInfo(n);
   personPanel.hidden=false;
   personPanel.scrollTop=0;
  }
- if(opening)refit();
-
- // Keep the portrait near its previous position when the diagram changes width.
- const frame=view.getBoundingClientRect(),card=trigger.getBoundingClientRect();
- const aim=(start,size,cardSize,position)=>{
-  if(center)return start+size/2;
-  const inset=Math.min(size/2,cardSize/2+20);
-  return Math.max(start+inset,Math.min(start+size-inset,position));
- };
- view.scrollLeft+=card.left+card.width/2-aim(frame.left,view.clientWidth,card.width,original.left+original.width/2);
- view.scrollTop+=card.top+card.height/2-aim(frame.top,view.clientHeight,card.height,original.top+original.height/2);
- if(keyboard)personName.focus({preventScroll:true});
+ placePerson(trigger,original,{opening,center,keyboard});
+ if(isNarrow?.matches&&document.documentElement.hasAttribute('data-ui-ready')){
+  const slot=shell.querySelector('.person-drawer-slot');
+  if(mobileDrawer?.slot!==slot){
+   mobileDrawer={slot,keyboard};
+   notifyUI();
+  }else if(keyboard)personName.focus({preventScroll:true});
+ }else if(keyboard)personName.focus({preventScroll:true});
 }
 
 function showPhotos(n){
@@ -650,23 +667,27 @@ function render(c){
  const stage=document.createElement('div');stage.className='stage';const canvas=document.createElement('div');canvas.className='canvas';canvas.style.width=c.w+'px';canvas.style.height=c.h+'px';
  const svg=document.createElementNS(SVG,'svg');svg.setAttribute('width',c.w);svg.setAttribute('height',c.h);canvas.append(svg);stage.append(canvas);view.append(stage);
  const toolbar=document.createElement('div');toolbar.className='controls floating-controls';
- const out=document.createElement('output');out.setAttribute('aria-live','polite');let scale=1,fitMode=null;
+ const out=document.createElement('output');out.setAttribute('aria-live','polite');let scale=1,fitMode=null,leftPadding=0;
  const minimumScale=()=>Math.min(.01,view.clientWidth/c.w||.01,view.clientHeight/c.h||.01);
  const resize=()=>{
   canvas.style.transform=`scale(${scale})`;
-  stage.style.width=(c.w*scale)+'px';stage.style.height=(c.h*scale)+'px';
+  canvas.style.left=leftPadding+'px';
+  const anchorWidth=fitMode===null&&leftPadding?view.clientWidth+leftPadding:0;
+  stage.style.width=Math.max(c.w*scale+leftPadding,anchorWidth)+'px';stage.style.height=(c.h*scale)+'px';
   const percent=scale*100;
   out.textContent=(percent<1?Math.max(.1,Number(percent.toFixed(1))):Math.round(percent))+'%';
  };
  const zoom=(factor,x=view.clientWidth/2,y=view.clientHeight/2)=>{
   fitMode=null;
-  const beforeX=(view.scrollLeft+x)/scale,beforeY=(view.scrollTop+y)/scale;
+  const beforeX=(view.scrollLeft+x-leftPadding)/scale,beforeY=(view.scrollTop+y)/scale;
   scale=Math.max(minimumScale(),Math.min(1.8,scale*factor));
-  resize();view.scrollLeft=beforeX*scale-x;view.scrollTop=beforeY*scale-y;
+  resize();view.scrollLeft=beforeX*scale+leftPadding-x;view.scrollTop=beforeY*scale-y;
  };
+ const sidebarWidth=()=>openDetails?.shell===shell&&!isNarrow?.matches&&personPanel.offsetWidth?personPanel.offsetWidth+24:0;
  const fit=whole=>{
   fitMode=whole;
-  scale=Math.min(1,view.clientWidth/c.w,whole?view.clientHeight/c.h:Infinity);
+  leftPadding=sidebarWidth();
+  scale=Math.min(1,Math.max(1,view.clientWidth-leftPadding)/c.w,whole?view.clientHeight/c.h:Infinity);
   resize();view.scrollLeft=0;view.scrollTop=0;
  };
  const control=(title,text,action)=>{const b=document.createElement('button');b.type='button';b.title=title;b.setAttribute('aria-label',title);b.textContent=text;b.addEventListener('click',action);toolbar.append(b)};
@@ -675,8 +696,33 @@ function render(c){
  control('Подогнать по ширине','По ширине',()=>fit(false));
  control('Показать всю схему','Вся схема',()=>fit(true));
  control('Масштаб 100 процентов','100%',()=>{fitMode=null;scale=1;resize()});
- const refit=()=>{if(fitMode!==null&&view.clientWidth&&view.clientHeight)fit(fitMode)};
- workspace.append(timeline,contrastButton,view,toolbar);shell.append(workspace);host.append(shell);
+ function placePerson(trigger,original,{opening,center,keyboard}){
+  if(opening&&fitMode!==null){fit(fitMode);return}
+  const frame=view.getBoundingClientRect(),card=trigger.getBoundingClientRect();
+  const left=frame.left+sidebarWidth();
+  const width=Math.max(1,view.clientWidth-(left-frame.left));
+  const target=(start,size,cardSize,position)=>{
+   if(center)return start+size/2;
+   const inset=Math.min(size/2,cardSize/2+20);
+   return Math.max(start+inset,Math.min(start+size-inset,position));
+  };
+  let nextLeft=view.scrollLeft+card.left+card.width/2-target(left,width,card.width,original.left+original.width/2);
+  const nextTop=view.scrollTop+card.top+card.height/2-target(frame.top,view.clientHeight,card.height,original.top+original.height/2);
+  // Extend the canvas at its origin if the selected person is already at the left edge.
+  if(nextLeft < 0 && sidebarWidth()){
+   const extra=Math.ceil(-nextLeft),previous=view.scrollLeft;
+   leftPadding+=extra;
+   resize();
+   view.scrollLeft=previous+extra;
+   nextLeft+=extra;
+  }
+  const behavior=keyboard||typeof matchMedia!=="function"||matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth';
+  if(view.scrollTo)view.scrollTo({left:nextLeft,top:nextTop,behavior});
+  else {view.scrollLeft=nextLeft;view.scrollTop=nextTop}
+ }
+ workspace.append(timeline,contrastButton,view,toolbar);
+ const drawerSlot=document.createElement('div');drawerSlot.className='person-drawer-slot';
+ shell.append(workspace,drawerSlot);host.append(shell);
  const hint=document.createElement('p');hint.className='canvas-hint';const desktopHint=document.createElement('span');desktopHint.className='desktop-gesture-hint';desktopHint.textContent='Перетаскивайте фон · Ctrl/⌘ + колёсико или щипок — масштаб · нажмите на человека или на линию · Esc или нажатие на фон — снять выделение · разрыв линии означает, что связи не соединены';const mobileHint=document.createElement('span');mobileHint.className='mobile-gesture-hint';mobileHint.textContent='Коснитесь карточки, чтобы открыть подробности · перетаскивайте фон для перемещения';hint.append(desktopHint,mobileHint);host.append(hint);
  const panel=document.createElement('div');panel.className='selection-panel';panel.setAttribute('aria-live','polite');host.append(panel);
  const edges=graphEdges(c),families=familyRoutes(c,map),nodeElements=new Map(),edgeElements=[];let selection=null;
@@ -744,7 +790,7 @@ function render(c){
  function restoreSelection(){if(selection?.person)showPerson(selection.person);else if(selection?.family)showFamily(selection.family,selection.child);else if(selection&&selection.edge!==undefined)showEdge(selection.edge);else clear()}
  function selectPerson(id,options){
   showPerson(id);
-  if(!editPreview)openPerson(map[id],nodeElements.get(id),shell,view,refit,options);
+  if(!editPreview)openPerson(map[id],nodeElements.get(id),shell,placePerson,options);
  }
  function showPerson(id){selection={person:id};const near=edges.map((e,i)=>({e,i})).filter(x=>x.e.a===id||x.e.b===id);const related=[...new Set(near.map(({e})=>e.a===id?e.b:e.a))];focusPeople([id,...related]);panel.replaceChildren();const title=document.createElement('strong');title.textContent=cardText(c.id,map[id])[0];panel.append(title);panel.append(button('Подробнее',()=>selectPerson(id,{keyboard:true}),'detail-button'));panel.append(button('Показать всё',clear,'clear-button'));const items=document.createElement('div');items.className='related-list';if(!near.length)items.textContent='Связанные люди пока не установлены.';for(const {e} of near){const other=e.a===id?e.b:e.a;const b=button(cardText(c.id,map[other])[0]+' · '+e.label,()=>showEdge(edges.indexOf(e)),'related-item'+(e.kind==='red'?' is-uncertain':''));items.append(b)}panel.append(items)}
  function showFamily(family,child=null){selection={family,child};const people=[...family.parents,...(child?[child]:family.children)];focusPeople(people,null,{family,child});panel.replaceChildren();const title=document.createElement('strong');title.textContent=family.label+(family.kind==='red'||family.uncertainChildren?.includes(child)?' · требует проверки':'');panel.append(title);panel.append(button('Показать всё',clear,'clear-button'));const items=document.createElement('div');items.className='related-list';for(const id of people)items.append(button(map[id].name,()=>showPerson(id),'related-item'+(family.kind==='red'?' is-uncertain':'')));panel.append(items)}
@@ -828,7 +874,7 @@ function render(c){
  view.addEventListener('pointermove',e=>{if(!pointers.has(e.pointerId))return;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pinch&&pointers.size>=2){const [a,b]=[...pointers.values()],rect=view.getBoundingClientRect(),next=pinch.scale*distance(a,b)/Math.max(1,pinch.distance);zoom(next/scale,(a.x+b.x)/2-rect.left,(a.y+b.y)/2-rect.top)}else if(drag&&pointers.size===1){if(Math.hypot(e.clientX-drag.x,e.clientY-drag.y)>5)suppressClick=true;view.scrollLeft=drag.left-(e.clientX-drag.x);view.scrollTop=drag.top-(e.clientY-drag.y)}});
  const stopPointer=e=>{pointers.delete(e.pointerId);pinch=null;if(pointers.size===1){const [remaining]=pointers.values();drag={x:remaining.x,y:remaining.y,left:view.scrollLeft,top:view.scrollTop}}else{drag=null;view.classList.remove('dragging')}};for(const ev of ['pointerup','pointercancel','lostpointercapture'])view.addEventListener(ev,stopPointer);
  view.addEventListener('click',e=>{if(suppressClick){suppressClick=false;return}if(!e.target.closest('.node,.link-hit')){closePerson();clear()}});
- document.addEventListener('keydown',e=>{if(e.key==='Escape'){setTimelineOpen(false);if(openDetails?.shell===shell)closePerson(true);if(selection)clear()}});
+ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!e.defaultPrevented&&!e.target?.closest?.('.ui-popup,.tree-actions')){setTimelineOpen(false);if(openDetails?.shell===shell)closePerson(true);if(selection)clear()}});
  clear();scale=c.id==='family'?.8:1;resize();
  const initial=map[c.id==='family'?'ol':c.nodes[0]?.id];
  let centered=false;
@@ -838,6 +884,11 @@ function render(c){
   view.scrollTop=Math.max(0,initial.y*scale-76);
   centered=true;
  }
+ chartActions.set(c.id,{
+  items:c.nodes.map(n=>({value:n.id,label:modalNames[c.id]?.[n.id]?.[0]||cardText(c.id,n)[0],description:cardText(c.id,n)[1]}))
+   .sort((a,b)=>a.label.localeCompare(b.label,'ru')),
+  select:id=>selectPerson(id,{center:true})
+ });
  centerInitialView();
  return centerInitialView;
 }
@@ -862,6 +913,8 @@ function showSection(){
  const hash=location.hash.slice(1).replace(/^chart-/,'');
  const chartId=centerCharts.has(hash)||hash==='sources'?hash:'family';
  const sectionId=chartId==='leviny'?'perikov':chartId;
+ activeChart=chartId;
+ notifyUI();
  for(const panel of pagePanels)panel.hidden=panel.id!==sectionId;
  perikovChart.hidden=chartId==='leviny';
  levinyChart.hidden=chartId!=='leviny';
@@ -873,4 +926,6 @@ function showSection(){
 window.addEventListener('hashchange',showSection);
 showSection();
 </script>
+<div id="person-drawer"></div>
+<script defer src="assets/ui/components.js"></script>
 </body></html>

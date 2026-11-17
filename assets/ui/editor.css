@@ -1,0 +1,27 @@
+:root,:root.dark{
+ --ink:var(--foreground);--line:var(--border);
+ --control-line:var(--input);--panel:var(--card);--paper:var(--background);
+ --hover:var(--accent);--active:var(--accent);--danger:var(--destructive);
+ font:14px/1.45 var(--font-ui)
+}
+h1,.history-head h2{font:570 22px/1.2 var(--font-ui);letter-spacing:-.025em}
+header{min-height:64px}
+p,#status,.preview-bar,input::placeholder,textarea::placeholder{color:var(--muted-foreground)}
+.auth-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.auth-head .ui-button,#theme-control .ui-button{padding:0;min-height:36px}
+#editor-tabs + .ui-tabs .ui-tabs-list{width:100%}
+#editor-tabs + .ui-tabs .ui-tab{flex:1;padding:5px 7px;min-height:36px}
+button.primary{background:var(--primary);border-color:var(--primary);color:var(--primary-foreground)}
+button.primary:hover:enabled{background:var(--primary);filter:brightness(.94)}
+.ui-select-host .ui-field{min-height:44px}
+.ui-select-host .ui-combobox .ui-combobox-input,
+.ui-select-host .ui-combobox .ui-chevron-button{min-height:42px}
+.ui-select-host .ui-combobox .ui-combobox-input{
+ border:0;padding:0;background:transparent;outline:none!important;box-shadow:none
+}
+dialog{background:var(--card)}
+#history-dialog{background:var(--background)}
+#history-badge{background:var(--primary);color:var(--primary-foreground)}
+.history-card,.editor-item{border-color:var(--border)}
+.dark .history-undo img,.dark .history-section>summary::before{filter:invert(1)}
+@media(max-width:760px){header{min-height:0}}

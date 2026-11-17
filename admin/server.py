@@ -293,6 +293,11 @@ class Handler(BaseHTTPRequestHandler):
                 if path in {"/editor.css", "/auth.js"}:
                     target = ADMIN / path[1:]
                     return self.send_content(target.read_bytes(), mimetypes.guess_type(target.name)[0])
+                if path in {"/preview/assets/ui/theme.js", "/preview/assets/ui/components.js",
+                            "/preview/assets/ui/theme.css", "/preview/assets/ui/editor.css",
+                            "/preview/assets/fonts/MedeoSansVariable.woff2"}:
+                    target = REPO / path[len("/preview/"):]
+                    return self.send_content(target.read_bytes(), mimetypes.guess_type(target.name)[0])
                 if path == "/join" or (path == "/" and not viewer):
                     return self.send_content((ADMIN / "auth.html").read_bytes(), "text/html; charset=utf-8")
                 if not viewer:
@@ -331,7 +336,7 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send_json({"current": current})
                 if path == "/preview/data/tree.js":
                     return self.send_content(data_script(get_draft(db)[3]), "text/javascript; charset=utf-8")
-                if path in {"/", "/editor.js", "/select.js", "/access.js", "/history.js", "/crop.js"}:
+                if path in {"/", "/editor.js", "/access.js", "/history.js", "/crop.js"}:
                     target = ADMIN / ("index.html" if path == "/" else path[1:])
                 elif path in {"/preview/", "/preview/index.html"}:
                     target = REPO / "index.html"
