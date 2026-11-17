@@ -33,7 +33,7 @@
   color-scheme:light;
   --background:#f5f6f8;--foreground:#18181b;
   --canvas:#fcfcfd;--card:#fff;--popover:#fff;
-  --muted:#edf0f4;--muted-foreground:#71717a;
+  --muted:#edf0f4;--muted-foreground:#6b6b75;
   --accent:#edf0f8;--accent-foreground:#242b43;
   --primary:#4654b9;--primary-foreground:#fff;
   --border:#e4e4e7;--input:#e4e4e7;--ring:#4654b9;
@@ -59,6 +59,7 @@
 .ui-accordion-body [data-slot="button"]{justify-self:start}
 :where(.ui-button){background-color:transparent}
 .ui-button{max-width:100%;cursor:pointer;font-family:var(--font-ui)}
+.ui-button,.ui-tab,.ui-item{-webkit-tap-highlight-color:color-mix(in srgb,var(--primary) 20%,transparent)}
 .ui-button:disabled{cursor:default}
 .ui-button.ui-theme-button{width:36px;height:36px;padding:0}
 .ui-accordion{border:1px solid var(--border);border-radius:var(--radius);background:var(--card)}
@@ -73,8 +74,7 @@
 .ui-accordion-trigger:focus-visible{outline:2px solid var(--ring);outline-offset:-2px}
 .ui-accordion-trigger svg{color:var(--muted-foreground);flex:none;transition:transform var(--duration-fast)}
 .ui-accordion-trigger[aria-expanded="true"] svg{transform:rotate(180deg)}
-.ui-accordion-content{height:var(--accordion-panel-height);overflow:clip;transition:height var(--duration-fast) ease-out}
-.ui-accordion-content[data-starting-style],.ui-accordion-content[data-ending-style]{height:0}
+.ui-accordion-content{overflow:clip}
 .ui-accordion-body{padding:10px}
 [data-accordion-label]{display:grid;gap:8px}
 .ui-select-host{display:block;min-width:0}
@@ -97,12 +97,12 @@
   max-height:min(360px,var(--available-height));overflow:auto;overscroll-behavior:contain;
   padding:4px;border:0;border-radius:var(--radius);
   background:var(--popover);color:var(--foreground);box-shadow:0 0 0 1px color-mix(in srgb,var(--foreground) 10%,transparent),0 4px 12px #0002;
-  opacity:1;transform:scale(1);transform-origin:var(--transform-origin);
-  transition:opacity var(--duration-fast) ease-out,transform var(--duration-fast) ease-out
+  transform-origin:var(--transform-origin)
 }
-.ui-popup[data-starting-style],.ui-popup[data-ending-style]{opacity:0;transform:scale(.98)}
 .ui-combobox-popup{width:min(max(230px,var(--anchor-width)),var(--available-width))}
 .ui-theme-popup{width:min(200px,var(--available-width))}
+/* The moving highlight stays on screen briefly while the theme changes. */
+.ui-theme-popup [data-slot="item-highlight"]{background-color:var(--accent)!important;transition-property:none!important}
 .ui-item{
   display:flex;align-items:center;justify-content:space-between;gap:10px;
   min-height:28px;padding:4px 7px;border-radius:var(--radius-md);cursor:default;overflow-wrap:anywhere;font:400 14px/1.25 var(--font-ui)
@@ -118,6 +118,6 @@
 .ui-tabs-list[data-variant="line"]{min-width:max-content;min-height:36px;padding:0 0 5px;border-bottom:1px solid var(--border)}
 .ui-tab{cursor:pointer;font-family:var(--font-ui);padding-inline:10px}
 @media(prefers-reduced-motion:reduce){
-  .ui-popup,.ui-accordion-content,.ui-accordion-trigger svg,.ui-tab,.ui-switch,[data-slot="switch-thumb"]{transition:none}
+  .ui-accordion-trigger svg,.ui-tab,.ui-switch{transition:none}
 }
 @media(max-width:760px){.ui-combobox-input{font-size:16px}}

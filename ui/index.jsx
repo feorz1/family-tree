@@ -1,9 +1,11 @@
 import React, {useCallback, useLayoutEffect, useSyncExternalStore} from "react";
 import {flushSync} from "react-dom";
 import {createRoot} from "react-dom/client";
-import {Drawer} from "@base-ui/react/drawer";
-import {Menu} from "@base-ui/react/menu";
-import {Tabs} from "@base-ui/react/tabs";
+import {Drawer} from "@animate-ui/react/primitives/base-ui/drawer";
+import {Menu} from "@animate-ui/react/primitives/base-ui/menu";
+import {Tabs} from "@animate-ui/react/primitives/base-ui/tabs";
+import {transition} from "@animate-ui/react/utils/motion";
+import {FamilyAnimation} from "./animation";
 import {Accordion, Button, Combobox, Icon, Select, Switch} from "./components";
 import {tabsRootStyle,tabsListStyle,tabsTriggerStyle} from "./nova";
 import {mountEditorControls} from "./editor-controls";
@@ -60,13 +62,15 @@ function enhanceSelect(select) {
   }
 
   sync();
-  root.render(<FamilySelect id={id} search={select.id === "person"} labelledBy={labelledBy}
+  root.render(<FamilyAnimation><FamilySelect id={id} search={select.id === "person"} labelledBy={labelledBy}
     label={labelledBy ? undefined : select.getAttribute("aria-label") || "Выбрать"}
-    subscribe={subscribe} get={() => state} onValueChange={commit}/>);
+    subscribe={subscribe} get={() => state} onValueChange={commit}/></FamilyAnimation>);
   const observer = new MutationObserver(sync);
   observer.observe(select, {subtree:true, attributes:true, childList:true, characterData:true});
   select.addEventListener("change", sync);
-  selectControls.set(select, {sync, dispose() {
+  selectControls.set(select, {sync, focus() {
+    host.querySelector("input:not([type=hidden]),button")?.focus();
+  }, dispose() {
     select.removeEventListener("change", sync);
     observer.disconnect();
     root.unmount();
@@ -77,6 +81,7 @@ function enhanceSelect(select) {
 
 window.enhanceSelect = enhanceSelect;
 window.syncSelect = select => selectControls.get(select)?.sync();
+window.focusSelect = select => selectControls.get(select)?.focus();
 window.removeSelect = select => {
   selectControls.get(select)?.dispose();
   selectControls.delete(select);
@@ -109,29 +114,39 @@ function ThemeMenu() {
   </Menu.Root>;
 }
 
-function Navigation({subscribe, get, items, label, onValueChange}) {
+function Navigation({subscribe, get, items, label, host, onValueChange}) {
   const value = useSyncExternalStore(subscribe, get);
+  const active = items.find(item => item.value === value);
   useLayoutEffect(() => {
-    document.getElementById("branch-tab-" + value)?.scrollIntoView({block:"nearest",inline:"nearest"});
-  }, [value]);
+    const tab = active && document.getElementById(active.tabId);
+    if (!tab || host.scrollWidth <= host.clientWidth) return;
+    const bounds = host.getBoundingClientRect();
+    const tabBounds = tab.getBoundingClientRect();
+    if (tabBounds.left < bounds.left) host.scrollLeft += tabBounds.left - bounds.left - 2;
+    else if (tabBounds.right > bounds.right) host.scrollLeft += tabBounds.right - bounds.right + 2;
+  }, [active, host]);
   return <Tabs.Root value={value} onValueChange={onValueChange} data-slot="tabs" className={tabsRootStyle}>
     <Tabs.List data-slot="tabs-list" data-variant="line" className={`ui-tabs-list ${tabsListStyle}`} aria-label={label}>
-      {items.map(item => <Tabs.Tab key={item.value} value={item.value} id={"branch-tab-" + item.value}
-        aria-controls={item.value} data-slot="tabs-trigger" className={`ui-tab ${tabsTriggerStyle}`}>{item.label}</Tabs.Tab>)}
+      {items.map(item => <Tabs.Tab key={item.value} value={item.value} id={item.tabId}
+        aria-controls={item.panelId} data-slot="tabs-trigger" className={`ui-tab ${tabsTriggerStyle}`}>{item.label}</Tabs.Tab>)}
     </Tabs.List>
   </Tabs.Root>;
 }
 
-function mountNavigation(control, buttons, attr, values, activate) {
+function mountNavigation(control, buttons, attr, values, activate, panelId = value => value) {
   if (!control) return;
   const host = document.createElement("div");
   host.className = "ui-tabs";
+  host.dataset.navigation = control.id;
   control.after(host);
-  const items = buttons.map(button => ({value:values(button),label:button.textContent.trim()}));
+  const items = buttons.map(button => {
+    const value = values(button);
+    return {value, label:button.textContent.trim(), tabId:`${control.id}-tab-${value}`, panelId:panelId(value)};
+  });
   for (const item of items) {
-    const panel = document.getElementById(item.value);
+    const panel = document.getElementById(item.panelId);
     panel?.setAttribute("role","tabpanel");
-    panel?.setAttribute("aria-labelledby","branch-tab-" + item.value);
+    panel?.setAttribute("aria-labelledby",item.tabId);
   }
   const get = () => values(buttons.find(button => button.hasAttribute(attr) && button.getAttribute(attr) !== "false") || buttons[0]);
   const subscribe = listener => {
@@ -139,8 +154,9 @@ function mountNavigation(control, buttons, attr, values, activate) {
     observer.observe(control,{attributes:true,subtree:true,attributeFilter:[attr]});
     return () => observer.disconnect();
   };
-  createRoot(host).render(<Navigation subscribe={subscribe} get={get} items={items}
-    label={control.getAttribute("aria-label")} onValueChange={value => activate(buttons.find(button => values(button) === value))}/>);
+  createRoot(host).render(<FamilyAnimation><Navigation subscribe={subscribe} get={get} items={items}
+    label={control.getAttribute("aria-label")} host={host}
+    onValueChange={value => activate(buttons.find(button => values(button) === value))}/></FamilyAnimation>);
   control.hidden = true;
 }
 
@@ -153,21 +169,26 @@ function PersonSearch({tree}) {
 
 function MobileDrawer({tree}) {
   const drawer = useSyncExternalStore(tree.subscribe, tree.getDrawer);
+  const slot = drawer?.slot;
   const attachPanel = useCallback(host => {
     if (!host) return;
     const panel = tree.getPanel();
     host.append(panel);
-    if (drawer.keyboard) panel.querySelector("h3").focus({preventScroll:true});
+    if (tree.getDrawer()?.keyboard) panel.querySelector("#dialog-name").focus({preventScroll:true});
     return () => { if (panel.parentNode === host) document.body.append(panel); };
+  }, [slot, tree]);
+  useLayoutEffect(() => {
+    if (drawer?.open && drawer.keyboard) tree.getPanel().querySelector("#dialog-name").focus({preventScroll:true});
   }, [drawer, tree]);
 
   if (!drawer) return null;
-  return <Drawer.Root open modal={false} disablePointerDismissal swipeDirection="down"
-    onOpenChange={open => {if (!open) tree.close();}}>
-    <Drawer.Portal container={drawer.slot}>
+  return <Drawer.Root open={drawer.open} modal={false} disablePointerDismissal swipeDirection="down"
+    onOpenChange={open => {if (!open) tree.close();}}
+    onOpenChangeComplete={open => {if (!open) tree.finishDrawerClose(slot);}}>
+    <Drawer.Portal container={slot}>
       <Drawer.Viewport className="person-drawer-viewport">
         <Drawer.Popup data-slot="drawer-content" className="person-drawer-popup" initialFocus={false} finalFocus={false}
-          aria-labelledby="dialog-name">
+          aria-labelledby="dialog-name" transition={transition.fade}>
           <div className="person-drawer-handle" aria-hidden="true"><span/></div>
           <Drawer.Content className="person-drawer-body" data-base-ui-swipe-ignore ref={attachPanel}/>
         </Drawer.Popup>
@@ -188,13 +209,16 @@ mountEditorControls();
 mountEditorOverlays();
 
 const settings = document.querySelector("#theme-control");
-if (settings) createRoot(settings).render(<ThemeMenu/>);
+if (settings) createRoot(settings).render(<FamilyAnimation><ThemeMenu/></FamilyAnimation>);
 const branchTabs = document.querySelector("#section-tabs");
 if (branchTabs && window.familyTreeUI) {
   const tree = window.familyTreeUI;
   mountNavigation(branchTabs, [...branchTabs.querySelectorAll("a")], "aria-current", link => link.hash.slice(1), link => link.click());
-  createRoot(document.querySelector("#person-search")).render(<PersonSearch tree={tree}/>);
-  createRoot(document.querySelector("#person-drawer")).render(<MobileDrawer tree={tree}/>);
+  const archiveTabs = document.querySelector("#archive-tabs");
+  if (archiveTabs) mountNavigation(archiveTabs, [...archiveTabs.querySelectorAll("a")], "aria-current",
+    link => link.hash.slice(1), link => link.click(), value => "chart-" + value);
+  createRoot(document.querySelector("#person-search")).render(<FamilyAnimation><PersonSearch tree={tree}/></FamilyAnimation>);
+  createRoot(document.querySelector("#person-drawer")).render(<FamilyAnimation><MobileDrawer tree={tree}/></FamilyAnimation>);
   document.documentElement.dataset.uiReady = "";
 }
 const modeTabs = document.querySelector("#editor-tabs");
@@ -205,10 +229,10 @@ if (personAccordion) {
   const sections = [...personAccordion.children].map(body => ({body, label:body.dataset.accordionLabel}));
   const root = createRoot(personAccordion);
   // Existing editor scripts bind directly to the fields inside these panels.
-  flushSync(() => root.render(<Accordion sections={sections}/>));
+  flushSync(() => root.render(<FamilyAnimation><Accordion sections={sections}/></FamilyAnimation>));
 }
 
 const contrast = window.familyContrastUI;
 if (contrast) for (const host of document.querySelectorAll(".contrast-control")) {
-  createRoot(host).render(<ContrastSwitch contrast={contrast}/>);
+  createRoot(host).render(<FamilyAnimation><ContrastSwitch contrast={contrast}/></FamilyAnimation>);
 }

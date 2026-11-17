@@ -13,16 +13,22 @@
 <script defer src="/preview/assets/portrait.js"></script>
 <script defer src="/crop.js"></script>
 <script defer src="/history.js"></script>
-<header>
-  <h1>Редактор родословной</h1>
-  <div class="actions">
+<header class="editor-header">
+  <div class="editor-heading">
+    <h1>Редактор родословной</h1>
     <div id="theme-control"></div>
-    <span id="status" role="status">Загружаем черновик…</span>
-    <button type="button" id="history" hidden data-slot="button" data-variant="ghost" data-size="sm">История<span id="history-badge" hidden></span></button>
-    <button type="button" id="access" hidden data-slot="button" data-variant="ghost" data-size="sm">Доступ</button>
-    <button type="button" id="logout" hidden data-slot="button" data-variant="ghost" data-size="sm">Выйти</button>
-    <button type="button" id="save" disabled data-slot="button" data-variant="outline" data-size="default">Сохранить черновик</button>
-    <button type="button" id="publish" disabled data-slot="button" data-variant="default" data-size="default">Опубликовать</button>
+  </div>
+  <span id="status" role="status">Загружаем черновик…</span>
+  <div class="editor-toolbar">
+    <div class="editor-utilities">
+      <button type="button" id="history" hidden data-slot="button" data-variant="ghost" data-size="sm">История<span id="history-badge" hidden></span></button>
+      <button type="button" id="access" hidden data-slot="button" data-variant="ghost" data-size="sm">Доступ</button>
+      <button type="button" id="logout" hidden data-slot="button" data-variant="ghost" data-size="sm">Выйти</button>
+    </div>
+    <div class="editor-save-actions">
+      <button type="button" id="save" disabled data-slot="button" data-variant="outline" data-size="default">Сохранить черновик</button>
+      <button type="button" id="publish" disabled data-slot="button" data-variant="default" data-size="default">Опубликовать</button>
+    </div>
   </div>
 </header>
 <main>
@@ -37,8 +43,8 @@
     </div>
     <section id="people" aria-label="Карточки">
       <div class="actions">
-        <label class="search-label">Поиск по семье<input type="search" id="search" placeholder="Имя или фамилия"></label>
-        <button type="button" id="new-person" data-slot="button" data-variant="outline" data-size="sm">Добавить</button>
+        <label>Поиск по семье<input type="search" id="search" placeholder="Имя или фамилия"></label>
+        <button type="button" id="new-person" data-slot="button" data-variant="outline" data-size="default">Добавить</button>
       </div>
       <label>Человек<select id="person"></select></label>
       <div id="review-note" hidden><p id="review-text"></p><button type="button" id="leave-review" data-slot="button" data-variant="ghost" data-size="sm">Выйти из проверки</button></div>

@@ -88,7 +88,7 @@ function showPerson() {
   const values = {
     cardName:label?.[0] || "", role:label?.[1] || "", name:modal?.[0] || node.name, maiden:modal?.[1] || "",
     dates:date?.[0] || "", year:date?.[1] || "", yearLabel:date?.[2] || "",
-    kind:node.kind, info:node.info, source:node.source, sourceLabel:node.sourceLabel
+    kind:node.kind ?? "", info:node.info ?? "", source:node.source ?? "", sourceLabel:node.sourceLabel ?? ""
   };
   personForm.elements.cardName.placeholder = node.name;
   personForm.elements.role.placeholder = node.sub || "Например, бабушка";
@@ -196,8 +196,10 @@ function showPhotos() {
     caption.addEventListener("input", () => {photo.caption = caption.value; changed();});
     const alt = element("input", "", {value:photo.alt || ""});
     alt.addEventListener("input", () => {photo.alt = alt.value; image.alt = alt.value; changed();});
-    const portrait = element("input", "", {type:"checkbox"});
-    updateEditorControl(portrait,{checked:Boolean(photo.portrait)});
+    const portraitLabelText = "Портрет на схеме";
+    const portrait = element("input", "", {
+      type:"checkbox", "aria-label":portraitLabelText, ...(photo.portrait ? {checked:""} : {})
+    });
     portrait.addEventListener("change", () => {
       if (portrait.checked) photos.forEach(p => {p.portrait = false;});
       photo.portrait = portrait.checked;
@@ -206,7 +208,7 @@ function showPhotos() {
     });
     const remove = element("button", "Убрать фото", {type:"button","data-variant":"destructive"});
     remove.addEventListener("click", () => {photos.splice(index,1);showPhotos();changed();});
-    const portraitLabel = createLabel("Портрет на схеме", portrait);
+    const portraitLabel = createLabel(portraitLabelText, portrait);
     portraitLabel.className = "check";
     item.append(image,createLabel("Подпись",caption),createLabel("Описание фотографии",alt),portraitLabel);
     if (photo.portrait) {
@@ -335,10 +337,12 @@ function drawRelation(value) {
       const group = element("fieldset");
       const choices = element("div", "", {class:"children-options",id:"children"});
       for (const node of [...current.nodes].sort((a,b) => displayName(a).localeCompare(displayName(b),"ru"))) {
-        const check = element("input","",{type:"checkbox",value:node.id});
-        updateEditorControl(check,{checked:original?.children.includes(node.id) || false});
+        const labelText = displayName(node);
+        const check = element("input","",{
+          type:"checkbox", value:node.id, "aria-label":labelText, ...(original?.children.includes(node.id) ? {checked:""} : {})
+        });
         const label = element("label","",{class:"check"});
-        label.append(controlHost(check),document.createTextNode(displayName(node)));
+        label.append(controlHost(check),document.createTextNode(labelText));
         choices.append(label);
       }
       group.append(element("legend","Дети"),choices);
@@ -753,7 +757,7 @@ function openReviewCard(context) {
   redrawPeople();
   setReview(context);
   const field = personForm.elements[context.field.target];
-  if (field?.tagName === "SELECT") selectControls.get(field)?.button.focus();
+  if (field?.tagName === "SELECT") focusSelect(field);
   else (field || personForm.elements.info).focus();
   return true;
 }

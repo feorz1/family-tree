@@ -1,8 +1,9 @@
-import React, {useMemo, useSyncExternalStore} from "react";
+import React, {useMemo, useRef, useSyncExternalStore} from "react";
 import {flushSync, createPortal} from "react-dom";
 import {createRoot} from "react-dom/client";
-import {AlertDialog} from "@base-ui/react/alert-dialog";
-import {Dialog} from "@base-ui/react/dialog";
+import {AlertDialog} from "@animate-ui/react/primitives/base-ui/alert-dialog";
+import {Dialog} from "@animate-ui/react/primitives/base-ui/dialog";
+import {FamilyAnimation} from "./animation";
 import {Button} from "./components";
 
 function prepareOverlay(source) {
@@ -64,6 +65,7 @@ function EditorOverlay({entry, children}) {
     <Dialog.Portal keepMounted>
       <Dialog.Backdrop className="ui-dialog-overlay" data-overlay-for={entry.id}/>
       <Dialog.Popup id={entry.id} data-slot={entry.sheet?"sheet-content":"dialog-content"}
+        data-side={entry.sheet ? "right" : undefined}
         className={entry.sheet?"ui-sheet-content":"ui-dialog-content"}
         ref={attach}
         initialFocus={()=>entry.id==="crop-dialog"
@@ -101,22 +103,25 @@ function answerConfirmation(answer) {
 
 function Confirmation({surface}) {
   const current = useSyncExternalStore(subscribeConfirmation,()=>confirmation);
-  if (!current || current.surface !== surface) return null;
-  return <AlertDialog.Root open onOpenChange={open=>{if (!open) answerConfirmation(false);}}>
+  const entry = current?.surface === surface ? current : null;
+  const cancelButton = useRef(null);
+  return <AlertDialog.Root open={Boolean(entry)} onOpenChange={open=>{if (!open && entry) answerConfirmation(false);}}>
     <AlertDialog.Portal>
-      <AlertDialog.Backdrop className="ui-dialog-overlay ui-confirm-overlay"/>
-      <AlertDialog.Popup className="ui-dialog-content ui-confirm" data-slot="alert-dialog-content"
-        initialFocus={()=>document.querySelector("[data-confirm-cancel]")}
-        finalFocus={()=>current.trigger?.isConnected ? current.trigger : false}>
-        <AlertDialog.Title className="ui-confirm-title">{current.title}</AlertDialog.Title>
-        {current.description && <AlertDialog.Description className="ui-confirm-description">
-          {current.description}
-        </AlertDialog.Description>}
-        <div className="ui-confirm-actions">
-          <AlertDialog.Close render={<Button data-confirm-cancel="" variant="outline"/>}>Отмена</AlertDialog.Close>
-          <Button variant={current.variant} onClick={()=>answerConfirmation(true)}>{current.action}</Button>
-        </div>
-      </AlertDialog.Popup>
+      {entry && <>
+        <AlertDialog.Backdrop className="ui-dialog-overlay ui-confirm-overlay"/>
+        <AlertDialog.Popup className="ui-dialog-content ui-confirm" data-slot="alert-dialog-content"
+          initialFocus={cancelButton}
+          finalFocus={()=>entry.trigger?.isConnected ? entry.trigger : false}>
+          <AlertDialog.Title className="ui-confirm-title">{entry.title}</AlertDialog.Title>
+          {entry.description && <AlertDialog.Description className="ui-confirm-description">
+            {entry.description}
+          </AlertDialog.Description>}
+          <div className="ui-confirm-actions">
+            <AlertDialog.Close render={<Button ref={cancelButton} data-confirm-cancel="" variant="outline"/>}>Отмена</AlertDialog.Close>
+            <Button variant={entry.variant} onClick={()=>answerConfirmation(true)}>{entry.action}</Button>
+          </div>
+        </AlertDialog.Popup>
+      </>}
     </AlertDialog.Portal>
   </AlertDialog.Root>;
 }
@@ -136,12 +141,12 @@ export function mountEditorOverlays() {
   document.body.append(host);
   const history = entries.get("history-dialog"), crop = entries.get("crop-dialog"), access = entries.get("access-dialog");
   const root = createRoot(host);
-  flushSync(()=>root.render(<>
+  flushSync(()=>root.render(<FamilyAnimation>
     <EditorOverlay entry={history}>
       <EditorOverlay entry={crop}/>
       <Confirmation surface={history.id}/>
     </EditorOverlay>
     <EditorOverlay entry={access}><Confirmation surface={access.id}/></EditorOverlay>
     <Confirmation/>
-  </>));
+  </FamilyAnimation>));
 }

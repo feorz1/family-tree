@@ -7,7 +7,7 @@
 <style>
 :root{--ink:#243631;--muted:#64766f;--green:#305c4e;--paper:#f5f7f3;--line:#cbd6ce;--red:#a83e3e;--redbg:#fff4f1;--blue:#426a85}*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}a{color:#315e50}button{font:inherit}h1{font:400 clamp(38px,5vw,64px)/1.05 Georgia,serif;margin:0;letter-spacing:-.03em}nav a{background:#e5ece5;color:#335648;text-decoration:none;border-radius:100px;padding:8px 14px;font-size:13px}nav a:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid #d69b3c;outline-offset:3px}.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:#4a5c54}.legend span{display:inline-flex;align-items:center;gap:6px}.swatch{width:20px;border-top:2px solid #6b8979}.swatch.red{border-top:2px dashed var(--red)}.swatch.blue{border-top:2px dashed #1499f7}.canvas{position:relative;transform-origin:top left;background-image:radial-gradient(#cbd8ce 0.7px,transparent .8px);background-size:24px 24px}.canvas svg{position:absolute;top:0;left:0;overflow:visible;pointer-events:none}.node{position:absolute;text-align:left;width:174px;min-height:82px;padding:10px 11px;border:1px solid #c9d7cd;border-radius:9px;color:var(--ink);background:#fff;box-shadow:0 3px 10px #2b493810;cursor:pointer}.node strong{font:600 14px/1.25 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;display:block}.node small{font-size:11px;line-height:1.3;color:#677970;display:block;margin-top:5px}.node .flag{display:block;font-size:10px;font-weight:700;color:#85622b;margin-top:4px}.node.uncertain{border-color:#c87070;background:var(--redbg)}.node.uncertain .flag{color:var(--red)}.node.document{background:#f3f8f3;border-color:#99b8a2}.node.adopt{border-color:#8eacbf;background:#f5f9fc}.node.group{border-style:dashed}.node.current{background:#254d3e;color:white;border-color:#254d3e}.node.current small{color:#d5e8dc}.node.current .flag{color:#cce7d4}.controls{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:9px}.controls button{background:white;border:1px solid #d4dfd6;border-radius:7px;color:#31594a;padding:5px 11px;cursor:pointer}.controls output{min-width:43px;text-align:center;font-size:12px;color:var(--muted)}.warning{color:#913f3f}dialog{border:0;border-radius:14px;padding:0;max-width:520px;width:calc(100% - 32px);box-shadow:0 18px 80px #10231b50;color:var(--ink)}dialog::backdrop{background:#13271dc0}.dialog-inner{padding:24px}dialog h3{font:400 28px/1.15 Georgia,serif;margin:0 36px 8px 0}dialog p{color:#52645b}.close{float:right;background:#eff3ee;border:0;border-radius:50%;width:32px;height:32px;cursor:pointer}dialog .state{font-size:12px;font-weight:700;color:var(--red)}dialog .state.family{color:#756329}.doc-links{display:flex;gap:12px;flex-wrap:wrap;font-size:13px}noscript{display:block;padding:20px;background:#fff4f1;color:#913f3f}
 
-.chart-shell{display:grid;grid-template-columns:190px minmax(0,1fr);gap:0;border:1px solid #d4dfd6;border-radius:14px;overflow:hidden;background:white}.timeline{background:#f1f5f0;border-right:1px solid #dae4da;padding:18px 10px 14px 16px;min-width:0}.timeline>strong{display:block;font-size:13px;color:#314d40}.timeline-hint{font-size:11px;color:#718078}.timeline-list{margin-top:16px;max-height:495px;overflow:auto;border-left:1px solid #b9cbbd;padding-left:9px}.timeline-item{display:grid;grid-template-columns:37px minmax(0,1fr);gap:7px;align-items:start;width:100%;text-align:left;border:0;background:transparent;border-radius:6px;padding:7px 3px;cursor:pointer;color:#3d5547;font-size:11px;line-height:1.25}.timeline-item:hover{background:#ddebe0}.timeline-item b{color:#6d8174;font-size:11px}.timeline-empty{color:#7a8a80;font-size:12px}.workspace{min-width:0;position:relative;background:#fff}.viewport{height:100%;overflow:auto;overscroll-behavior:contain;cursor:grab;touch-action:none;scrollbar-width:thin}.viewport.dragging{cursor:grabbing;user-select:none}.stage{position:relative;min-width:100%;min-height:100%;overflow:clip}.canvas{position:absolute;top:0;left:0}.canvas svg{pointer-events:none}.edge{transition:opacity .15s}.edge-halo{fill:none;stroke:#fff;stroke-width:9;pointer-events:none;stroke-linejoin:round;stroke-linecap:round}.edge-line{fill:none;stroke:#7b9c8c;stroke-width:2.5;pointer-events:none;stroke-linejoin:round;stroke-linecap:round}.edge-red .edge-line{stroke:#b24a4a;stroke-dasharray:7 5}.edge-blue .edge-line{stroke:#1499f7;stroke-dasharray:6 6}.edge.is-dim{opacity:.07}.link-hit{fill:none;stroke:transparent;stroke-width:20;pointer-events:stroke;cursor:pointer}.link-hit:focus{outline:none}.link-hit:focus-visible{stroke:#d8ad5d;stroke-opacity:.5}.node{height:96px;min-height:0;padding:7px 10px;border-radius:18px;overflow:hidden;z-index:2;transition:opacity .15s,box-shadow .15s}.node strong{max-height:34px;overflow:hidden}.node small{max-height:none;line-height:1.25;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.node .node-date{display:block;font-size:10px;font-weight:650;color:#47705a;margin-top:3px}.node .flag{font-size:9px;margin-top:2px}.node.is-dim{opacity:.15}.node.current .node-date{color:#d6eadb}.floating-controls{position:absolute;bottom:12px;right:12px;max-width:calc(100% - 24px);margin:0;background:#fff;border:1px solid #d8e1da;border-radius:9px;padding:4px;box-shadow:0 5px 18px #2643341c}.floating-controls button{border:0;padding:5px 8px}.floating-controls output{min-width:38px}.canvas-hint{font-size:12px;color:#718178;margin:7px 0 10px}.selection-panel{min-height:44px;padding:11px 14px;background:#eaf1eb;border:1px solid #d8e5da;border-radius:9px;font-size:13px;color:#617568}.selection-panel strong{font-size:14px;color:#2c4c3c;margin-right:10px}.selection-panel button{font:inherit;cursor:pointer}.detail-button,.clear-button{background:transparent;border:0;color:#35644e;text-decoration:underline;margin-right:10px;padding:2px}.related-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}.related-item{background:white;border:1px solid #d1dfd3;border-radius:6px;color:#3e5d4a;font-size:12px!important;padding:5px 8px}.related-item.is-uncertain{color:#a14141;border-color:#d9aaaa;background:#fff8f7}@media(max-width:700px){.chart-shell{grid-template-columns:126px minmax(0,1fr)}.timeline{padding:12px 6px 10px 8px}.timeline-list{padding-left:5px}.timeline-item{grid-template-columns:31px minmax(0,1fr);gap:3px;font-size:10px}.floating-controls{right:5px;bottom:6px;max-width:calc(100% - 10px);gap:4px}.floating-controls button{font-size:11px;padding:4px 5px}.canvas-hint{line-height:1.4}}
+.chart-shell{display:grid;grid-template-columns:190px minmax(0,1fr);gap:0;border:1px solid #d4dfd6;border-radius:14px;overflow:hidden;background:white}.timeline{background:#f1f5f0;border-right:1px solid #dae4da;padding:18px 10px 14px 16px;min-width:0}.timeline>strong{display:block;font-size:13px;color:#314d40}.timeline-hint{font-size:11px;color:#718078}.timeline-list{margin-top:16px;max-height:495px;overflow:auto;border-left:1px solid #b9cbbd;padding-left:9px}.timeline-item{display:grid;grid-template-columns:37px minmax(0,1fr);gap:7px;align-items:start;width:100%;text-align:left;border:0;background:transparent;border-radius:6px;padding:7px 3px;cursor:pointer;color:#3d5547;font-size:11px;line-height:1.25}.timeline-item:hover{background:#ddebe0}.timeline-item b{color:#6d8174;font-size:11px}.timeline-empty{color:#7a8a80;font-size:12px}.workspace{min-width:0;position:relative;background:#fff}.viewport{height:100%;overflow:auto;overscroll-behavior:contain;cursor:grab;touch-action:none;scrollbar-width:thin}.viewport.dragging{cursor:grabbing;user-select:none}.stage{position:relative;min-width:100%;min-height:100%;overflow:clip}.canvas{position:absolute;top:0;left:0}.canvas svg{pointer-events:none}.edge{transition:opacity .15s}.edge-halo{fill:none;stroke:#fff;stroke-width:9;pointer-events:none;stroke-linejoin:round;stroke-linecap:round}.edge-line{fill:none;stroke:#7b9c8c;stroke-width:2.5;pointer-events:none;stroke-linejoin:round;stroke-linecap:round}.edge-red .edge-line{stroke:#b24a4a;stroke-dasharray:7 5}.edge-blue .edge-line{stroke:#1499f7;stroke-dasharray:6 6}.edge.is-dim{opacity:.07}.link-hit{fill:none;stroke:transparent;stroke-width:20;pointer-events:stroke;cursor:pointer}.link-hit:focus{outline:none}.link-hit:focus-visible{stroke:#d8ad5d;stroke-opacity:.5}.node{height:96px;min-height:0;padding:7px 10px;border-radius:18px;overflow:hidden;z-index:2;transition:opacity .15s,box-shadow .15s}.node strong{max-height:34px;overflow:hidden}.node small{max-height:none;line-height:1.25;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.node .node-date{display:block;font-size:10px;font-weight:650;color:#47705a;margin-top:3px}.node .flag{font-size:9px;margin-top:2px}.node.is-dim{opacity:.15}.node.current .node-date{color:#d6eadb}.floating-controls{position:absolute;bottom:12px;right:12px;max-width:calc(100% - 24px);margin:0;background:#fff;border:1px solid #d8e1da;border-radius:9px;padding:4px;box-shadow:0 5px 18px #2643341c}.floating-controls button{border:0;padding:5px 8px}.floating-controls output{min-width:38px}.canvas-hint{font-size:12px;color:#718178;margin:7px 0 10px}.selection-panel{min-height:44px;padding:11px 14px;background:#eaf1eb;border:1px solid #d8e5da;border-radius:9px;font-size:13px;color:#617568}.selection-panel strong{font-size:14px;color:#2c4c3c;margin-right:10px}.selection-panel button{font:inherit;cursor:pointer}.detail-button,.clear-button{background:transparent;border:0;color:#35644e;text-decoration:underline;margin-right:10px;padding:2px}.related-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}.related-item{background:white;border:1px solid #d1dfd3;border-radius:6px;color:#3e5d4a;font-size:12px!important;padding:5px 8px}.related-item.is-uncertain{color:#a14141;border-color:#d9aaaa;background:#fff8f7}
 .swatch.spouse{border-top:2px solid #c18d2d}.edge-spouse .edge-line{stroke:#c18d2d}.edge-spouse.edge-red .edge-line{stroke:#b24a4a}.family-edge .edge-halo{stroke-width:0}
 .node.has-portrait{padding-right:52px}.node.has-portrait strong{font-size:12px;line-height:1.15;max-height:42px}.node-portrait{position:absolute;right:8px;top:9px;width:36px;height:48px;object-fit:cover;object-position:center 28%;border-radius:8px;background:#edf2ed}.person-photos{display:flex;flex-wrap:wrap;gap:12px;margin:14px 0}.person-photos:empty{display:none}.person-photos figure{margin:0;flex:1 1 180px;min-width:0}.person-photos a{display:block}.person-photos img{display:block;max-width:100%;max-height:300px;object-fit:contain;border-radius:9px;background:#f1f5f0}.person-photos figcaption{font-size:12px;color:#64766f;margin-top:4px}dialog{max-height:90vh;overflow-y:auto}
 .person-photos{display:block}.person-photos figure{width:100%}.person-photos img{margin:0 auto}.person-photos figcaption{text-align:center}.person-photos .photo-slide{touch-action:pan-y pinch-zoom}.photo-controls{display:flex;align-items:center;gap:4px;width:max-content;margin:14px auto 0;padding:4px;border:1px solid #dde6dd;border-radius:999px;background:#f5f8f4}.photo-controls button{display:grid;place-items:center;width:44px;height:44px;padding:0;border:0;border-radius:50%;background:transparent;color:#31594a;cursor:pointer;transition:background-color .15s,color .15s}.photo-controls button:hover{background:#e4eee5;color:#24493d}.photo-controls button:active{background:#d7e6da}.photo-controls button:focus-visible{outline:2px solid #c29140;outline-offset:2px}.photo-controls button svg{display:block;width:18px;height:18px}.photo-count{min-width:48px;text-align:center;color:#536b5d;font-size:12px;font-weight:600;letter-spacing:.04em;font-variant-numeric:tabular-nums}
@@ -24,7 +24,7 @@
 .node strong,.node.has-portrait strong{display:block;width:100%;max-height:38px;margin-top:10px;overflow:hidden;font:600 15px/1.23 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 .node small,.node.current small{display:block;width:100%;max-height:32px;margin-top:4px;overflow:hidden;white-space:normal;text-overflow:clip;font-size:12px;line-height:1.25;color:#63786e}
 .node:focus-visible{outline:3px solid #d69b3c;outline-offset:4px;border-radius:24px}
-@media(max-width:700px){
+@media(max-width:760px){
  .desktop-gesture-hint{display:none}.mobile-gesture-hint{display:inline}
  .chart-shell{grid-template-columns:minmax(0,1fr)}
  .timeline{position:relative;z-index:4;border-right:0;border-bottom:1px solid #dae4da;padding:0}
@@ -47,7 +47,6 @@
 .timeline-list{position:absolute;top:50px;left:0;right:0;z-index:5;margin:0;max-height:min(360px,calc(100% - 50px));overflow:auto;overscroll-behavior:contain;border:1px solid #ddd;border-radius:10px;padding:6px 10px;background:#fff;box-shadow:0 10px 24px #0000001a}
 .timeline.is-collapsed .timeline-list{display:none}
 .timeline-item{grid-template-columns:42px minmax(0,1fr);gap:8px;padding:9px 7px;font-size:12px}
-@media(max-width:700px){.timeline{inset:8px auto 8px 8px}}
 
 /* The optical-size axis matches the Medeo text and display cuts. */
 @font-face{font-family:"Medeo Sans";src:url("assets/fonts/MedeoSansVariable.woff2") format("woff2");font-style:normal;font-weight:100 900;font-display:swap}
@@ -61,8 +60,8 @@
 .dialog-header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
 .dialog-heading{min-width:0;flex:1;display:flex;flex-direction:column;gap:8px}
 .dialog-name-row{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:8px;row-gap:0;min-width:0}
-#person-details h3,.dialog-maiden{margin:0;overflow-wrap:anywhere;font:400 24px/1.2 "Medeo Sans",sans-serif;font-variation-settings:"opsz" 14}
-#person-details h3{color:#242424}.dialog-maiden{color:var(--muted)}
+#dialog-name,.dialog-maiden{margin:0;overflow-wrap:anywhere;font:400 24px/1.2 "Medeo Sans",sans-serif;font-variation-settings:"opsz" 14}
+#dialog-name{color:#242424}.dialog-maiden{color:var(--muted)}
 .dialog-relationship,.dialog-date{font:400 16px/1.2 "Medeo Sans",sans-serif;font-variation-settings:"opsz" 14}
 .dialog-relationship{color:var(--muted)}.dialog-date{color:#877130}
 .dialog-heading>:empty{display:none}
@@ -82,7 +81,7 @@
 #dialog-description{margin:0;color:var(--muted);font:400 16px/24px "Medeo Sans",sans-serif;font-variation-settings:"opsz" 32}
 #dialog-facts:empty{display:none}
 #dialog-facts{display:grid;gap:12px;margin:0;font:400 15px/22px "Medeo Sans",sans-serif;color:#383838}
-#dialog-facts h4{margin:0;font:600 16px/22px "Medeo Sans",sans-serif;color:#242424}
+#dialog-facts h3{margin:0;font:600 16px/22px "Medeo Sans",sans-serif;color:#242424}
 #dialog-facts ul{list-style:none;display:grid;gap:12px;margin:0;padding:0}
 #dialog-facts li{display:grid;grid-template-columns:48px minmax(0,1fr);gap:10px}
 #dialog-facts .fact-year{color:var(--muted);font-weight:600}
@@ -152,7 +151,7 @@ body.high-contrast{--ink:#111;--muted:#333;--paper:#fff;--line:#aaa}
 
 /* Only the selected diagram uses the space below the navigation. */
 body{height:100vh;height:100dvh;display:flex;flex-direction:column;overflow:hidden}
-header,main{--page-gutter:max(24px,calc((100% - 1420px)/2))}
+header,main{--page-gutter:max(clamp(12px,5vw - 26px,24px),calc((100% - 1420px)/2))}
 header{flex:none;padding:24px var(--page-gutter)}
 main{display:flex;flex-direction:column;flex:1;min-height:0;gap:24px;padding:24px var(--page-gutter)}
 .section-tabs{display:flex;flex:none;gap:8px;overflow-x:auto;scrollbar-width:thin;overscroll-behavior-x:contain}
@@ -165,7 +164,7 @@ main{display:flex;flex-direction:column;flex:1;min-height:0;gap:24px;padding:24p
 .sources{display:block;overflow:auto;overscroll-behavior:contain;padding:20px 24px;background:#fff;border:1px solid var(--line);border-radius:14px}
 .sources p{margin:0 0 12px;max-width:72ch}
 .sources .legend{margin-top:20px}
-@media(max-width:700px){
+@media(max-width:760px){
  header,main{--page-gutter:12px}
  header{padding-block:16px}
  h1{font-size:clamp(28px,7vw,38px)}
@@ -193,10 +192,6 @@ main{display:flex;flex-direction:column;flex:1;min-height:0;gap:24px;padding:24p
  #person-details{grid-row:2;margin:0 6px 6px}
  #person-details .dialog-inner{padding:14px}
 }
-@media(prefers-reduced-motion:no-preference){
- #person-details:not([hidden]){animation:person-details-enter 160ms ease-out}
- @keyframes person-details-enter{from{opacity:0;transform:translateY(6px)}}
-}
 </style>
 <link rel="stylesheet" href="assets/ui/theme.css">
 <link rel="stylesheet" href="assets/ui/tree.css">
@@ -218,7 +213,7 @@ main{display:flex;flex-direction:column;flex:1;min-height:0;gap:24px;padding:24p
   <section id="khramov" class="page-panel" aria-label="Храмовы" hidden><div class="chart-panel" id="chart-khramov"></div></section>
   <section id="boyko" class="page-panel" aria-label="Семья Сергея" hidden><div class="chart-panel" id="chart-boyko"></div></section>
   <section id="perikov" class="page-panel" aria-label="Периковы в метриках" hidden>
-    <nav class="section-tabs archive-tabs" aria-label="Схемы в метрических книгах">
+    <nav class="section-tabs archive-tabs" id="archive-tabs" aria-label="Схемы в метрических книгах">
       <a href="#perikov" aria-current="page">Периковы</a>
       <a href="#leviny">Левины</a>
     </nav>
@@ -242,7 +237,7 @@ main{display:flex;flex-direction:column;flex:1;min-height:0;gap:24px;padding:24p
     </div>
   </section>
 </main>
-<aside id="person-details" aria-label="Сведения о человеке" hidden><div class="dialog-inner"><div class="dialog-header"><div class="dialog-heading"><div class="dialog-name-row"><h3 id="dialog-name" tabindex="-1"></h3><span id="dialog-maiden" class="dialog-maiden"></span></div><div id="dialog-relationship" class="dialog-relationship"></div><div id="dialog-date" class="dialog-date"></div><div id="dialog-state" class="state"></div></div><button type="button" class="close" aria-label="Закрыть карточку"><img src="assets/icons/modal-close.svg" width="16" height="16" alt=""></button></div><div id="dialog-photos" class="person-photos"></div><p id="dialog-description"></p><section id="dialog-facts" aria-label="События и даты"></section><div id="dialog-links" class="doc-links"></div></div></aside>
+<aside id="person-details" aria-label="Сведения о человеке" hidden><div class="dialog-inner"><div class="dialog-header"><div class="dialog-heading"><div class="dialog-name-row"><h2 id="dialog-name" tabindex="-1"></h2><span id="dialog-maiden" class="dialog-maiden"></span></div><div id="dialog-relationship" class="dialog-relationship"></div><div id="dialog-date" class="dialog-date"></div><div id="dialog-state" class="state"></div></div><button type="button" class="close" aria-label="Закрыть карточку"><img src="assets/icons/modal-close.svg" width="16" height="16" alt=""></button></div><div id="dialog-photos" class="person-photos"></div><p id="dialog-description"></p><section id="dialog-facts" aria-label="События и даты"></section><div id="dialog-links" class="doc-links"></div></div></aside>
 <script src="assets/portrait.js"></script>
 <script src="data/tree.js"></script>
 <script>
@@ -266,7 +261,7 @@ const editPreview=typeof window!=='undefined'&&window.name==='family-tree-admin-
 let openDetails=null;
 const chartActions=new Map(),uiListeners=new Set();
 const isNarrow=typeof matchMedia==="function"?matchMedia("(max-width:760px)"):null;
-let activeChart="family",mobileDrawer=null;
+let activeChart="family",mobileDrawer=null,desktopExit=null;
 function notifyUI(){for(const listener of uiListeners)listener()}
 if(typeof window!=="undefined"&&!editPreview){
  window.familyTreeUI={
@@ -276,34 +271,81 @@ if(typeof window!=="undefined"&&!editPreview){
   select:id=>chartActions.get(activeChart)?.select(id),
   getDrawer:()=>mobileDrawer,
   getPanel:()=>personPanel,
-  close:()=>closePerson(true)
+  close:()=>closePerson(true),
+  finishDrawerClose(slot){
+   if(mobileDrawer?.slot!==slot||mobileDrawer.open)return;
+   resetDrawer();
+   hidePersonPanel();
+   notifyUI();
+  }
  };
  isNarrow?.addEventListener("change",()=>closePerson());
 }
 
+function resetDrawer(){
+ if(!mobileDrawer)return;
+ mobileDrawer.slot.classList.remove('is-closing');
+ mobileDrawer.slot.inert=false;
+ mobileDrawer=null;
+}
+function clearPanelExit(){
+ desktopExit=null;
+ personPanel.inert=false;
+ personPanel.removeAttribute?.('data-closing');
+}
+function hidePersonPanel(){
+ personPanel.hidden=true;
+ clearPanelExit();
+}
 function closePerson(restoreFocus=false){
- if(!openDetails)return;
- const {shell,trigger}=openDetails;
+ if(!openDetails){
+  if(!restoreFocus&&(mobileDrawer||desktopExit)){
+   resetDrawer();
+   hidePersonPanel();
+   notifyUI();
+  }
+  return;
+ }
+ const {shell,trigger,view}=openDetails;
  openDetails=null;
  trigger.setAttribute('aria-expanded','false');
- personPanel.hidden=true;
+ // Freeze an in-flight scroll to a person at the currently displayed camera position.
+ view.scrollTo?.({left:view.scrollLeft,top:view.scrollTop,behavior:'auto'});
  shell.classList.remove('details-open');
- mobileDrawer=null;
- notifyUI();
  if(restoreFocus)trigger.focus({preventScroll:true});
+ if(restoreFocus&&mobileDrawer?.open&&personPanel.closest('.person-drawer-body')){
+  mobileDrawer.slot.classList.add('is-closing');
+  mobileDrawer.slot.inert=true;
+  mobileDrawer={...mobileDrawer,open:false};
+ }else{
+  resetDrawer();
+  if(restoreFocus&&!isNarrow?.matches&&personPanel.getAnimations){
+   personPanel.inert=true;
+   personPanel.setAttribute('data-closing','');
+   const completion=Promise.allSettled(personPanel.getAnimations().map(animation=>animation.finished));
+   desktopExit=completion;
+   completion.then(()=>{if(desktopExit===completion)hidePersonPanel()});
+  }else hidePersonPanel();
+ }
+ notifyUI();
 }
 
-function openPerson(n,trigger,shell,placePerson,{keyboard=false,center=false}={}){
+function openPerson(n,trigger,shell,view,placePerson,{keyboard=false,center=false}={}){
  const original=trigger.getBoundingClientRect();
  const opening=openDetails?.shell!==shell;
  if(opening){
-  closePerson();
-  shell.prepend(personPanel);
+  // Reopening the same panel reverses its exit without moving or remounting it.
+  const reopening=mobileDrawer?.slot.parentElement===shell||desktopExit&&personPanel.parentElement===shell;
+  if(!reopening){
+   closePerson();
+   shell.prepend(personPanel);
+  }
+  clearPanelExit();
   shell.classList.add('details-open');
  }
  if(openDetails?.trigger!==trigger){
   openDetails?.trigger.setAttribute('aria-expanded','false');
-  openDetails={shell,trigger};
+  openDetails={shell,trigger,view};
   trigger.setAttribute('aria-expanded','true');
   personInfo(n);
   personPanel.hidden=false;
@@ -312,8 +354,10 @@ function openPerson(n,trigger,shell,placePerson,{keyboard=false,center=false}={}
  placePerson(trigger,original,{opening,center,keyboard});
  if(isNarrow?.matches&&document.documentElement.hasAttribute('data-ui-ready')){
   const slot=shell.querySelector('.person-drawer-slot');
-  if(mobileDrawer?.slot!==slot){
-   mobileDrawer={slot,keyboard};
+  if(mobileDrawer?.slot!==slot||!mobileDrawer.open){
+   slot.classList.remove('is-closing');
+   slot.inert=false;
+   mobileDrawer={slot,keyboard,open:true};
    notifyUI();
   }else if(keyboard)personName.focus({preventScroll:true});
  }else if(keyboard)personName.focus({preventScroll:true});
@@ -403,7 +447,7 @@ function factsForPerson(n){
 }
 function showDocumentFacts(n){
  const container=document.querySelector('#dialog-facts'),events=factsForPerson(n);container.replaceChildren();if(!events.length)return;
- const heading=document.createElement('h4'),list=document.createElement('ul');heading.textContent='События и даты';
+ const heading=document.createElement('h3'),list=document.createElement('ul');heading.textContent='События и даты';
  for(const fact of events){const li=document.createElement('li'),year=document.createElement('span'),body=document.createElement('span');year.className='fact-year';year.textContent=fact.year?String(fact.year):'—';body.className='fact-text';body.textContent=fact.text+(fact.url?' ':'');if(fact.url){const a=document.createElement('a');a.href=fact.url;a.textContent='Источник';body.append(a)}li.append(year,body);list.append(li)}
  container.append(heading,list);
 }
@@ -686,12 +730,22 @@ function render(c){
   scale=Math.min(1,Math.max(1,view.clientWidth-leftPadding)/c.w,whole?view.clientHeight/c.h:Infinity);
   resize();view.scrollLeft=0;view.scrollTop=0;
  };
- const control=(title,text,action)=>{const b=document.createElement('button');b.type='button';b.title=title;b.setAttribute('aria-label',title);b.textContent=text;b.addEventListener('click',action);toolbar.append(b)};
+ const control=(title,text,action)=>{
+  const button=document.createElement('button');
+  button.type='button';button.title=title;button.setAttribute('aria-label',title);
+  button.textContent=text;button.addEventListener('click',action);toolbar.append(button);
+  return button;
+ };
  control('Уменьшить масштаб','−',()=>zoom(1/1.2));toolbar.append(out);
  control('Увеличить масштаб','+',()=>zoom(1.2));
- control('Подогнать по ширине','По ширине',()=>fit(false));
+ const fitWidth=control('Подогнать по ширине','По ширине',()=>fit(false));
+ fitWidth.className='zoom-fit-width';
  control('Показать всю схему','Вся схема',()=>fit(true));
- control('Масштаб 100 процентов','100%',()=>{fitMode=null;scale=1;resize()});
+ const resetZoom=control('Масштаб 100 процентов','',()=>{fitMode=null;scale=1;resize()});
+ const resetPercent=document.createElement('span'),resetRatio=document.createElement('span');
+ resetPercent.className='zoom-reset-percent';resetPercent.textContent='100%';
+ resetRatio.className='zoom-reset-ratio';resetRatio.textContent='1:1';
+ resetZoom.append(resetPercent,resetRatio);
  function placePerson(trigger,original,{opening,center,keyboard}){
   if(opening&&fitMode!==null){fit(fitMode);return}
   const frame=view.getBoundingClientRect(),card=trigger.getBoundingClientRect();
@@ -788,7 +842,7 @@ function render(c){
  function restoreSelection(){if(selection?.person)showPerson(selection.person);else if(selection?.family)showFamily(selection.family,selection.child);else if(selection&&selection.edge!==undefined)showEdge(selection.edge);else clear()}
  function selectPerson(id,options){
   showPerson(id);
-  if(!editPreview)openPerson(map[id],nodeElements.get(id),shell,placePerson,options);
+  if(!editPreview)openPerson(map[id],nodeElements.get(id),shell,view,placePerson,options);
  }
  function showPerson(id){selection={person:id};const near=edges.map((e,i)=>({e,i})).filter(x=>x.e.a===id||x.e.b===id);const related=[...new Set(near.map(({e})=>e.a===id?e.b:e.a))];focusPeople([id,...related]);panel.replaceChildren();const title=document.createElement('strong');title.textContent=cardText(c.id,map[id])[0];panel.append(title);panel.append(button('Подробнее',()=>selectPerson(id,{keyboard:true}),'detail-button'));panel.append(button('Показать всё',clear,'clear-button'));const items=document.createElement('div');items.className='related-list';if(!near.length)items.textContent='Связанные люди пока не установлены.';for(const {e} of near){const other=e.a===id?e.b:e.a;const b=button(cardText(c.id,map[other])[0]+' · '+e.label,()=>showEdge(edges.indexOf(e)),'related-item'+(e.kind==='red'?' is-uncertain':''));items.append(b)}panel.append(items)}
  function showFamily(family,child=null){selection={family,child};const people=[...family.parents,...(child?[child]:family.children)];focusPeople(people,null,{family,child});panel.replaceChildren();const title=document.createElement('strong');title.textContent=family.label+(family.kind==='red'||family.uncertainChildren?.includes(child)?' · требует проверки':'');panel.append(title);panel.append(button('Показать всё',clear,'clear-button'));const items=document.createElement('div');items.className='related-list';for(const id of people)items.append(button(map[id].name,()=>showPerson(id),'related-item'+(family.kind==='red'?' is-uncertain':'')));panel.append(items)}

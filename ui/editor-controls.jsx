@@ -1,10 +1,12 @@
-import React, {useSyncExternalStore} from "react";
+import React, {useState, useSyncExternalStore} from "react";
 import {flushSync, createPortal} from "react-dom";
 import {createRoot} from "react-dom/client";
-import {Collapsible as CollapsiblePrimitive} from "@base-ui/react/collapsible";
-import {Checkbox as CheckboxPrimitive} from "@base-ui/react/checkbox";
+import {Collapsible as CollapsiblePrimitive} from "@animate-ui/react/primitives/base-ui/collapsible";
+import {Checkbox as CheckboxPrimitive} from "@animate-ui/react/primitives/base-ui/checkbox";
+import {Slider as SliderPrimitive} from "@animate-ui/react/primitives/base-ui/slider";
+import {transition} from "@animate-ui/react/utils/motion";
 import {Input as InputPrimitive} from "@base-ui/react/input";
-import {Slider as SliderPrimitive} from "@base-ui/react/slider";
+import {FamilyAnimation} from "./animation";
 import {Button, Icon} from "./components";
 import {inputStyle,textareaStyle} from "./nova";
 
@@ -46,9 +48,9 @@ function stateStore(initial, onChange) {
   };
 }
 
-function Checkbox({id, name, value, store, inputRef}) {
+function Checkbox({id, name, value, label, store, inputRef}) {
   const {checked} = useSyncExternalStore(store.subscribe, store.get);
-  return <CheckboxPrimitive.Root id={id} name={name} value={value} checked={checked} inputRef={inputRef}
+  return <CheckboxPrimitive.Root id={id} name={name} value={value} checked={checked} inputRef={inputRef} aria-label={label}
     data-slot="checkbox" className="ui-checkbox" onCheckedChange={next=>store.set({checked:next})}>
     <CheckboxPrimitive.Indicator className="ui-checkbox-indicator"><Icon name="check"/></CheckboxPrimitive.Indicator>
   </CheckboxPrimitive.Root>;
@@ -91,7 +93,7 @@ function buildControl(tag, attributes, text, source, inputRef) {
   const {value, ...other} = props;
   if (props.type === "checkbox") {
     const store = stateStore({checked:"checked" in props});
-    return <Checkbox id={props.id} name={props.name} value={value} store={store} inputRef={node=>{
+    return <Checkbox id={props.id} name={props.name} value={value} label={props["aria-label"]} store={store} inputRef={node=>{
       if (node) setters.set(node,store.set);
       inputRef(node);
     }}/>;
@@ -132,7 +134,7 @@ export function mountEditorControls() {
   const sources = [...document.querySelectorAll("button[data-variant]:not([data-dialog-close]),input,textarea")];
   const panels = sources.map(mountStaticControl);
   const root = createRoot(rootHost);
-  flushSync(()=>root.render(panels));
+  flushSync(()=>root.render(<FamilyAnimation>{panels}</FamilyAnimation>));
 
   new MutationObserver(records=>{
     if (!records.some(record=>record.removedNodes.length)) return;
@@ -148,7 +150,7 @@ export function mountEditorControls() {
 function mountDynamic(content) {
   const host = slot();
   const root = createRoot(host);
-  flushSync(()=>root.render(content));
+  flushSync(()=>root.render(<FamilyAnimation>{content}</FamilyAnimation>));
   dynamicControls.set(host,root);
   return host;
 }
@@ -161,16 +163,22 @@ window.editorControl = (tag, text, attributes) => {
   return node;
 };
 
-window.editorCollapsible = ({summary, content, attributes = {}, open = false}) => {
-  return mountDynamic(<CollapsiblePrimitive.Root {...inputProps(attributes)} defaultOpen={open} data-slot="collapsible">
+function Disclosure({summary, content, attributes = {}, open = false}) {
+  // Rebuilt history rows are measured synchronously to preserve the scroll anchor.
+  const [restored, setRestored] = useState(open);
+  return <CollapsiblePrimitive.Root {...inputProps(attributes)} defaultOpen={open} data-slot="collapsible"
+    onOpenChange={() => setRestored(false)}>
     <CollapsiblePrimitive.Trigger render={<Button variant="ghost" className="ui-disclosure-trigger"/>} data-disclosure-trigger="">
       <span className="ui-control-host" ref={node=>{if (node) node.append(...summary.childNodes);}}/>
       <Icon name="chevron"/>
     </CollapsiblePrimitive.Trigger>
     <CollapsiblePrimitive.Panel keepMounted data-slot="collapsible-content" className="ui-disclosure-content"
+      data-disclosure-restored={restored ? "" : undefined} transition={restored ? transition.instant : undefined}
       ref={node=>{if (node) node.append(content);}}/>
-  </CollapsiblePrimitive.Root>);
-};
+  </CollapsiblePrimitive.Root>;
+}
+
+window.editorCollapsible = props => mountDynamic(<Disclosure {...props}/>);
 window.controlHost = node => hosts.get(node) ?? node;
 window.updateEditorControl = (node, patch) => {
   Object.assign(node,patch);

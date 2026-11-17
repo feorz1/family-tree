@@ -1,9 +1,9 @@
 import React from "react";
-import {Accordion as AccordionPrimitive} from "@base-ui/react/accordion";
+import {Accordion as AccordionPrimitive} from "@animate-ui/react/primitives/base-ui/accordion";
 import {Button as ButtonPrimitive} from "@base-ui/react/button";
-import {Combobox as ComboboxPrimitive} from "@base-ui/react/combobox";
-import {Select as SelectPrimitive} from "@base-ui/react/select";
-import {Switch as SwitchPrimitive} from "@base-ui/react/switch";
+import {Combobox as ComboboxPrimitive} from "@animate-ui/react/primitives/base-ui/combobox";
+import {Select as SelectPrimitive} from "@animate-ui/react/primitives/base-ui/select";
+import {Switch as SwitchPrimitive} from "@animate-ui/react/primitives/base-ui/switch";
 import {buttonStyle,buttonVariants,buttonSizes,inputGroupStyle,selectStyle,switchStyle,switchThumbStyle} from "./nova";
 
 // shadcn/ui Base UI composition, styled with the shared CSS variables.

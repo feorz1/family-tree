@@ -21,9 +21,9 @@ function updateBadge(count) {
   button.setAttribute("aria-label", count ? "История правок, новых сохранений: "+count : "История правок");
 }
 
-function portrait(card) {
+function portrait(card, emptyLabel) {
   const container = element("div","",{class:"history-card"});
-  if (!card) return element("p","Карточки не было",{class:"history-empty"});
+  if (!card) return element("p",emptyLabel,{class:"history-empty"});
   const frame = element("div","",{class:"portrait-frame history-avatar"});
   if (card.portrait) {
     const img = element("img","",{src:"/preview/"+card.portrait,alt:"",loading:"lazy"});
@@ -92,7 +92,7 @@ function describeValue(field, value) {
 
 function comparison(title, before, after) {
   const block = element("div","",{class:"history-comparison"});
-  if (title) block.append(element("h5",title));
+  if (title) block.append(element("h4",title));
   const columns = element("div","",{class:"history-columns"});
   for (const [label,content] of [["Было",before],["Стало",after]]) {
     const cell = element("div","",{class:"history-value"});
@@ -188,14 +188,18 @@ function sectionStatus(entry, section) {
 function sectionView(entry, section, index, open) {
   const chartName = titles[section.chart];
   const summary = element("span");
-  summary.append(element("span",section.title || chartName || "Общие данные"));
-  if (section.title && chartName) summary.append(element("small",chartName));
+  const row = element("span","",{class:"history-row"});
+  const metadata = element("span","",{class:"history-row-meta"});
+  row.append(element("span",section.title || chartName || "Общие данные",{class:"history-row-title"}));
+  if (section.title && chartName) metadata.append(element("small",chartName,{class:"history-row-chart"}));
   const state = sectionStatus(entry, section);
   if (state) {
     const badge = element("small",state[0],{class:"history-state "+state[1]});
     if (entry.publishedAt && !entry.revertedBy) badge.title = "Публикация · " + dateLabel(entry.publishedAt);
-    summary.append(badge);
+    metadata.append(badge);
   }
+  if (metadata.childNodes.length) row.append(metadata);
+  summary.append(row);
   const contents = element("div","",{class:"history-fields"});
   if (section.refinements.length) {
     const chain = element("ul","",{class:"history-chain","aria-label":"Уточнения правки"});
@@ -207,7 +211,8 @@ function sectionView(entry, section, index, open) {
     contents.append(chain);
   }
   if (section.beforeCard || section.afterCard) {
-    contents.append(comparison(null,portrait(section.beforeCard),portrait(section.afterCard)));
+    contents.append(comparison(null,portrait(section.beforeCard,"Карточки не было"),
+      portrait(section.afterCard,"Карточка удалена")));
   }
   const canReview = !entry.publication && !entry.revertedBy && !section.acceptedAt &&
     (entry.role === "editor" || entry.action === "recovered");
@@ -249,18 +254,19 @@ function entryView(entry, openSections, initiallyOpen) {
   const card = element("article","",{class:"history-entry"});
   const head = element("div","",{class:"history-entry-head"});
   const meta = element("div","",{class:"history-meta"});
-  const title = element("h4",authorName(entry.actor));
+  const title = element("h3",authorName(entry.actor));
   if (entry.action === "recovered" && entry.actor) title.title = "Автор указан по твоему уточнению";
-  meta.append(title);
-  if (entry.action === "revert") meta.append(element("span","Отмена правки"));
-  if (entry.editedAt) meta.append(historyTime(entry.editedAt));
-  else if (entry.publishedAt) {
-    const date = element("span","Публикация · ");
-    date.append(historyTime(entry.publishedAt));
-    meta.append(date);
+  const details = element("p","",{class:"history-entry-details"});
+  const operation = entry.action === "revert" ? "Отмена правки" : !entry.editedAt && entry.publishedAt ? "Публикация" : null;
+  if (operation) details.append(element("span",operation));
+  const timestamp = entry.editedAt || entry.publishedAt;
+  if (timestamp) {
+    if (operation) details.append(element("span","·",{"aria-hidden":"true"}));
+    details.append(historyTime(timestamp));
   } else {
-    meta.append(element("span","До появления журнала",{title:"Для этой записи доступно сравнение версий без времени редактирования."}));
+    details.append(element("span","До появления журнала",{title:"Для этой записи доступно сравнение версий без времени редактирования."}));
   }
+  meta.append(title,details);
   head.append(meta);
   if (!entry.revertedBy) {
     const undo = formButton("Отменить сохранение",async trigger => {
@@ -285,11 +291,12 @@ function entryView(entry, openSections, initiallyOpen) {
     undo.append(icon);
     head.append(controlHost(undo));
   }
-  card.append(head);
+  const sections = element("div","",{class:"history-sections"});
   for (const section of entry.sections) {
     const key = entry.id + "-" + section.index;
-    card.append(sectionView(entry,section,section.index,initiallyOpen || openSections.has(key)));
+    sections.append(sectionView(entry,section,section.index,initiallyOpen || openSections.has(key)));
   }
+  card.append(head,sections);
   return card;
 }
 
