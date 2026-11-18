@@ -10,6 +10,7 @@ const relationForm = $("#relation-form");
 let data, revision, publicDirty, localDirty = false, busy = false, currentRole, reviewContext = null;
 let mode = "people", selectedPerson = "", route = null;
 let selectedPoint = null, addingPoint = false, canvasEditor = null;
+let stopContrastSync = () => {};
 
 function element(tag, text, attributes = {}) {
   if (tag === "button") return editorControl(tag,text,{"data-size":"sm",...attributes});
@@ -445,15 +446,25 @@ function clearRoute() {
   $("#route-form").hidden = true;
 }
 
+$("#preview-contrast").addEventListener("change", event => {
+  frame.contentWindow.familyContrastUI?.set(event.target.checked);
+});
+
 frame.addEventListener("load", () => {
+  stopContrastSync();stopContrastSync=()=>{};
   canvasEditor?.destroy();
   canvasEditor = null;
   clearRoute();
   const doc = frame.contentDocument;
   if (!doc.querySelector(".chart-shell")) return;
   const style = doc.createElement("style");
-  style.textContent = "header, #section-tabs, .archive-tabs{display:none!important}main{padding:0}.chart-shell{border:0;border-radius:0}";
+  style.textContent = "header, #section-tabs, .archive-tabs, .contrast-control{display:none!important}main{padding:0}.chart-shell{border:0;border-radius:0}";
   doc.head.append(style);
+  const contrast=frame.contentWindow.familyContrastUI;
+  if(contrast){
+    const sync=()=>updateEditorControl($("#preview-contrast"),{checked:contrast.get()});
+    stopContrastSync=contrast.subscribe(sync);sync();
+  }
   canvasEditor = mountCanvasEditor({
     doc,chart,data:()=>data,changed,route:()=>route,clearRoute,selectRoute,setMode,
     selectedPoint:()=>selectedPoint,setSelectedPoint:index=>{selectedPoint=index;},

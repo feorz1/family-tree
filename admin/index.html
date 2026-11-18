@@ -135,9 +135,14 @@
         <button type="button" data-align="middle" title="По центру по вертикали" data-slot="button" data-variant="outline" data-size="sm">Середина</button>
         <button type="button" data-align="bottom" title="По нижнему краю" data-slot="button" data-variant="outline" data-size="sm">Снизу</button>
       </div>
-      <p>Shift + клик — несколько карточек · Shift + перетаскивание — одна ось · стрелки — 1 px, с Shift — 10 px · пробел + перетаскивание — фон · Delete — точка или линия · ⌘/Ctrl Z — отмена</p>
     </div>
-    <div class="preview-bar"><span>Предпросмотр черновика</span><a id="public-link" target="_blank" rel="noopener">Открыть публичное древо ↗</a></div>
+    <div class="preview-bar">
+      <span>Предпросмотр черновика</span>
+      <div class="actions preview-actions">
+        <label class="check preview-contrast"><input type="checkbox" id="preview-contrast" aria-label="Контрастный режим">Контраст</label>
+        <a id="public-link" target="_blank" rel="noopener">Открыть публичное древо ↗</a>
+      </div>
+    </div>
     <iframe name="family-tree-admin-preview" id="preview" title="Схема в черновике"></iframe>
   </section>
 </main>
