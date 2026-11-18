@@ -3120,30 +3120,22 @@ const treeData = {
       "[\"evd1898\",\"evd_sis\",\"red\",\"возможно одна и та же Евдокия\"]": {
         "points": [
           [
-            3944,
-            953
+            3180,
+            1050.5
           ],
           [
-            3944,
-            146
-          ],
-          [
-            2158,
-            146
-          ],
-          [
-            2158,
-            1300
+            3180,
+            1186
           ],
           [
             2190,
-            1300
+            1186
           ]
         ],
         "radius": 8,
         "startPoint": [
-          3909,
-          953
+          3759,
+          1050.5
         ],
         "endPoint": [
           2190,
@@ -3152,8 +3144,8 @@ const treeData = {
         "orthogonal": true,
         "startNode": "evd1898",
         "start": {
-          "side": "right",
-          "fraction": 0.1
+          "side": "left",
+          "fraction": 0.75
         },
         "endNode": "evd_sis",
         "end": {
@@ -3165,19 +3157,11 @@ const treeData = {
         "points": [
           [
             2220,
-            1170
+            1210
           ],
           [
-            2922,
-            1170
-          ],
-          [
-            2922,
-            833
-          ],
-          [
-            3378,
-            833
+            3408,
+            1210
           ]
         ],
         "radius": 8,
@@ -3186,7 +3170,7 @@ const treeData = {
           1328
         ],
         "endPoint": [
-          3378,
+          3408,
           1328
         ],
         "orthogonal": true,
@@ -3198,7 +3182,7 @@ const treeData = {
         "endNode": "ni",
         "end": {
           "side": "top",
-          "fraction": 0.7
+          "fraction": 0.9
         }
       },
       "[\"aga_sis\",\"ni\",\"\",\"брат и сестра · по сообщению семьи\"]": {
@@ -3227,53 +3211,41 @@ const treeData = {
       "[\"vasi_sib\",\"ni\",\"\",\"братья · по сообщению семьи\"]": {
         "points": [
           [
-            2360,
+            2722,
             1463
           ],
           [
-            2360,
+            2722,
             1560
           ],
           [
-            2140,
+            3222,
             1560
           ],
           [
-            2140,
-            126
-          ],
-          [
-            3980,
-            126
-          ],
-          [
-            3980,
-            1300
-          ],
-          [
-            3408,
-            1300
+            3222,
+            1433
           ]
         ],
         "radius": 8,
         "startPoint": [
-          2517,
+          2667,
           1463
         ],
         "endPoint": [
-          3408,
-          1328
+          3273,
+          1433
         ],
         "orthogonal": true,
         "startNode": "vasi_sib",
         "start": {
-          "side": "left",
+          "side": "right",
           "fraction": 0.9
         },
         "endNode": "ni",
         "end": {
-          "side": "top",
-          "fraction": 0.9
+          "side": "left",
+          "fraction": 0.7
         }
       },
       "[\"iv\",\"aga_sis\",\"blue\",\"восприемница\"]": {
@@ -3307,57 +3279,33 @@ const treeData = {
       "[\"para_sis\",\"aga_sis\",\"blue\",\"восприемница Параскевы\"]": {
         "points": [
           [
-            2702,
-            1433
+            3238,
+            1463
           ],
           [
-            2702,
-            1580
-          ],
-          [
-            2126,
-            1580
-          ],
-          [
-            2126,
-            106
-          ],
-          [
-            5528,
-            106
-          ],
-          [
-            5528,
-            1950
-          ],
-          [
-            3654,
-            1950
-          ],
-          [
-            3654,
-            1853
+            3238,
+            1733
           ]
         ],
         "radius": 8,
         "startPoint": [
-          2895,
-          1433
+          3045,
+          1463
         ],
         "endPoint": [
-          3603,
-          1853
+          3453,
+          1733
         ],
         "orthogonal": true,
         "startNode": "aga_sis",
         "start": {
-          "side": "left",
-          "fraction": 0.7
+          "side": "right",
+          "fraction": 0.9
         },
         "endNode": "para_sis",
         "end": {
-          "side": "right",
-          "fraction": 0.9
+          "side": "left",
+          "fraction": 0.1
         }
       },
       "[\"val\",\"vitaly_fet\",\"\",\"братья · по сообщению семьи\"]": {
