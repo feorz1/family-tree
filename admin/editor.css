@@ -140,3 +140,5 @@ html:has(#history-dialog:not([hidden])){overflow-x:clip}
   .history-filters button,.history-undo{min-width:44px}
   .history-undo,#crop-dialog .ui-slider-control,#crop-dialog .ui-button{min-height:44px}
 }
+
+.canvas-toolbar{display:grid;gap:8px;flex:none}.canvas-toolbar p{font-size:12px}.canvas-toolbar #canvas-selection{font-size:12px;color:var(--muted-foreground)}.canvas-toolbar [data-align]{min-width:0;padding-inline:8px}

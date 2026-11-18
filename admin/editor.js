@@ -9,7 +9,7 @@ const personForm = $("#person-form");
 const relationForm = $("#relation-form");
 let data, revision, publicDirty, localDirty = false, busy = false, currentRole, reviewContext = null;
 let mode = "people", selectedPerson = "", route = null;
-let selectedPoint = null, addingPoint = false;
+let selectedPoint = null, addingPoint = false, canvasEditor = null;
 
 function element(tag, text, attributes = {}) {
   if (tag === "button") return editorControl(tag,text,{"data-size":"sm",...attributes});
@@ -143,6 +143,7 @@ $("#search").addEventListener("input", redrawPeople);
 $("#person").addEventListener("change", event => {
   selectedPerson = event.target.value;
   showPerson();
+  canvasEditor?.selectPerson(selectedPerson);
   centerPreviewOnPerson();
 });
 
@@ -380,6 +381,10 @@ relationForm.addEventListener("submit", event => {
       return status("Добавь ребёнка или выбери двух супругов", true);
     }
     const record = {...original,id:original?.id || newId("g"),parents,children,label,kind};
+    if(original && (JSON.stringify(original.parents)!==JSON.stringify(parents) || JSON.stringify(original.children)!==JSON.stringify(children))) {
+      for(const key of Object.keys(data.routes[current.id]||{}))if(key.startsWith("group:"+original.id+":"))delete data.routes[current.id][key];
+      resetCanvasHistory();
+    }
     if (record.uncertainChildren) record.uncertainChildren = record.uncertainChildren.filter(id => children.includes(id));
     if (original) current.groups[current.groups.indexOf(original)] = record; else current.groups.push(record);
     const oldPair = original?.parents;
@@ -424,6 +429,7 @@ function activeChart() {
   selectedPerson = "";
   $("#search").value = "";
   clearRoute();
+  canvasEditor?.clearSelection();
   redrawPeople();
   redrawRelations();
   frame.contentWindow.location.hash = chart().id;
@@ -440,41 +446,20 @@ function clearRoute() {
 }
 
 frame.addEventListener("load", () => {
+  canvasEditor?.destroy();
+  canvasEditor = null;
   clearRoute();
   const doc = frame.contentDocument;
   if (!doc.querySelector(".chart-shell")) return;
   const style = doc.createElement("style");
-  style.textContent = "header, #section-tabs, .archive-tabs{display:none!important}main{padding:0} .chart-shell{border:0;border-radius:0}.route-editor-overlay{z-index:3}.editing-point{pointer-events:all;cursor:move;touch-action:none;fill:#fff;stroke:#96400e;stroke-width:3}.editing-point.active{fill:#ffb06c}.editing-point.fixed{cursor:default;stroke:#777;pointer-events:none}";
+  style.textContent = "header, #section-tabs, .archive-tabs{display:none!important}main{padding:0}.chart-shell{border:0;border-radius:0}";
   doc.head.append(style);
-  doc.addEventListener("keydown", event => {
-    const hit = event.target.closest?.(".link-hit");
-    if (mode !== "routes" || !hit?.treeRoute || !["Enter"," "].includes(event.key)) return;
-    event.preventDefault();
-    event.stopPropagation();
-    selectRoute(hit);
-    $("#radius").focus();
-  },true);
-  doc.addEventListener("click", event => {
-    if (mode === "routes") {
-      if (addingPoint && route && event.target.closest(".viewport")) {
-        event.preventDefault();
-        event.stopPropagation();
-        insertPoint(event);
-        return;
-      }
-      const hit = event.target.closest(".link-hit");
-      if (!hit?.treeRoute) return;
-      event.preventDefault();
-      event.stopPropagation();
-      selectRoute(hit);
-    } else if (mode === "people") {
-      const card = event.target.closest("[data-person]");
-      if (!card) return;
-      selectedPerson = card.getAttribute("data-person");
-      $("#search").value = "";
-      redrawPeople();
-    }
-  },true);
+  canvasEditor = mountCanvasEditor({
+    doc,chart,data:()=>data,changed,route:()=>route,clearRoute,selectRoute,setMode,
+    selectedPoint:()=>selectedPoint,setSelectedPoint:index=>{selectedPoint=index;},
+    syncRouteControls,applyRoute,isAddingPoint:()=>addingPoint,insertPoint,
+    selectPerson(id){selectedPerson=id;$("#search").value="";redrawPeople();}
+  });
 });
 
 function selectRoute(hit) {
@@ -496,6 +481,7 @@ function selectRoute(hit) {
   $("#route-name").textContent = hit.getAttribute("aria-label");
   updateEditorControl($("#radius"),{value:override.radius});
   $("#radius-value").value = override.radius;
+  updateEditorControl($("#route-orthogonal"),{checked:override.orthogonal!==false});
   drawHandles();
 }
 
@@ -504,52 +490,8 @@ function canvasPoint(event) {
   return [Math.round(Math.max(0,local.x)),Math.round(Math.max(0,local.y))];
 }
 
-function attachment(rect, point) {
-  const [x,y] = point;
-  const edges = [
-    ["left", Math.abs(x-rect.x), (y-rect.y)/rect.size],
-    ["right", Math.abs(x-rect.x-rect.size), (y-rect.y)/rect.size],
-    ["top", Math.abs(y-rect.y), (x-rect.x)/rect.size],
-    ["bottom", Math.abs(y-rect.y-rect.size), (x-rect.x)/rect.size]
-  ];
-  const [side,,offset] = edges.sort((a,b) => a[1]-b[1])[0];
-  return {side,fraction:Math.round(Math.min(1,Math.max(0,offset))*100)/100};
-}
-
 function drawHandles() {
-  const {svg,handles,model,override} = route;
-  const points = model.pointsFor(override);
-  handles.replaceChildren();
-  for (const [index,point] of points.entries()) {
-    const end = index === 0 ? "start" : index === points.length-1 ? "end" : null;
-    const fixed = end && !model[end];
-    const circle = svg.ownerDocument.createElementNS(svg.namespaceURI,"circle");
-    circle.setAttribute("class","editing-point"+(fixed?" fixed":"")+(index===selectedPoint?" active":""));
-    circle.setAttribute("cx",point[0]);
-    circle.setAttribute("cy",point[1]);
-    circle.setAttribute("r",fixed?5:9);
-    handles.append(circle);
-    if (fixed) continue;
-    circle.addEventListener("pointerdown", event => {
-      event.preventDefault();
-      event.stopPropagation();
-      selectedPoint = index;
-      for (const marker of handles.children) marker.classList.toggle("active",marker === circle);
-      syncRouteControls();
-      circle.setPointerCapture(event.pointerId);
-    });
-    circle.addEventListener("pointermove", event => {
-      if (!circle.hasPointerCapture(event.pointerId)) return;
-      const point = canvasPoint(event);
-      if (end) override[end] = attachment(model[end],point);
-      else override.points[index-1] = point;
-      const next = model.pointsFor(override)[index];
-      circle.setAttribute("cx",next[0]);
-      circle.setAttribute("cy",next[1]);
-      applyRoute();
-    });
-  }
-  syncRouteControls();
+  canvasEditor?.drawHandles();
 }
 
 function syncRouteControls(){
@@ -563,7 +505,7 @@ function syncRouteControls(){
   $("#route-point").value = selection;
   syncSelect($("#route-point"));
   const end = selection === 0 ? "start" : selection === points.length-1 ? "end" : null;
-  for (const button of document.querySelectorAll("[data-nudge]")) button.disabled = Boolean(end && !route.model[end]);
+  for (const button of document.querySelectorAll("[data-nudge]")) button.disabled = false;
   $("#add-midpoint").disabled = selection === points.length-1 || route.override.points.length >= 60;
   $("#remove-point").disabled = Boolean(end);
 }
@@ -578,19 +520,16 @@ for (const button of document.querySelectorAll("[data-nudge]")) {
     const points = route.model.pointsFor(route.override);
     const delta = button.dataset.nudge.split(",").map(Number);
     const moved = points[index].map((value,axis)=>Math.max(0,value+delta[axis]));
-    const end = index === 0 ? "start" : index === points.length-1 ? "end" : null;
-    if (end) route.override[end] = attachment(route.model[end],moved);
-    else route.override.points[index-1] = moved;
     selectedPoint = index;
-    applyRoute();
+    canvasEditor.setRoutePoints(canvasEditor.movePoint(points,index,moved));
     drawHandles();
   });
 }
 $("#add-midpoint").addEventListener("click", () => {
   const index = Number($("#route-point").value), points = route.model.pointsFor(route.override);
-  route.override.points.splice(index,0,points[index].map((point,axis)=>Math.round((point+points[index+1][axis])/2)));
+  points.splice(index+1,0,points[index].map((point,axis)=>Math.round((point+points[index+1][axis])/2)));
   selectedPoint = index + 1;
-  applyRoute();
+  canvasEditor.setRoutePoints(points);
   drawHandles();
 });
 
@@ -612,11 +551,12 @@ function insertPoint(event) {
   };
   const best = existing.slice(1).map((next,index) => ({index,distance:distance(existing[index],next)}))
     .sort((a,b) => a.distance-b.distance)[0];
-  route.override.points.splice(best.index,0,point);
-  selectedPoint = best.index+1;
+  existing.splice(best.index+1,0,point);
+  const next = route.override.orthogonal===false ? existing : CanvasGeometry.orthogonal(existing);
+  selectedPoint = next.findIndex(p=>CanvasGeometry.same(p,point));
   addingPoint = false;
   $("#add-point").setAttribute("aria-pressed","false");
-  applyRoute();
+  canvasEditor.setRoutePoints(next);
   drawHandles();
 }
 
@@ -630,13 +570,25 @@ $("#add-point").addEventListener("click", event => {
   event.target.setAttribute("aria-pressed",String(addingPoint));
 });
 $("#remove-point").addEventListener("click", () => {
-  route.override.points.splice(Number($("#route-point").value)-1,1);
+  const points=route.model.pointsFor(route.override),index=Number($("#route-point").value);
+  if(index===0||index===points.length-1)return;
+  points.splice(index,1);
   selectedPoint = null;
-  applyRoute();
+  canvasEditor.setRoutePoints(points);
   drawHandles();
 });
 $("#reset-route").addEventListener("click", () => {
   const {model} = route;
+  if(route.override.frozen) {
+    route.override.radius=8;route.override.orthogonal=true;
+    updateEditorControl($("#radius"),{value:8});$("#radius-value").value=8;
+    updateEditorControl($("#route-orthogonal"),{checked:true});
+    const points=structuredClone(model.autoPoints);
+    canvasEditor.setRoutePoints(points);
+    selectedPoint=null;
+    drawHandles();
+    return;
+  }
   if (data.routes[model.chart]) delete data.routes[model.chart][model.key];
   model.update(null);
   route.override = {points:structuredClone(model.autoPoints.slice(1,-1)),radius:8};
@@ -734,6 +686,7 @@ async function syncDraft() {
   const updated = draft.revision !== revision;
   const stateChanged = publicDirty !== draft.dirty;
   if (updated) {
+    resetCanvasHistory();
     ({data,revision} = draft);
     redrawPeople();
     redrawRelations();

@@ -182,7 +182,7 @@ def section_key(path):
 def category(section, field):
     if field["kind"] == "photos":
         return "photos"
-    if field["kind"] == "route":
+    if field["kind"] in {"route", "position"}:
         return "routes"
     if section["person"] or field["label"] == "События и даты":
         return "cards"
@@ -213,6 +213,8 @@ def describe(before, after, patches):
             continue
         if table == "photoCatalog":
             label, kind = "Фотографии", "photos"
+        elif table == "charts" and path[-1] == "position":
+            label, kind = "Положение карточки на схеме", "position"
         elif table == "routes":
             label, kind = "Маршрут линии", "route"
         elif table == "documentaryFacts":

@@ -112,6 +112,8 @@ def validate(data, db):
             demand(all(isinstance(person.get(field, ""), str) for field in ("name", "sub", "info", "kind", "source", "sourceLabel")), "Некорректные поля карточки")
             demand(0 < len(person["name"].strip()) <= 160, "Укажите имя до 160 символов")
             demand(number(person["x"], 0, 30000) and number(person["y"], -450 if key == "family" else 0, 30000), "Некорректное положение карточки")
+            if "position" in person:
+                demand(isinstance(person["position"], list) and len(person["position"]) == 2 and all(number(n, 0, 99000) for n in person["position"]), "Некорректное положение карточки на схеме")
             demand(valid_link(person.get("source", "")), "Ссылка на источник должна начинаться с https:// или http://")
             demand(person.get("kind", "") in {"", "document", "uncertain", "adopt", "current", "group"}, "Неизвестная отметка карточки")
             photos = data["photoCatalog"].get(key, {}).get(person["id"], [])
@@ -155,6 +157,14 @@ def validate(data, db):
             points = override["points"]
             demand(isinstance(points, list) and len(points) <= 60, "Слишком много точек у одной линии")
             demand(all(len(point) == 2 and all(number(n, 0, 100000) for n in point) for point in points), "Точка вне схемы")
+            for field in ("startPoint", "endPoint"):
+                if field in override:
+                    demand(isinstance(override[field], list) and len(override[field]) == 2 and all(number(n, 0, 100000) for n in override[field]), "Конец линии вне схемы")
+            for field in ("hidden", "orthogonal", "frozen"):
+                if field in override:
+                    demand(type(override[field]) is bool, "Некорректная настройка линии")
+            if "children" in override:
+                demand(isinstance(override["children"], list) and all(isinstance(uid, str) and uid in ids[key] for uid in override["children"]), "Неизвестные участники общей линии")
             demand(number(override.get("radius", 8), 0, 80), "Недопустимое скругление")
             for field in ("start", "end"):
                 if field not in override:

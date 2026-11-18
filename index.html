@@ -260,6 +260,7 @@ const personName=document.querySelector('#dialog-name');
 const editPreview=typeof window!=='undefined'&&window.name==='family-tree-admin-preview';
 let openDetails=null;
 const chartActions=new Map(),uiListeners=new Set();
+if(editPreview)window.familyTreeEditor={charts:new Map()};
 const isNarrow=typeof matchMedia==="function"?matchMedia("(max-width:760px)"):null;
 let activeChart="family",mobileDrawer=null,desktopExit=null;
 function notifyUI(){for(const listener of uiListeners)listener()}
@@ -689,6 +690,8 @@ function render(c){
   if(byId.you&&byId.and&&byId.ol)byId.you.x=(byId.and.x+byId.ol.x)/2;
   if(byId.nast&&byId.ol&&byId.ser)byId.nast.x=(byId.ol.x+byId.ser.x)/2;
  }
+ // Explicit editor positions bypass the initial layout and parent centering.
+ for(const n of c.nodes)if(n.position){[n.x,n.y]=n.position}
  const host=document.querySelector('#chart-'+c.id), map=Object.fromEntries(c.nodes.map(n=>[n.id,n]));
  c.w=Math.max(c.w,...c.nodes.map(n=>n.x+NODE_W+100));c.h=Math.max(c.h,...c.nodes.map(n=>n.y+NODE_H+100));
  const shell=document.createElement('div');shell.className='chart-shell';
@@ -819,7 +822,7 @@ function render(c){
   if(!path){path=routeEdge(a,b,c.nodes,c.w,c.h,simpleFallback);if(path)simpleUsed.push(path)}
   simpleRoutes[i]=path;
  });
- const editedPaths=new Map();
+ const editedPaths=new Map(),editorModels=[];
  const unionFor=(e,f)=>e&&(!e.kind||e.label==='общие усыновители')&&f.parents.includes(e.a)&&f.parents.includes(e.b);
  function clear(){selection=null;panel.replaceChildren();const message=document.createElement('span');message.textContent='Выберите человека или связь, чтобы увидеть связанных людей.';panel.append(message);nodeElements.forEach(el=>el.classList.remove('is-dim','is-selected','is-related'));edgeElements.forEach(el=>el.group.classList.remove('is-dim','is-selected'))}
  function focusPeople(ids,edgeIndex=null,familySelection=null){
@@ -864,12 +867,13 @@ function render(c){
    return [x+d,anchor.side==='top'?y:y+PORTRAIT];
   };
   const pointsFor=override=>[
-   override?.start&&startNode?pointAt(startNode,override.start):path[0],
+   override?.start&&startNode?pointAt(startNode,override.start):override?.startPoint||path[0],
    ...(override?.points||path.slice(1,-1)),
-   override?.end&&endNode?pointAt(endNode,override.end):path.at(-1)
+   override?.end&&endNode?pointAt(endNode,override.end):override?.endPoint||path.at(-1)
   ];
   const paint=()=>{
    const override=chartRoutes[key];
+   group.style.display=override?.hidden?'none':'';
    const hasCustomGroup=groupId&&Object.keys(chartRoutes).some(k=>k.startsWith('group:'+groupId+':'));
    const d=override||hasCustomGroup?roundedPath(pointsFor(override),override?.radius??8):info.family?familyPath(info.family,info.role,path):roundedPath(path);
    for(const el of [halo,visible,hit])el.setAttribute('d',d);
@@ -880,24 +884,52 @@ function render(c){
    if(!editedPaths.has(bucket))editedPaths.set(bucket,[]);
    editedPaths.get(bucket).push(paint);
    hit.treeRoute={
-    key,chart:c.id,pointsFor,autoPoints:path,
-    start:startNode?{x:map[startNode].x+PORTRAIT_INSET,y:map[startNode].y,size:PORTRAIT}:null,
-    end:endNode?{x:map[endNode].x+PORTRAIT_INSET,y:map[endNode].y,size:PORTRAIT}:null,
+    key,chart:c.id,pointsFor,autoPoints:path,hit,group,
+    startNode,endNode,familyId:groupId,role:info.role,parents:info.family?.parents||null,
+    members:info.family?[...info.family.parents,...info.family.children]:[startNode,endNode],routeChildren:info.children||[],
+    union:info.edge&&families.some(f=>unionFor(info.edge,f))?[info.edge.a,info.edge.b]:null,
+    get start(){return startNode?{x:map[startNode].x+PORTRAIT_INSET,y:map[startNode].y,size:PORTRAIT}:null},
+    get end(){return endNode?{x:map[endNode].x+PORTRAIT_INSET,y:map[endNode].y,size:PORTRAIT}:null},
     update(override){
      if(override)chartRoutes[key]=override;else delete chartRoutes[key];
      editedPaths.get(bucket).forEach(repaint=>repaint());
     }
    };
+   editorModels.push(hit.treeRoute);
   }
   const select=()=>{closePerson();if(info.family)showFamily(info.family,info.child||null);else showEdge(info.index)};
   hit.addEventListener('click',ev=>{ev.stopPropagation();select()});hit.addEventListener('keydown',ev=>{if(ev.key==='Enter'||ev.key===' '){ev.preventDefault();select()}});group.append(halo,visible,hit);svg.append(group);edgeElements.push({group,...info})
  }
- const drawIndividual=e=>{const index=edges.indexOf(e),path=simpleRoutes[index];if(!path){console.warn('Не удалось провести связь',c.id,e.a,e.b);return}addPath(path,{edge:e,index})};
+ const drawIndividual=e=>{
+  const index=edges.indexOf(e),saved=routes[c.id]?.[JSON.stringify([e.a,e.b,e.kind,e.label])];
+  let path=simpleRoutes[index];
+  if(!path&&saved){
+   const endpoint=(id,anchor,fallback)=>{
+    if(!anchor)return fallback;
+    const n=map[id],x=n.x+PORTRAIT_INSET,y=n.y,d=PORTRAIT*anchor.fraction;
+    return anchor.side==='left'?[x,y+d]:anchor.side==='right'?[x+PORTRAIT,y+d]:[x+d,anchor.side==='top'?y:y+PORTRAIT];
+   };
+   path=[endpoint(e.a,saved.start,saved.startPoint),...saved.points,endpoint(e.b,saved.end,saved.endPoint)];
+   if(!path[0]||!path.at(-1))path=null;
+  }
+  if(!path){console.warn('Не удалось провести связь',c.id,e.a,e.b);return}
+  addPath(path,{edge:e,index});
+ };
  // Union lines sit below their own family stems; unrelated lines use a white halo above them
  // so crossings read as separate connections rather than accidental junctions.
  const unionEdges=individual.filter(e=>families.some(f=>unionFor(e,f)));
  for(const e of unionEdges)drawIndividual(e);
- for(const f of families){addPath(f.stem,{family:f,role:'stem',children:f.children});for(const [segmentIndex,segment] of f.bus.entries()){const kind=segment.children.length&&segment.children.every(id=>f.uncertainChildren?.includes(id))?'red':'';addPath(segment.points,{family:f,role:'bus',segment:String(segmentIndex),children:segment.children,kind})}for(const branch of f.branches){const kind=f.uncertainChildren?.includes(branch.child)?'red':'';addPath(branch.points,{family:f,role:'branch',children:[branch.child],child:branch.child,kind})}}
+ for(const f of families){
+  addPath(f.stem,{family:f,role:'stem',children:f.children});
+  // Bus indices come from the saved topology once a family has been moved.
+  // Recalculating their count from the new X coordinates would create extra lines.
+  const saved=routes[c.id]||{},prefix='group:'+f.id+':bus:';
+  const segments=saved['group:'+f.id+':stem:']?.frozen
+   ?Object.entries(saved).filter(([key,value])=>key.startsWith(prefix)&&value.frozen).map(([key,value])=>({index:key.slice(prefix.length),points:[value.startPoint,...value.points,value.endPoint],children:(value.children||f.children).filter(id=>f.children.includes(id))}))
+   :f.bus.map((segment,index)=>({...segment,index:String(index)}));
+  for(const segment of segments){const kind=segment.children.length&&segment.children.every(id=>f.uncertainChildren?.includes(id))?'red':'';addPath(segment.points,{family:f,role:'bus',segment:segment.index,children:segment.children,kind})}
+  for(const branch of f.branches){const kind=f.uncertainChildren?.includes(branch.child)?'red':'';addPath(branch.points,{family:f,role:'branch',children:[branch.child],child:branch.child,kind})}
+ }
  for(const e of individual)if(!unionEdges.includes(e))drawIndividual(e);
  for(const n of c.nodes){n.chartId=c.id;n.photos=(photoCatalog[c.id]||{})[n.id]||[];const b=document.createElement('button');b.type='button';b.className='node '+(n.kind||'');b.setAttribute('data-person',n.id);const [displayName,relationship]=cardText(c.id,n),portrait=n.photos.find(photo=>photo.portrait);const avatar=document.createElement('span');avatar.className='node-avatar';avatar.setAttribute('aria-hidden','true');if(portrait){b.classList.add('has-portrait');const img=document.createElement('img');img.className='node-portrait';img.src=portrait.src;img.alt='';img.loading='lazy';if(portrait.crop)framePortrait(img,portrait.crop);avatar.append(img)}else avatar.textContent=cardInitials(displayName);b.append(avatar);b.style.left=n.x+'px';b.style.top=n.y+'px';b.setAttribute('aria-label',displayName+(relationship?', '+relationship:'')+(n.kind==='uncertain'?', связь требует проверки':''));if(!editPreview){b.setAttribute('aria-controls','person-details');b.setAttribute('aria-expanded','false')}const name=document.createElement('strong');name.textContent=displayName;const sub=document.createElement('small');sub.textContent=relationship;b.append(name,sub);let touchStart=null,touchMoved=false;
  b.addEventListener('pointerdown',e=>{touchMoved=false;touchStart=e.pointerType==='touch'?{x:e.clientX,y:e.clientY}:null});
@@ -910,6 +942,14 @@ function render(c){
   selectPerson(n.id,{keyboard});
  });
  canvas.append(b);nodeElements.set(n.id,b)}
+ if(editPreview)window.familyTreeEditor.charts.set(c.id,{
+  nodes:c.nodes,nodeElements,models:editorModels,canvas,view,svg,clear,
+  setPositions(positions){
+   for(const [id,point] of Object.entries(positions)){const n=map[id],el=nodeElements.get(id);if(!n||!el)continue;[n.x,n.y]=point;el.style.left=n.x+'px';el.style.top=n.y+'px'}
+   c.w=Math.max(c.w,...c.nodes.map(n=>n.x+NODE_W+100));c.h=Math.max(c.h,...c.nodes.map(n=>n.y+NODE_H+100));
+   canvas.style.width=c.w+'px';canvas.style.height=c.h+'px';svg.setAttribute('width',c.w);svg.setAttribute('height',c.h);resize();
+  }
+ });
  const dated=c.nodes.filter(n=>(births[c.id]||{})[n.id]?.[1]).sort((a,b)=>Number(births[c.id][a.id][1])-Number(births[c.id][b.id][1]));
  if(!dated.length){const empty=document.createElement('p');empty.className='timeline-empty';empty.textContent='Даты рождения пока уточняются';timelineList.append(empty)}
  for(const n of dated){const item=document.createElement('button');item.type='button';item.className='timeline-item';const year=document.createElement('b');year.textContent=births[c.id][n.id][2]||births[c.id][n.id][1];const name=document.createElement('span');name.textContent=cardText(c.id,n)[0];item.append(year,name);item.addEventListener('click',e=>{
@@ -922,7 +962,7 @@ function render(c){
  });timelineList.append(item)}
  view.addEventListener('wheel',e=>{if(!e.ctrlKey&&!e.metaKey)return;e.preventDefault();const rect=view.getBoundingClientRect();zoom(Math.exp(-e.deltaY*.003),e.clientX-rect.left,e.clientY-rect.top)},{passive:false});
  const pointers=new Map();let drag=null,pinch=null,suppressClick=false;const distance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
- view.addEventListener('pointerdown',e=>{setTimelineOpen(false);if(e.button!==0||e.target.closest('.node,.link-hit,.floating-controls'))return;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===1)suppressClick=false;view.setPointerCapture(e.pointerId);if(pointers.size===1){drag={x:e.clientX,y:e.clientY,left:view.scrollLeft,top:view.scrollTop};view.classList.add('dragging')}else if(pointers.size===2){suppressClick=true;const [a,b]=[...pointers.values()];pinch={distance:distance(a,b),scale};drag=null}});
+ view.addEventListener('pointerdown',e=>{setTimelineOpen(false);if(e.button!==0||e.target.closest('.node,.link-hit,.floating-controls,.editing-point,.editing-segment'))return;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pointers.size===1)suppressClick=false;view.setPointerCapture(e.pointerId);if(pointers.size===1){drag={x:e.clientX,y:e.clientY,left:view.scrollLeft,top:view.scrollTop};view.classList.add('dragging')}else if(pointers.size===2){suppressClick=true;const [a,b]=[...pointers.values()];pinch={distance:distance(a,b),scale};drag=null}});
  view.addEventListener('pointermove',e=>{if(!pointers.has(e.pointerId))return;pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});if(pinch&&pointers.size>=2){const [a,b]=[...pointers.values()],rect=view.getBoundingClientRect(),next=pinch.scale*distance(a,b)/Math.max(1,pinch.distance);zoom(next/scale,(a.x+b.x)/2-rect.left,(a.y+b.y)/2-rect.top)}else if(drag&&pointers.size===1){if(Math.hypot(e.clientX-drag.x,e.clientY-drag.y)>5)suppressClick=true;view.scrollLeft=drag.left-(e.clientX-drag.x);view.scrollTop=drag.top-(e.clientY-drag.y)}});
  const stopPointer=e=>{pointers.delete(e.pointerId);pinch=null;if(pointers.size===1){const [remaining]=pointers.values();drag={x:remaining.x,y:remaining.y,left:view.scrollLeft,top:view.scrollTop}}else{drag=null;view.classList.remove('dragging')}};for(const ev of ['pointerup','pointercancel','lostpointercapture'])view.addEventListener(ev,stopPointer);
  view.addEventListener('click',e=>{if(suppressClick){suppressClick=false;return}if(!e.target.closest('.node,.link-hit')){closePerson();clear()}});

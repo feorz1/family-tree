@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="/editor.css">
 <link rel="stylesheet" href="/preview/assets/ui/editor.css">
 <script defer src="/preview/assets/ui/components.js"></script>
+<script defer src="/preview/assets/ui/canvas-editor.js"></script>
 <script defer src="/editor.js"></script>
 <script defer src="/access.js"></script>
 <script defer src="/preview/assets/portrait.js"></script>
@@ -91,10 +92,16 @@
       </form>
     </section>
     <section id="routes" aria-label="Маршруты" hidden>
-      <p>Выбери линию на схеме мышью или клавишами Tab и Enter.</p>
+      <p>Выберите линию. Перетаскивайте точки и середины отрезков. Shift — движение по одной оси, Alt — без привязок.</p>
+      <label class="check"><input type="checkbox" id="canvas-snap" checked> Привязки и направляющие</label>
+      <button type="button" id="restore-lines" data-slot="button" data-variant="outline" data-size="sm">Показать удалённые линии</button>
       <div id="route-form" hidden>
         <h2 id="route-name"></h2>
-        <p>Перетащи точку на схеме или выбери её в списке и сдвинь кнопками.</p>
+        <label class="check"><input type="checkbox" id="route-orthogonal" checked> Прямоугольные повороты</label>
+        <div class="actions">
+          <button type="button" id="align-point-x" data-slot="button" data-variant="outline" data-size="sm">Точка по вертикали</button>
+          <button type="button" id="align-point-y" data-slot="button" data-variant="outline" data-size="sm">Точка по горизонтали</button>
+        </div>
         <label>Точка маршрута<select id="route-point"></select></label>
         <div class="actions" aria-label="Сдвинуть точку">
           <button type="button" data-nudge="-10,0" aria-label="Сдвинуть точку влево" data-slot="button" data-variant="outline" data-size="icon-sm">←</button>
@@ -108,11 +115,28 @@
           <button type="button" id="add-midpoint" data-slot="button" data-variant="outline" data-size="default">Вставить после выбранной</button>
           <button type="button" id="remove-point" disabled data-slot="button" data-variant="outline" data-size="default">Убрать точку</button>
         </div>
+        <button type="button" id="delete-line" data-slot="button" data-variant="destructive" data-size="sm">Удалить линию · Delete</button>
         <button type="button" id="reset-route" data-slot="button" data-variant="outline" data-size="default">Восстановить автоматический маршрут</button>
       </div>
     </section>
   </aside>
   <section class="preview" aria-label="Предпросмотр черновика">
+    <div class="canvas-toolbar" aria-label="Управление схемой">
+      <div class="actions">
+        <button type="button" id="canvas-undo" disabled title="Отменить · ⌘/Ctrl Z" data-slot="button" data-variant="outline" data-size="sm">Отменить</button>
+        <button type="button" id="canvas-redo" disabled title="Повторить · ⌘/Ctrl Shift Z" data-slot="button" data-variant="outline" data-size="sm">Повторить</button>
+        <span id="canvas-selection" role="status">Перетащите карточку, чтобы переместить</span>
+      </div>
+      <div class="actions" aria-label="Выровнять выбранные карточки">
+        <button type="button" data-align="left" title="По левому краю" data-slot="button" data-variant="outline" data-size="sm">Слева</button>
+        <button type="button" data-align="center" title="По центру по горизонтали" data-slot="button" data-variant="outline" data-size="sm">Центр</button>
+        <button type="button" data-align="right" title="По правому краю" data-slot="button" data-variant="outline" data-size="sm">Справа</button>
+        <button type="button" data-align="top" title="По верхнему краю" data-slot="button" data-variant="outline" data-size="sm">Сверху</button>
+        <button type="button" data-align="middle" title="По центру по вертикали" data-slot="button" data-variant="outline" data-size="sm">Середина</button>
+        <button type="button" data-align="bottom" title="По нижнему краю" data-slot="button" data-variant="outline" data-size="sm">Снизу</button>
+      </div>
+      <p>Shift + клик — несколько карточек · Shift + перетаскивание — одна ось · стрелки — 1 px, с Shift — 10 px · пробел + перетаскивание — фон · Delete — точка или линия · ⌘/Ctrl Z — отмена</p>
+    </div>
     <div class="preview-bar"><span>Предпросмотр черновика</span><a id="public-link" target="_blank" rel="noopener">Открыть публичное древо ↗</a></div>
     <iframe name="family-tree-admin-preview" id="preview" title="Схема в черновике"></iframe>
   </section>

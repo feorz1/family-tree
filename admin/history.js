@@ -53,7 +53,7 @@ function summaryText(value) {
 
 function describeValue(field, value) {
   if (value == null || value === "" || (Array.isArray(value) && !value.length)) {
-    return element("p",field.kind === "route" ? "Автоматический маршрут" : "Пусто",{class:"history-empty"});
+    return element("p",field.kind === "route" ? "Автоматический маршрут" : field.kind === "position" ? "Исходное положение" : "Пусто",{class:"history-empty"});
   }
   if (field.kind === "photos") {
     const list = element("ul","",{class:"history-photos"});
@@ -70,8 +70,10 @@ function describeValue(field, value) {
     }
     return list;
   }
+  if (field.kind === "position") return element("p", "X: "+value[0]+" · Y: "+value[1]);
   if (field.kind === "route") {
     const info = element("div","",{class:"history-route"});
+    if (value.hidden) info.append(element("p","Линия удалена со схемы · родство сохранено"));
     info.append(element("p","Точки изгиба: "+value.points.length+" · Скругление: "+(value.radius ?? 8)));
     if (value.points.length || value.start || value.end) {
       const coordinates = value.points.map(point=>point.join(", ")).join(" · ");

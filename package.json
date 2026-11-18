@@ -2,11 +2,12 @@
   "name": "family-tree",
   "private": true,
   "scripts": {
-    "build:ui": "esbuild ui/index.jsx --bundle --minify --define:process.env.NODE_ENV=\"'production'\" --legal-comments=eof --outfile=assets/ui/components.js && tailwindcss -i ui/theme.css -o assets/ui/theme.css --minify"
+    "build:ui": "esbuild ui/index.jsx --bundle --minify --define:process.env.NODE_ENV=\"'production'\" --legal-comments=eof --outfile=assets/ui/components.js && tailwindcss -i ui/theme.css -o assets/ui/theme.css --minify && esbuild ui/canvas-editor.js --bundle --minify --legal-comments=eof --outfile=assets/ui/canvas-editor.js"
   },
   "dependencies": {
     "@animate-ui/react": "2.4.6",
     "@base-ui/react": "1.9.0",
+    "interactjs": "1.10.28",
     "motion": "14.14.0",
     "react": "19.3.1",
     "react-dom": "19.3.1"
