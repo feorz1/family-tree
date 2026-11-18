@@ -1,6 +1,7 @@
 // All coordinates are canvas coordinates, independent of browser zoom and scrolling.
 const copy = points => points.map(point => [...point]);
 const same = (a, b) => Math.hypot(a[0]-b[0], a[1]-b[1]) < .01;
+const isOrthogonal = points => points.slice(1).every((p,i)=>Math.abs(p[0]-points[i][0])<1e-6||Math.abs(p[1]-points[i][1])<1e-6);
 function attachment(rect, [x,y]) {
   const candidates = [
     ['left',Math.abs(x-rect.x),(y-rect.y)/rect.size],
@@ -56,6 +57,28 @@ function moveEnds(points, start, end, squared = true) {
 function constrain(delta, shift) {
   return !shift ? delta : Math.abs(delta[0]) >= Math.abs(delta[1]) ? [delta[0],0] : [0,delta[1]];
 }
+function pathAnchor(points, point) {
+  const lengths=points.slice(1).map((p,i)=>Math.hypot(p[0]-points[i][0],p[1]-points[i][1]));
+  const total=lengths.reduce((a,b)=>a+b,0);
+  let travelled=0,best={distance:Infinity,point:[...points[0]],fraction:0};
+  for(let i=0;i<lengths.length;i++){
+    const a=points[i],b=points[i+1],dx=b[0]-a[0],dy=b[1]-a[1];
+    const t=Math.max(0,Math.min(1,((point[0]-a[0])*dx+(point[1]-a[1])*dy)/(lengths[i]**2||1)));
+    const candidate=[a[0]+t*dx,a[1]+t*dy],distance=Math.hypot(point[0]-candidate[0],point[1]-candidate[1]);
+    if(distance<best.distance)best={point:candidate,distance,fraction:total?(travelled+t*lengths[i])/total:0};
+    travelled+=lengths[i];
+  }
+  return best;
+}
+function pointOnPath(points, fraction) {
+  const lengths=points.slice(1).map((p,i)=>Math.hypot(p[0]-points[i][0],p[1]-points[i][1]));
+  let remaining=lengths.reduce((a,b)=>a+b,0)*Math.max(0,Math.min(1,fraction));
+  for(let i=0;i<lengths.length;i++){
+    if(remaining<=lengths[i])return points[i].map((v,axis)=>v+(points[i+1][axis]-v)*(remaining/(lengths[i]||1)));
+    remaining-=lengths[i];
+  }
+  return [...points.at(-1)];
+}
 function midpoint(points) {
   const lengths = points.slice(1).map((p,i)=>Math.hypot(p[0]-points[i][0],p[1]-points[i][1]));
   let remaining = lengths.reduce((a,b)=>a+b,0)/2;
@@ -65,4 +88,4 @@ function midpoint(points) {
   }
   return [...points.at(-1)];
 }
-module.exports = {copy,same,attachment,project,orthogonal,moveVertex,moveEnds,constrain,midpoint};
+module.exports = {copy,same,attachment,project,orthogonal,moveVertex,moveEnds,constrain,midpoint,pathAnchor,pointOnPath,isOrthogonal};

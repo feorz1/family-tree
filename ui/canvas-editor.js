@@ -97,12 +97,20 @@ window.mountCanvasEditor = function (options) {
     if (!from.length) return;
     to.push(snapshot());restore(from.pop());options.changed();
   }
+  function parentUnion(model) {
+    if(model.role!=='stem'||model.parents?.length!==2)return null;
+    return scene().models.find(m=>m.union&&model.parents.every(id=>m.union.includes(id)))||null;
+  }
   function store(model, points, base = savedRoutes()[model.key] || {}) {
-    const start=model.start?G.project(model.start,points[0]):points[0];
+    const squared=base.orthogonal??G.isOrthogonal(points);
+    const union=parentUnion(model),parentPath=union?.pointsFor(savedRoutes()[union.key]);
+    const unionAnchor=parentPath?G.pathAnchor(parentPath,points[0]):null;
+    const start=model.start?G.project(model.start,points[0]):unionAnchor?.point||points[0];
     const end=model.end?G.project(model.end,points.at(-1)):points.at(-1);
-    if(!G.same(start,points[0])||!G.same(end,points.at(-1)))points=G.moveEnds(points,start,end,base.orthogonal!==false);
+    if(!G.same(start,points[0])||!G.same(end,points.at(-1)))points=G.moveEnds(points,start,end,squared);
     if (points.length > 62) return false;
-    const value = {...clone(base),points:G.copy(points.slice(1,-1)),radius:base.radius??8,orthogonal:base.orthogonal??true};
+    const value = {...clone(base),points:G.copy(points.slice(1,-1)),radius:base.radius??8,orthogonal:squared};
+    if(unionAnchor)value.unionFraction=unionAnchor.fraction;
     for (const [end,p] of [['start',points[0]],['end',points.at(-1)]]) {
       if (model[end]) {value[end]=G.attachment(model[end],p);value[end+'Node']=model[end+'Node'];}
       value[end+'Point']=[...p];
@@ -118,6 +126,7 @@ window.mountCanvasEditor = function (options) {
     // Constrain the attachment before calculating bends, rather than snapping
     // an already-edited endpoint back to a different position during storage.
     if(side&&current.model[side])next=G.project(current.model[side],next);
+    else if(side==='start'){const union=parentUnion(current.model);if(union)next=G.pathAnchor(union.pointsFor(savedRoutes()[union.key]),next).point;}
     const result=G.moveVertex(points,index,next,current.override.orthogonal!==false,pins(current.model));
     const tracked=side==='start'?0:side==='end'?result.length-1:result.findIndex(p=>G.same(p,next));
     options.setSelectedPoint(tracked<0?null:tracked);
@@ -144,11 +153,11 @@ window.mountCanvasEditor = function (options) {
     options.changed();
   }
   function followUnion(model,before,after) {
-    const oldMid=G.midpoint(before),newMid=G.midpoint(after);
     for (const stem of scene().models.filter(m=>m.role==='stem'&&m.parents?.length===2&&m.parents.every(id=>model.union.includes(id)))) {
-      const path=stem.pointsFor(savedRoutes()[stem.key]);
-      const start=path[0].map((v,i)=>v+newMid[i]-oldMid[i]);
-      store(stem,G.moveEnds(path,start,path.at(-1)));
+      const base=savedRoutes()[stem.key]||{},path=stem.pointsFor(base);
+      const fraction=base.unionFraction??G.pathAnchor(before,path[0]).fraction;
+      const start=G.pointOnPath(after,fraction);
+      store(stem,G.moveEnds(path,start,path.at(-1),base.orthogonal??G.isOrthogonal(path)),base);
     }
   }
   function movement() {
@@ -167,14 +176,14 @@ window.mountCanvasEditor = function (options) {
       const groupDelta=delta(model.members[0]);
       let next;
       if (model.members.every(id=>positions[id]&&G.same(delta(id),groupDelta))) next=points.map(p=>p.map((v,i)=>v+groupDelta[i]));
-      else next=G.moveEnds(points,points[0].map((v,i)=>v+ds[i]),points.at(-1).map((v,i)=>v+de[i]),savedRoutes()[model.key]?.orthogonal!==false);
+      else next=G.moveEnds(points,points[0].map((v,i)=>v+ds[i]),points.at(-1).map((v,i)=>v+de[i]),savedRoutes()[model.key]?.orthogonal??G.isOrthogonal(points));
       nextPaths.set(model,next);
     }
     for (const {model,points} of initial.paths.filter(item=>item.model.union)) {
-      const oldMid=G.midpoint(points),newMid=G.midpoint(nextPaths.get(model));
       for (const stem of initial.paths.filter(item=>item.model.role==='stem'&&item.model.parents?.length===2&&item.model.parents.every(id=>model.union.includes(id)))) {
-        const next=nextPaths.get(stem.model),start=stem.points[0].map((v,i)=>v+newMid[i]-oldMid[i]);
-        nextPaths.set(stem.model,G.moveEnds(next,start,next.at(-1)));
+        const fraction=stem.override.unionFraction??G.pathAnchor(points,stem.points[0]).fraction;
+        const next=nextPaths.get(stem.model),start=G.pointOnPath(nextPaths.get(model),fraction);
+        nextPaths.set(stem.model,G.moveEnds(next,start,next.at(-1),stem.override.orthogonal??G.isOrthogonal(stem.points)));
       }
     }
     // Freeze the visible routes before the next save, avoiding a fresh auto-layout.

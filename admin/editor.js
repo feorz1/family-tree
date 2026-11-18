@@ -476,6 +476,7 @@ function selectRoute(hit) {
   original.after(svg);
   const saved = data.routes[model.chart]?.[model.key];
   const override = saved ? structuredClone(saved) : {points:structuredClone(model.autoPoints.slice(1,-1)),radius:8};
+  override.orthogonal ??= CanvasGeometry.isOrthogonal(model.pointsFor(override));
   route = {svg,handles,model,override};
   $("#route-form").hidden = false;
   $("#route-name").textContent = hit.getAttribute("aria-label");

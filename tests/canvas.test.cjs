@@ -10,6 +10,8 @@ function rightAngles(points) {
   for(let i=1;i<points.length;i++)assert.ok(points[i][0]===points[i-1][0]||points[i][1]===points[i-1][1],JSON.stringify(points));
 }
 rightAngles(moved);
+assert.equal(G.isOrthogonal(original),true);
+assert.equal(G.isOrthogonal([[0,0],[10,20]]),false);
 const junction = G.moveVertex([[100,100],[200,100],[200,300]],1,[250,100],true,{start:true,end:false});
 assert.deepEqual(junction,[[100,100],[250,100],[250,300]],'A free family junction follows its bend');
 assert.deepEqual(G.moveEnds(original,[40,70],[230,200]),original.map(([x,y])=>[x+30,y+50]),'Group movement preserves all bends');
@@ -23,6 +25,15 @@ assert.deepEqual(G.constrain([20,-90],false),[20,-90]);
 assert.deepEqual(G.attachment({x:100,y:200,size:150},[250,275]),{side:'right',fraction:.5});
 assert.deepEqual(G.attachment({x:100,y:200,size:150},[50,900]),{side:'left',fraction:1});
 assert.deepEqual(G.midpoint([[0,0],[100,0],[100,200]]),[100,50]);
+const elbow=[[0,0],[100,0],[100,200]];
+assert.deepEqual(G.pathAnchor(elbow,[120,80]).point,[100,80]);
+assert.equal(G.pathAnchor(elbow,[120,80]).fraction,.6);
+assert.deepEqual(G.pointOnPath(elbow,.6),[100,80]);
+for(const x of [42,58]){
+  const fraction=G.pathAnchor([[0,0],[100,0]],[x,0]).fraction;
+  const attached=G.pointOnPath([[0,0],[50,0],[50,60],[100,60]],fraction);
+  assert.ok(G.pathAnchor([[0,0],[50,0],[50,60],[100,60]],attached).distance<1e-9,'Offset sibling stems must remain on a bent parent union');
+}
 assert.deepEqual(G.project({x:100,y:200,size:150},[240,275]),[250,275],'An attached endpoint must be projected before editing bends');
 assert.deepEqual(G.moveEnds([[0,0],[100,100]],[10,20],[120,140],false),[[10,20],[120,140]],'Free routing must preserve a diagonal');
 

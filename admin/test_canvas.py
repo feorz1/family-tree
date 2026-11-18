@@ -39,6 +39,15 @@ class CanvasPersistenceTest(unittest.TestCase):
         with self.assertRaises(server.EditError):
             server.validate(self.data, None)
 
+    def test_parent_union_anchor_stays_within_the_parent_line(self):
+        for fraction in (0, .42, .58, 1):
+            self.data["routes"]["family"]["canvas-test"] = {"points": [], "unionFraction": fraction}
+            server.validate(self.data, None)
+        for fraction in (-.1, 1.1, True, "0.5"):
+            self.data["routes"]["family"]["canvas-test"] = {"points": [], "unionFraction": fraction}
+            with self.assertRaises(server.EditError):
+                server.validate(self.data, None)
+
     def test_card_position_has_its_own_history_kind_and_can_be_reverted(self):
         after = copy.deepcopy(self.data)
         after["charts"][0]["nodes"][0]["position"] = [4100, 3400]
