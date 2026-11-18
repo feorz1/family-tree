@@ -36,6 +36,20 @@ for(const x of [42,58]){
 }
 assert.deepEqual(G.project({x:100,y:200,size:150},[240,275]),[250,275],'An attached endpoint must be projected before editing bends');
 assert.deepEqual(G.moveEnds([[0,0],[100,100]],[10,20],[120,140],false),[[10,20],[120,140]],'Free routing must preserve a diagonal');
+assert.deepEqual(G.normalize([[0,0],[99.995,0],[100,0]]),[[0,0],[100,0]],'Cleaning a short final segment must preserve the exact attachment');
+assert.deepEqual(G.normalize([[0,0],[.005,0]]),[[0,0],[.005,0]],'A short connection must retain both distinct endpoints');
+
+// Repeated edits of an explicitly subdivided straight run used to leave a
+// staircase of redundant points behind the grabbed handle.
+let subdivided=[[0,0],[20,0],[40,0],[60,0],[80,0],[100,0],[100,100],[200,100]],tracked=2;
+for(let i=0;i<200;i++){
+  const next=subdivided[tracked].map((v,axis)=>v+(axis===i%2?1:0));
+  subdivided=G.moveVertex(subdivided,tracked,next);
+  tracked=subdivided.findIndex(p=>G.same(p,next));
+  assert.ok(tracked>=0,'The grabbed point must remain selected after redundant bends collapse');
+  assert.ok(subdivided.length<=12,'Repeated nudges must not accumulate redundant points: '+subdivided.length);
+  rightAngles(subdivided);
+}
 
 // The public renderer must honor an explicit position even for a child normally
 // centered below its parents. It must also render saved free junctions verbatim.

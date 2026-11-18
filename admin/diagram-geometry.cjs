@@ -17,28 +17,48 @@ function project(rect, point) {
   if(anchor.side==='right')return [rect.x+rect.size,rect.y+d];
   return [rect.x+d,anchor.side==='top'?rect.y:rect.y+rect.size];
 }
-function orthogonal(points) {
+function normalize(points, keep = []) {
+  const result=[];
+  for(const [index,point] of points.entries()){
+    if(result.length&&same(result.at(-1),point)){
+      // Even a subpixel terminal segment must retain the exact attachment.
+      if(index===points.length-1){if(result.length===1)result.push([...point]);else result[result.length-1]=[...point];}
+      continue;
+    }
+    while(result.length>1){
+      const a=result.at(-2),b=result.at(-1),dx=point[0]-a[0],dy=point[1]-a[1];
+      const cross=Math.abs((b[0]-a[0])*dy-(b[1]-a[1])*dx);
+      const between=(b[0]-a[0])*(b[0]-point[0])+(b[1]-a[1])*(b[1]-point[1])<=1e-6;
+      if(keep.some(p=>same(p,b))||!between||cross>1e-6*Math.max(1,Math.hypot(dx,dy)))break;
+      result.pop();
+    }
+    result.push([...point]);
+  }
+  return result.length===1?[result[0],[...result[0]]]:result;
+}
+function orthogonal(points, keep = []) {
   const result = [];
   for (const point of points) {
     const previous = result.at(-1);
     if (previous && previous[0] !== point[0] && previous[1] !== point[1]) result.push([point[0],previous[1]]);
     if (!previous || !same(previous,point)) result.push([...point]);
   }
-  return result.length > 1 ? result : [result[0], [...result[0]]];
+  return normalize(result,keep);
 }
 function moveVertex(points, index, next, squared = true, pinned = {start:true,end:true}) {
   const result = copy(points), old = points[index];
   result[index] = [...next];
-  if (!squared) return result;
+  if (!squared) return normalize(result,[next]);
   // Move adjacent bends with the handle, while preserving attached endpoints.
   for (const adjacent of [index-1,index+1]) {
     if (adjacent < 0 || adjacent >= points.length || (adjacent===0&&pinned.start) || (adjacent===points.length-1&&pinned.end)) continue;
     if (points[adjacent][0] === old[0]) result[adjacent][0] = next[0];
     else if (points[adjacent][1] === old[1]) result[adjacent][1] = next[1];
   }
-  return orthogonal(result);
+  return orthogonal(result,[next]);
 }
 function moveEnds(points, start, end, squared = true) {
+  points=normalize(points);
   let result = copy(points);
   const ds = start.map((v,i)=>v-points[0][i]), de = end.map((v,i)=>v-points.at(-1)[i]);
   if (same(ds,de)) return result.map(p=>p.map((v,i)=>v+ds[i]));
@@ -88,4 +108,4 @@ function midpoint(points) {
   }
   return [...points.at(-1)];
 }
-module.exports = {copy,same,attachment,project,orthogonal,moveVertex,moveEnds,constrain,midpoint,pathAnchor,pointOnPath,isOrthogonal};
+module.exports = {copy,same,attachment,project,normalize,orthogonal,moveVertex,moveEnds,constrain,midpoint,pathAnchor,pointOnPath,isOrthogonal};

@@ -101,25 +101,42 @@ window.mountCanvasEditor = function (options) {
     if(model.role!=='stem'||model.parents?.length!==2)return null;
     return scene().models.find(m=>m.union&&model.parents.every(id=>m.union.includes(id)))||null;
   }
-  function store(model, points, base = savedRoutes()[model.key] || {}) {
+  function prepare(model, points, base, plans = new Map(), keep = []) {
     const squared=base.orthogonal??G.isOrthogonal(points);
-    const union=parentUnion(model),parentPath=union?.pointsFor(savedRoutes()[union.key]);
+    points=squared?G.orthogonal(points,keep):G.normalize(points,keep);
+    const union=parentUnion(model),parentPath=union&&(plans.get(union)?.points||union.pointsFor(savedRoutes()[union.key]));
     const unionAnchor=parentPath?G.pathAnchor(parentPath,points[0]):null;
     const start=model.start?G.project(model.start,points[0]):unionAnchor?.point||points[0];
     const end=model.end?G.project(model.end,points.at(-1)):points.at(-1);
     if(!G.same(start,points[0])||!G.same(end,points.at(-1)))points=G.moveEnds(points,start,end,squared);
-    if (points.length > 62) return false;
+    points=G.normalize(points,keep);
+    if (points.length > 62) return null;
     const value = {...clone(base),points:G.copy(points.slice(1,-1)),radius:base.radius??8,orthogonal:squared};
     if(unionAnchor)value.unionFraction=unionAnchor.fraction;
     for (const [end,p] of [['start',points[0]],['end',points.at(-1)]]) {
       if (model[end]) {value[end]=G.attachment(model[end],p);value[end+'Node']=model[end+'Node'];}
       value[end+'Point']=[...p];
     }
-    savedRoutes()[model.key] = value;
-    model.update(value);
-    if (options.route()?.model.key===model.key) options.route().override=clone(value);
-    return true;
+    return {points,value};
   }
+  // Validate every connected piece before writing any of them. A rejected
+  // edit must never leave half of a shared junction at its old position.
+  function savePaths(changes, keep = [], joins = []) {
+    const plans=new Map(),current=options.route()?.model;
+    const ordered=[...changes].sort(([a],[b])=>Number(Boolean(b.union))-Number(Boolean(a.union)));
+    for(const [model,{points,base=savedRoutes()[model.key]||{}}] of ordered){
+      const plan=prepare(model,points,base,plans,model===current?keep:[]);
+      if(!plan){options.notify?.('Слишком много точек. Уберите лишнюю точку перед добавлением нового изгиба.');return null;}
+      plans.set(model,plan);
+    }
+    if(joins.some(({model,point})=>G.pathAnchor(plans.get(model).points,point).distance>.01))return null;
+    for(const [model,{value}] of plans){
+      savedRoutes()[model.key]=value;model.update(value);
+      if(current===model)options.route().override=clone(value);
+    }
+    return plans;
+  }
+  let pointSelection=null;
   const pins = model => ({start:Boolean(model.start||model.parents?.length===2&&model.role==='stem'),end:Boolean(model.end)});
   function movePoint(points,index,next){
     const current=options.route(),side=index===0?'start':index===points.length-1?'end':null;
@@ -129,36 +146,52 @@ window.mountCanvasEditor = function (options) {
     else if(side==='start'){const union=parentUnion(current.model);if(union)next=G.pathAnchor(union.pointsFor(savedRoutes()[union.key]),next).point;}
     const result=G.moveVertex(points,index,next,current.override.orthogonal!==false,pins(current.model));
     const tracked=side==='start'?0:side==='end'?result.length-1:result.findIndex(p=>G.same(p,next));
+    pointSelection={points:result,previous:options.selectedPoint()};
     options.setSelectedPoint(tracked<0?null:tracked);
     return result;
   }
   function setRoutePoints(points, propagate = true) {
     const current = options.route();
     if (!current) return;
-    const model = current.model, previous = model.pointsFor(current.override);
-    if (!store(model,points,current.override)) return;
-    const actual = model.pointsFor(savedRoutes()[model.key]);
+    const model=current.model,previous=model.pointsFor(current.override),selection=options.selectedPoint();
+    const keep=selection!==null&&points[selection]?[points[selection]]:[];
+    const primary=prepare(model,points,current.override,new Map(),keep);
+    const failed=()=>{
+      if(pointSelection?.points===points)options.setSelectedPoint(pointSelection.previous);
+      else if(selection>=previous.length)options.setSelectedPoint(null);
+      pointSelection=null;return false;
+    };
+    if(!primary){options.notify?.('Слишком много точек. Уберите лишнюю точку перед добавлением нового изгиба.');return failed();}
+    const actual=primary.points,changes=new Map([[model,{points:actual,base:primary.value}]]),joins=[];
     // Shared family junctions stay shared when an endpoint is moved.
     if (propagate && model.familyId) for (const end of [0,previous.length-1]) {
       const side = end===0?'start':'end', next = end===0?actual[0]:actual.at(-1);
       if (model[side] || G.same(previous[end],next)) continue;
       for (const sibling of scene().models.filter(m=>m!==model&&m.familyId===model.familyId)) {
-        let path = sibling.pointsFor(savedRoutes()[sibling.key]);
-        path = path.map(p=>G.same(p,previous[end]) ? [...next] : [...p]);
-        if (current.override.orthogonal!==false) path = G.orthogonal(path);
-        store(sibling,path);
+        let path=changes.get(sibling)?.points||sibling.pointsFor(savedRoutes()[sibling.key]);
+        const index=path.findIndex(p=>G.same(p,previous[end]));
+        if(index<0)continue;
+        const squared=savedRoutes()[sibling.key]?.orthogonal??G.isOrthogonal(path);
+        if(index===0||index===path.length-1)path=G.moveEnds(path,index===0?next:path[0],index===path.length-1?next:path.at(-1),squared);
+        else path=G.moveVertex(path,index,next,squared,pins(sibling));
+        changes.set(sibling,{points:path});joins.push({model:sibling,point:next});
       }
     }
-    if (model.union) followUnion(model,previous,actual);
-    options.changed();
-  }
-  function followUnion(model,before,after) {
-    for (const stem of scene().models.filter(m=>m.role==='stem'&&m.parents?.length===2&&m.parents.every(id=>model.union.includes(id)))) {
+    if(model.union)for(const stem of scene().models.filter(m=>m.role==='stem'&&m.parents?.length===2&&m.parents.every(id=>model.union.includes(id)))){
       const base=savedRoutes()[stem.key]||{},path=stem.pointsFor(base);
-      const fraction=base.unionFraction??G.pathAnchor(before,path[0]).fraction;
-      const start=G.pointOnPath(after,fraction);
-      store(stem,G.moveEnds(path,start,path.at(-1),base.orthogonal??G.isOrthogonal(path)),base);
+      const fraction=base.unionFraction??G.pathAnchor(previous,path[0]).fraction;
+      changes.set(stem,{points:G.moveEnds(path,G.pointOnPath(actual,fraction),path.at(-1),base.orthogonal??G.isOrthogonal(path)),base});
     }
+    const plans=savePaths(changes,keep,joins);
+    if(!plans)return failed();
+    const saved=plans.get(model).points;
+    if(selection!==null){
+      const tracked=selection===0?0:selection===points.length-1?saved.length-1:saved.findIndex(p=>keep.some(q=>G.same(p,q)));
+      options.setSelectedPoint(tracked<0?null:tracked);
+    }
+    pointSelection=null;
+    options.changed();
+    return true;
   }
   function movement() {
     return {
@@ -168,8 +201,8 @@ window.mountCanvasEditor = function (options) {
   }
   function moveNodes(positions, initial) {
     const delta = id => positions[id] ? positions[id].map((v,i)=>v-initial.nodes[id][i]) : [0,0];
+    const previous=Object.fromEntries(scene().nodes.map(n=>[n.id,[n.x,n.y]]));
     scene().setPositions(positions);
-    for (const n of options.chart().nodes) if (positions[n.id]) n.position=[...positions[n.id]];
     const nextPaths = new Map();
     for (const {model,points} of initial.paths) {
       const ds=delta(model.startNode),de=delta(model.endNode);
@@ -187,7 +220,9 @@ window.mountCanvasEditor = function (options) {
       }
     }
     // Freeze the visible routes before the next save, avoiding a fresh auto-layout.
-    for (const {model,override} of initial.paths) store(model,nextPaths.get(model),{...override,frozen:true,...(model.role==='bus'?{children:[...model.routeChildren]}:{})});
+    const changes=new Map(initial.paths.map(({model,override})=>[model,{points:nextPaths.get(model),base:{...override,frozen:true,...(model.role==='bus'?{children:[...model.routeChildren]}:{})}}]));
+    if(!savePaths(changes)){scene().setPositions(previous);return;}
+    for(const n of options.chart().nodes)if(positions[n.id])n.position=[...positions[n.id]];
     options.changed();
   }
   function snappedDelta(delta, initial, event) {
@@ -247,6 +282,8 @@ window.mountCanvasEditor = function (options) {
       mid.setAttribute('class','editing-segment');mid.setAttribute('x',(p[0]+q[0])/2-size*.7);mid.setAttribute('y',(p[1]+q[1])/2-size*.7);mid.setAttribute('width',size*1.4);mid.setAttribute('height',size*1.4);mid.setAttribute('rx',size*.3);
       mid.dataset.segment=index;mid.style.cursor=p[1]===q[1]?'ns-resize':'ew-resize';current.handles.append(mid);
     }
+    const active=current.handles.querySelector('.editing-point.active');
+    if(active)current.handles.append(active);
     options.syncRouteControls();
   }
   const cards=interact('.node',{context:doc}).draggable({
@@ -276,13 +313,13 @@ window.mountCanvasEditor = function (options) {
         if(!options.route())return;
         begin();const points=G.copy(options.route().model.pointsFor(options.route().override));
         const vertex=event.target.dataset.point;
-        drag={kind:'route',points,index:Number(vertex??event.target.dataset.segment),segment:vertex===undefined,start:point({clientX:event.x0,clientY:event.y0})};
+        drag={kind:'route',points,index:Number(vertex??event.target.dataset.segment),segment:vertex===undefined,element:event.target,start:point({clientX:event.x0,clientY:event.y0})};
         options.setSelectedPoint(drag.segment?null:drag.index);
       },
       move(event){
         if(drag?.kind!=='route'||!options.route())return;
         const p=point(event),original=event.originalEvent||event;
-        let next;
+        let next,segmentCenter;
         if(!drag.segment){
           const position=snapPoint(p,drag.points,drag.index,original);
           next=movePoint(drag.points,drag.index,position);
@@ -291,13 +328,26 @@ window.mountCanvasEditor = function (options) {
           const delta=p[axis]-drag.start[axis];
           next=G.copy(drag.points);
           const movedA=[...a],movedB=[...b];movedA[axis]=Math.max(0,a[axis]+delta);movedB[axis]=Math.max(0,b[axis]+delta);
+          segmentCenter=movedA.map((v,i)=>(v+movedB[i])/2);
           next.splice(i,2,...(i===0?[a,movedA]:[movedA]),...(i+1===drag.points.length-1?[movedB,b]:[movedB]));
-          next=G.orthogonal(next);
+          next=options.route().override.orthogonal===false?G.normalize(next):G.orthogonal(next);
         }
-        setRoutePoints(next);
-        // Keep the grabbed DOM element alive until interact.js releases it.
-        const markers=[...options.route().handles.querySelectorAll('.editing-point')];
-        next.forEach((v,i)=>{markers[i]?.setAttribute('cx',v[0]);markers[i]?.setAttribute('cy',v[1]);});
+        if(!setRoutePoints(next))return;
+        // Point indices can change when a redundant bend disappears. Reuse the
+        // grabbed element itself, rather than moving it to another point's slot.
+        const current=options.route(),actual=current.model.pointsFor(current.override),selected=options.selectedPoint();
+        const available=[...current.handles.querySelectorAll('.editing-point')].filter(el=>el!==drag.element);
+        const size=Math.max(5,Math.min(24,5/scale()));
+        actual.forEach((p,index)=>{
+          let marker=!drag.segment&&index===selected?drag.element:available.shift();
+          if(!marker){marker=doc.createElementNS(current.svg.namespaceURI,'circle');current.handles.append(marker);}
+          marker.setAttribute('class','editing-point'+(!drag.segment&&index===selected?' active':''));
+          marker.dataset.point=index;marker.setAttribute('cx',p[0]);marker.setAttribute('cy',p[1]);marker.setAttribute('r',size);
+          marker.setAttribute('tabindex','0');marker.setAttribute('role','button');marker.setAttribute('aria-label',index===0?'Начало линии':index===actual.length-1?'Конец линии':`Точка ${index}`);
+        });
+        available.forEach(el=>el.remove());
+        for(const marker of current.handles.querySelectorAll('.editing-segment'))if(marker!==drag.element)marker.remove();
+        if(drag.segment){drag.element.setAttribute('x',segmentCenter[0]-size*.7);drag.element.setAttribute('y',segmentCenter[1]-size*.7);}
       },
       end(){if(drag?.kind!=='route')return;drag=null;suppressClick=Date.now()+250;guides();drawHandles();commit();}
     }

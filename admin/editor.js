@@ -457,7 +457,7 @@ frame.addEventListener("load", () => {
   canvasEditor = mountCanvasEditor({
     doc,chart,data:()=>data,changed,route:()=>route,clearRoute,selectRoute,setMode,
     selectedPoint:()=>selectedPoint,setSelectedPoint:index=>{selectedPoint=index;},
-    syncRouteControls,applyRoute,isAddingPoint:()=>addingPoint,insertPoint,
+    syncRouteControls,applyRoute,isAddingPoint:()=>addingPoint,insertPoint,notify:message=>status(message,true),
     selectPerson(id){selectedPerson=id;$("#search").value="";redrawPeople();}
   });
 });
@@ -553,7 +553,7 @@ function insertPoint(event) {
   const best = existing.slice(1).map((next,index) => ({index,distance:distance(existing[index],next)}))
     .sort((a,b) => a.distance-b.distance)[0];
   existing.splice(best.index+1,0,point);
-  const next = route.override.orthogonal===false ? existing : CanvasGeometry.orthogonal(existing);
+  const next = route.override.orthogonal===false ? existing : CanvasGeometry.orthogonal(existing,[point]);
   selectedPoint = next.findIndex(p=>CanvasGeometry.same(p,point));
   addingPoint = false;
   $("#add-point").setAttribute("aria-pressed","false");
