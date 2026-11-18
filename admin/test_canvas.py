@@ -16,7 +16,7 @@ class CanvasPersistenceTest(unittest.TestCase):
         relationships = copy.deepcopy(self.data["charts"][0]["groups"])
         self.data["routes"]["family"]["canvas-test"] = {
             "points": [[100, 200]], "startPoint": [50, 200], "endPoint": [100, 300],
-            "orthogonal": True, "hidden": True, "radius": 8,
+            "orthogonal": True, "hidden": True, "radius": 8, "startNode": node["id"], "endNode": node["id"],
         }
         server.validate(self.data, None)
         self.assertEqual(self.data["charts"][0]["groups"], relationships)
@@ -31,6 +31,11 @@ class CanvasPersistenceTest(unittest.TestCase):
                     server.validate(self.data, None)
         del self.data["charts"][0]["nodes"][0]["position"]
         self.data["routes"]["family"]["canvas-test"] = {"points": [], "hidden": "yes"}
+        with self.assertRaises(server.EditError):
+            server.validate(self.data, None)
+
+    def test_invalid_connector_binding_is_rejected(self):
+        self.data["routes"]["family"]["canvas-test"] = {"points": [], "startNode": "unknown_person"}
         with self.assertRaises(server.EditError):
             server.validate(self.data, None)
 

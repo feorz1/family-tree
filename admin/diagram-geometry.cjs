@@ -10,6 +10,12 @@ function attachment(rect, [x,y]) {
   ].sort((a,b)=>a[1]-b[1]);
   return {side:candidates[0][0],fraction:Math.max(0,Math.min(1,candidates[0][2]))};
 }
+function project(rect, point) {
+  const anchor=attachment(rect,point),d=rect.size*anchor.fraction;
+  if(anchor.side==='left')return [rect.x,rect.y+d];
+  if(anchor.side==='right')return [rect.x+rect.size,rect.y+d];
+  return [rect.x+d,anchor.side==='top'?rect.y:rect.y+rect.size];
+}
 function orthogonal(points) {
   const result = [];
   for (const point of points) {
@@ -35,6 +41,7 @@ function moveEnds(points, start, end, squared = true) {
   let result = copy(points);
   const ds = start.map((v,i)=>v-points[0][i]), de = end.map((v,i)=>v-points.at(-1)[i]);
   if (same(ds,de)) return result.map(p=>p.map((v,i)=>v+ds[i]));
+  if (!squared) {result[0]=[...start];result[result.length-1]=[...end];return result;}
   if (points.length===2) {
     if(start[0]===end[0]||start[1]===end[1])return [[...start],[...end]];
     // Keep the original tangent at both ends, rather than growing a bend
@@ -58,4 +65,4 @@ function midpoint(points) {
   }
   return [...points.at(-1)];
 }
-module.exports = {copy,same,attachment,orthogonal,moveVertex,moveEnds,constrain,midpoint};
+module.exports = {copy,same,attachment,project,orthogonal,moveVertex,moveEnds,constrain,midpoint};

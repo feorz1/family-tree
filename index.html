@@ -857,9 +857,21 @@ function render(c){
   else hit.setAttribute('aria-label',map[info.edge.a].name+' — '+map[info.edge.b].name+': '+info.edge.label);
   const groupId=info.family?.id;
   const key=groupId?'group:'+groupId+':'+info.role+':'+(info.child||info.segment||''):JSON.stringify([info.edge.a,info.edge.b,info.edge.kind,info.edge.label]);
-  const startNode=info.edge?.a||(info.role==='stem'&&info.family.parents.length===1?info.family.parents[0]:null);
-  const endNode=info.edge?.b||info.child;
-  const chartRoutes=routes[c.id]||(editPreview?(routes[c.id]={}):{});
+  const sourceNode=info.edge?.a||(info.role==='stem'&&info.family.parents.length===1?info.family.parents[0]:null);
+  const targetNode=info.edge?.b||info.child;
+  const chartRoutes=routes[c.id]||(editPreview?(routes[c.id]={}):{}),savedRoute=chartRoutes[key];
+  const distanceToPortrait=(point,id)=>{
+   const n=map[id],x=n.x+PORTRAIT_INSET,y=n.y;
+   return Math.hypot(Math.max(x-point[0],0,point[0]-x-PORTRAIT),Math.max(y-point[1],0,point[1]-y-PORTRAIT));
+  };
+  // Automatic paths may run top-to-bottom or left-to-right, opposite to the
+  // relationship's a/b order. Editing must bind the ends that are actually drawn.
+  // Legacy explicit attachments retain their original a/b interpretation.
+  const reversed=info.edge&&!savedRoute?.start&&!savedRoute?.end&&
+   distanceToPortrait(path[0],targetNode)+distanceToPortrait(path.at(-1),sourceNode)<
+   distanceToPortrait(path[0],sourceNode)+distanceToPortrait(path.at(-1),targetNode);
+  const startNode=savedRoute?.startNode||(reversed?targetNode:sourceNode);
+  const endNode=savedRoute?.endNode||(reversed?sourceNode:targetNode);
   const pointAt=(id,anchor)=>{
    const n=map[id],x=n.x+PORTRAIT_INSET,y=n.y,d=PORTRAIT*anchor.fraction;
    if(anchor.side==='left')return [x,y+d];

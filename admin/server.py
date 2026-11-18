@@ -157,6 +157,9 @@ def validate(data, db):
             points = override["points"]
             demand(isinstance(points, list) and len(points) <= 60, "Слишком много точек у одной линии")
             demand(all(len(point) == 2 and all(number(n, 0, 100000) for n in point) for point in points), "Точка вне схемы")
+            for field in ("startNode", "endNode"):
+                if field in override:
+                    demand(isinstance(override[field], str) and override[field] in ids[key], "Неизвестная карточка крепления линии")
             for field in ("startPoint", "endPoint"):
                 if field in override:
                     demand(isinstance(override[field], list) and len(override[field]) == 2 and all(number(n, 0, 100000) for n in override[field]), "Конец линии вне схемы")

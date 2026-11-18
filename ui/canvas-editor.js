@@ -98,10 +98,13 @@ window.mountCanvasEditor = function (options) {
     to.push(snapshot());restore(from.pop());options.changed();
   }
   function store(model, points, base = savedRoutes()[model.key] || {}) {
+    const start=model.start?G.project(model.start,points[0]):points[0];
+    const end=model.end?G.project(model.end,points.at(-1)):points.at(-1);
+    if(!G.same(start,points[0])||!G.same(end,points.at(-1)))points=G.moveEnds(points,start,end,base.orthogonal!==false);
     if (points.length > 62) return false;
     const value = {...clone(base),points:G.copy(points.slice(1,-1)),radius:base.radius??8,orthogonal:base.orthogonal??true};
     for (const [end,p] of [['start',points[0]],['end',points.at(-1)]]) {
-      if (model[end]) value[end]=G.attachment(model[end],p);
+      if (model[end]) {value[end]=G.attachment(model[end],p);value[end+'Node']=model[end+'Node'];}
       value[end+'Point']=[...p];
     }
     savedRoutes()[model.key] = value;
@@ -110,7 +113,16 @@ window.mountCanvasEditor = function (options) {
     return true;
   }
   const pins = model => ({start:Boolean(model.start||model.parents?.length===2&&model.role==='stem'),end:Boolean(model.end)});
-  function movePoint(points,index,next){const current=options.route();return G.moveVertex(points,index,next,current.override.orthogonal!==false,pins(current.model));}
+  function movePoint(points,index,next){
+    const current=options.route(),side=index===0?'start':index===points.length-1?'end':null;
+    // Constrain the attachment before calculating bends, rather than snapping
+    // an already-edited endpoint back to a different position during storage.
+    if(side&&current.model[side])next=G.project(current.model[side],next);
+    const result=G.moveVertex(points,index,next,current.override.orthogonal!==false,pins(current.model));
+    const tracked=side==='start'?0:side==='end'?result.length-1:result.findIndex(p=>G.same(p,next));
+    options.setSelectedPoint(tracked<0?null:tracked);
+    return result;
+  }
   function setRoutePoints(points, propagate = true) {
     const current = options.route();
     if (!current) return;
@@ -265,7 +277,6 @@ window.mountCanvasEditor = function (options) {
         if(!drag.segment){
           const position=snapPoint(p,drag.points,drag.index,original);
           next=movePoint(drag.points,drag.index,position);
-          options.setSelectedPoint(next.findIndex(v=>G.same(v,position)));
         }else{
           const i=drag.index,a=drag.points[i],b=drag.points[i+1],axis=a[1]===b[1]?1:0;
           const delta=p[axis]-drag.start[axis];
@@ -357,7 +368,11 @@ window.mountCanvasEditor = function (options) {
     if(selected.size){const initial=movement();moveNodes(Object.fromEntries([...selected].map(id=>[id,initial.nodes[id].map((v,i)=>Math.max(0,Math.min(99000,v+d[i])))])),initial);}
     else{const current=options.route(),points=current.model.pointsFor(current.override),index=options.selectedPoint();
       if(index!==null){const next=points[index].map((v,i)=>Math.max(0,v+d[i]));setRoutePoints(movePoint(points,index,next));}
-      else setRoutePoints(points.map((p,i)=>i===0||i===points.length-1?p:p.map((v,axis)=>Math.max(0,v+d[axis]))));drawHandles();}
+      else {
+        const moved=points.map(p=>p.map((v,axis)=>Math.max(0,v+d[axis]))),pinned=pins(current.model);
+        setRoutePoints(G.moveEnds(moved,pinned.start?points[0]:moved[0],pinned.end?points.at(-1):moved.at(-1),current.override.orthogonal!==false));
+      }
+      drawHandles();}
     commit();
   }
   listen(doc,'wheel',()=>{if(!drag)requestAnimationFrame(drawHandles);},{passive:true});
