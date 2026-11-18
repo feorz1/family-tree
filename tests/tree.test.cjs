@@ -245,6 +245,26 @@ function samples(d,step=0){
  const tokens=d.match(/[MLQ]|-?\d+(?:\.\d+)?/g),out=[];let x=0,y=0;
  for(let i=0;i<tokens.length;){const op=tokens[i++];if(op==='M'){x=+tokens[i++];y=+tokens[i++];out.push([x,y])}else if(op==='L'){const nx=+tokens[i++],ny=+tokens[i++],count=step?Math.max(12,Math.ceil(Math.hypot(nx-x,ny-y)/step)):12;for(let k=1;k<=count;k++)out.push([x+(nx-x)*k/count,y+(ny-y)*k/count]);x=nx;y=ny}else if(op==='Q'){const cx=+tokens[i++],cy=+tokens[i++],nx=+tokens[i++],ny=+tokens[i++];for(let k=1;k<=12;k++){const t=k/12;out.push([(1-t)**2*x+2*(1-t)*t*cx+t*t*nx,(1-t)**2*y+2*(1-t)*t*cy+t*t*ny])}x=nx;y=ny}else throw Error('Unknown path command '+op)}return out;
 }
+// A crossing has one point in common; distinct connections must never share
+// a stretch of the same stroke, even when they attach to the same portrait.
+function straightSegments(d){
+ const tokens=d.match(/[MLQ]|-?\d+(?:\.\d+)?/g),segments=[];let point;
+ for(let i=0;i<tokens.length;){
+  const op=tokens[i++];
+  if(op==='Q'){i+=2;point=[+tokens[i++],+tokens[i++]];continue}
+  const next=[+tokens[i++],+tokens[i++]];
+  if(op==='L'&&distance(point,next)>.001)segments.push([point,next]);
+  point=next;
+ }
+ return segments;
+}
+function sharedLength([a,b],[c,d]){
+ for(const axis of [0,1]){const other=1-axis;
+  if(Math.abs(a[other]-b[other])<.001&&Math.abs(c[other]-d[other])<.001&&Math.abs(a[other]-c[other])<.001)
+   return Math.max(0,Math.min(Math.max(a[axis],b[axis]),Math.max(c[axis],d[axis]))-Math.max(Math.min(a[axis],b[axis]),Math.min(c[axis],d[axis])));
+ }
+ return 0;
+}
 const roundedPath=vm.runInContext('roundedPath',ctx);
 const familyPath=vm.runInContext('familyPath',ctx);
 function nearSegment(p,a,b){const dx=b[0]-a[0],dy=b[1]-a[1],t=Math.max(0,Math.min(1,((p[0]-a[0])*dx+(p[1]-a[1])*dy)/(dx*dx+dy*dy||1)));return Math.hypot(p[0]-a[0]-t*dx,p[1]-a[1]-t*dy)<0.5}
@@ -340,6 +360,15 @@ for(const c of charts){
  for(const hit of hits){const rendered=samples(hit.attrs.d,8);for(const node of c.nodes)for(const box of cardBoxes(node)){
   if(rendered.some(([x,y])=>x>box.left+.05&&x<box.right-.05&&y>box.top+.05&&y<box.bottom-.05))throw Error(`${c.id}: rendered line ${hit.attrs['aria-label']} crosses portrait or caption of ${node.id}`);
  }}
+ const visible=subtree.filter(g=>g.classList.contains('edge')&&g.style.display!=='none').map(g=>{
+  const hit=g.children.find(e=>e.classList.contains('link-hit'));
+  return {label:hit.attrs['aria-label'],segments:straightSegments(hit.attrs.d)};
+ });
+ for(let i=0;i<visible.length;i++)for(let j=i;j<visible.length;j++){
+  const a=visible[i],b=visible[j];
+  for(let u=0;u<a.segments.length;u++)for(let v=i===j?u+1:0;v<b.segments.length;v++)
+   if(sharedLength(a.segments[u],b.segments[v])>.05)throw Error(`${c.id}: overlapping strokes: ${a.label} / ${b.label}`);
+ }
  const map=Object.fromEntries(c.nodes.map(n=>[n.id,n])),families=familyRoutes(c,map);
  function onPortrait(point,node){const [x,y]=point,l=node.x+PORTRAIT_INSET,r=l+PORTRAIT,t=node.y,b=t+PORTRAIT,eps=.02;return ((Math.abs(x-l)<eps||Math.abs(x-r)<eps)&&y>=t-eps&&y<=b+eps)||((Math.abs(y-t)<eps||Math.abs(y-b)<eps)&&x>=l-eps&&x<=r+eps)}
  for(const edge of graph(c)){
@@ -416,7 +445,7 @@ if(!/\.family-edge\s+\.edge-halo\s*\{\s*stroke-width\s*:\s*0/.test(file)||!/\.ed
 if(/\.edge\.is-selected\s+\.edge-line\s*\{[^}]*stroke-width/.test(file)||/\.node\.is-(selected|related)\s*\{[^}]*box-shadow/.test(file)||/\.node:hover\s*\{/.test(file))throw Error('Highlighting must not thicken outlines');
 console.log('Shared family routes, accurate selection, uncertainty and adoption validated.');
 // On narrow screens, the years control opens temporarily without consuming chart width.
-if(!file.includes('@media(max-width:700px)')||!file.includes('.chart-shell{grid-template-columns:minmax(0,1fr)}')||!file.includes('.timeline.is-collapsed .timeline-list{display:none}'))throw Error('Mobile timeline layout missing');
+if(!file.includes('@media(max-width:760px)')||!file.includes('.chart-shell{grid-template-columns:minmax(0,1fr)}')||!file.includes('.timeline.is-collapsed .timeline-list{display:none}'))throw Error('Mobile timeline layout missing');
 for(const c of charts){
  const subtree=walk(roots['#chart-'+c.id]),timeline=subtree.find(e=>e.className==='timeline'),toggle=subtree.find(e=>e.className==='timeline-toggle'),list=subtree.find(e=>e.className==='timeline-list'),chartView=subtree.find(e=>e.className==='viewport'),chartPanel=subtree.find(e=>e.className==='selection-panel');
  if(!timeline||!toggle||!list||toggle.attrs['aria-controls']!==list.attrs.id||toggle.attrs['aria-expanded']!=='false'||!timeline.classList.contains('is-collapsed'))throw Error(`${c.id}: timeline should start closed`);

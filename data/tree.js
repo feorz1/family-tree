@@ -3077,85 +3077,1582 @@ const treeData = {
   ],
   "routes": {
     "family": {
-      "[\"iv\",\"aga_sis\",\"blue\",\"восприемница\"]": {
+      "[\"ser\",\"you\",\"blue\",\"усыновление\"]": {
         "points": [
           [
-            2773,
-            1404
-          ]
-        ],
-        "radius": 8
-      },
-      "[\"vasi_sib\",\"ni\",\"\",\"братья · по сообщению семьи\"]": {
-        "points": [
-          [
-            2710,
-            1403
+            3386,
+            2586
           ],
           [
-            2710,
-            1339
+            3386,
+            3166
           ],
           [
-            3218,
-            1337
+            2563,
+            3166
           ],
           [
-            3218,
-            1401
+            2563,
+            2976
           ]
         ],
         "radius": 8,
+        "startPoint": [
+          3333,
+          2586
+        ],
+        "endPoint": [
+          2616,
+          2976
+        ],
+        "orthogonal": true,
+        "startNode": "ser",
+        "start": {
+          "side": "right",
+          "fraction": 0.5
+        },
+        "endNode": "you",
         "end": {
           "side": "left",
-          "fraction": 0.49
+          "fraction": 0.5
+        }
+      },
+      "[\"evd1898\",\"evd_sis\",\"red\",\"возможно одна и та же Евдокия\"]": {
+        "points": [
+          [
+            3944,
+            953
+          ],
+          [
+            3944,
+            146
+          ],
+          [
+            2158,
+            146
+          ],
+          [
+            2158,
+            1300
+          ],
+          [
+            2190,
+            1300
+          ]
+        ],
+        "radius": 8,
+        "startPoint": [
+          3909,
+          953
+        ],
+        "endPoint": [
+          2190,
+          1328
+        ],
+        "orthogonal": true,
+        "startNode": "evd1898",
+        "start": {
+          "side": "right",
+          "fraction": 0.1
+        },
+        "endNode": "evd_sis",
+        "end": {
+          "side": "top",
+          "fraction": 0.1
         }
       },
       "[\"evd_sis\",\"ni\",\"\",\"брат и сестра · по сообщению семьи\"]": {
         "points": [
           [
-            2370,
-            1403
+            2220,
+            1170
           ],
           [
-            2370,
-            1310
+            2922,
+            1170
           ],
           [
-            3230,
-            1310
+            2922,
+            833
           ],
           [
-            3230,
-            1380
+            3378,
+            833
           ]
         ],
         "radius": 8,
+        "startPoint": [
+          2220,
+          1328
+        ],
+        "endPoint": [
+          3378,
+          1328
+        ],
+        "orthogonal": true,
+        "startNode": "evd_sis",
+        "start": {
+          "side": "top",
+          "fraction": 0.3
+        },
+        "endNode": "ni",
         "end": {
-          "side": "left",
-          "fraction": 0.35
+          "side": "top",
+          "fraction": 0.7
         }
       },
       "[\"aga_sis\",\"ni\",\"\",\"брат и сестра · по сообщению семьи\"]": {
         "points": [],
         "radius": 8,
-        "end": {
-          "side": "left",
-          "fraction": 0.64
-        },
+        "startPoint": [
+          3045,
+          1403
+        ],
+        "endPoint": [
+          3273,
+          1403
+        ],
+        "orthogonal": true,
+        "startNode": "aga_sis",
         "start": {
           "side": "right",
-          "fraction": 0.64
+          "fraction": 0.5
+        },
+        "endNode": "ni",
+        "end": {
+          "side": "left",
+          "fraction": 0.5
+        }
+      },
+      "[\"vasi_sib\",\"ni\",\"\",\"братья · по сообщению семьи\"]": {
+        "points": [
+          [
+            2360,
+            1463
+          ],
+          [
+            2360,
+            1560
+          ],
+          [
+            2140,
+            1560
+          ],
+          [
+            2140,
+            126
+          ],
+          [
+            3980,
+            126
+          ],
+          [
+            3980,
+            1300
+          ],
+          [
+            3408,
+            1300
+          ]
+        ],
+        "radius": 8,
+        "startPoint": [
+          2517,
+          1463
+        ],
+        "endPoint": [
+          3408,
+          1328
+        ],
+        "orthogonal": true,
+        "startNode": "vasi_sib",
+        "start": {
+          "side": "left",
+          "fraction": 0.9
+        },
+        "endNode": "ni",
+        "end": {
+          "side": "top",
+          "fraction": 0.9
+        }
+      },
+      "[\"iv\",\"aga_sis\",\"blue\",\"восприемница\"]": {
+        "points": [
+          [
+            2742,
+            1463
+          ]
+        ],
+        "radius": 8,
+        "startPoint": [
+          2895,
+          1463
+        ],
+        "endPoint": [
+          2742,
+          1718
+        ],
+        "orthogonal": true,
+        "startNode": "aga_sis",
+        "start": {
+          "side": "left",
+          "fraction": 0.9
+        },
+        "endNode": "iv",
+        "end": {
+          "side": "top",
+          "fraction": 0.3
+        }
+      },
+      "[\"para_sis\",\"aga_sis\",\"blue\",\"восприемница Параскевы\"]": {
+        "points": [
+          [
+            2702,
+            1433
+          ],
+          [
+            2702,
+            1580
+          ],
+          [
+            2126,
+            1580
+          ],
+          [
+            2126,
+            106
+          ],
+          [
+            5528,
+            106
+          ],
+          [
+            5528,
+            1950
+          ],
+          [
+            3654,
+            1950
+          ],
+          [
+            3654,
+            1853
+          ]
+        ],
+        "radius": 8,
+        "startPoint": [
+          2895,
+          1433
+        ],
+        "endPoint": [
+          3603,
+          1853
+        ],
+        "orthogonal": true,
+        "startNode": "aga_sis",
+        "start": {
+          "side": "left",
+          "fraction": 0.7
+        },
+        "endNode": "para_sis",
+        "end": {
+          "side": "right",
+          "fraction": 0.9
+        }
+      },
+      "[\"val\",\"vitaly_fet\",\"\",\"братья · по сообщению семьи\"]": {
+        "points": [],
+        "radius": 8,
+        "startPoint": [
+          3333,
+          2183
+        ],
+        "endPoint": [
+          3561,
+          2183
+        ],
+        "orthogonal": true,
+        "startNode": "val",
+        "start": {
+          "side": "right",
+          "fraction": 0.5
+        },
+        "endNode": "vitaly_fet",
+        "end": {
+          "side": "left",
+          "fraction": 0.5
         }
       }
     },
     "khramov": {
+      "[\"max_old\",\"nik\",\"\",\"отец и сын\"]": {
+        "points": [
+          [
+            1064,
+            293
+          ],
+          [
+            1064,
+            546
+          ],
+          [
+            1014,
+            546
+          ]
+        ],
+        "radius": 8,
+        "startPoint": [
+          1029,
+          293
+        ],
+        "endPoint": [
+          1014,
+          574
+        ],
+        "orthogonal": true,
+        "startNode": "max_old",
+        "start": {
+          "side": "right",
+          "fraction": 0.9
+        },
+        "endNode": "nik",
+        "end": {
+          "side": "top",
+          "fraction": 0.9
+        }
+      },
       "[\"fyodor\",\"kat\",\"\",\"отец и дочь\"]": {
+        "points": [
+          [
+            1307,
+            293
+          ],
+          [
+            1307,
+            546
+          ],
+          [
+            1257,
+            546
+          ]
+        ],
+        "radius": 8,
+        "startPoint": [
+          1272,
+          293
+        ],
+        "endPoint": [
+          1257,
+          574
+        ],
+        "orthogonal": true,
+        "startNode": "fyodor",
+        "start": {
+          "side": "right",
+          "fraction": 0.9
+        },
+        "endNode": "kat",
+        "end": {
+          "side": "top",
+          "fraction": 0.9
+        }
+      },
+      "[\"sk\",\"marina_b\",\"\",\"супруги\"]": {
         "points": [],
         "radius": 8,
+        "startPoint": [
+          345,
+          1065
+        ],
+        "endPoint": [
+          438,
+          1065
+        ],
+        "orthogonal": true,
+        "startNode": "sk",
         "start": {
-          "side": "bottom",
+          "side": "right",
           "fraction": 0.5
+        },
+        "endNode": "marina_b",
+        "end": {
+          "side": "left",
+          "fraction": 0.5
+        }
+      },
+      "[\"sv_k\",\"emel\",\"\",\"супруги\"]": {
+        "points": [],
+        "radius": 8,
+        "startPoint": [
+          876,
+          1065
+        ],
+        "endPoint": [
+          969,
+          1065
+        ],
+        "orthogonal": true,
+        "startNode": "sv_k",
+        "start": {
+          "side": "right",
+          "fraction": 0.5
+        },
+        "endNode": "emel",
+        "end": {
+          "side": "left",
+          "fraction": 0.5
+        }
+      },
+      "[\"max_young\",\"olga_h\",\"\",\"бывшие супруги\"]": {
+        "points": [],
+        "radius": 8,
+        "startPoint": [
+          1713,
+          1065
+        ],
+        "endPoint": [
+          1806,
+          1065
+        ],
+        "orthogonal": true,
+        "startNode": "olga_h",
+        "start": {
+          "side": "right",
+          "fraction": 0.5
+        },
+        "endNode": "max_young",
+        "end": {
+          "side": "left",
+          "fraction": 0.5
+        }
+      },
+      "[\"max_young\",\"marina_s\",\"\",\"супруги\"]": {
+        "points": [],
+        "radius": 8,
+        "startPoint": [
+          1956,
+          1065
+        ],
+        "endPoint": [
+          2049,
+          1065
+        ],
+        "orthogonal": true,
+        "startNode": "max_young",
+        "start": {
+          "side": "right",
+          "fraction": 0.5
+        },
+        "endNode": "marina_s",
+        "end": {
+          "side": "left",
+          "fraction": 0.5
+        }
+      },
+      "[\"and\",\"you\",\"\",\"родитель — ребёнок\"]": {
+        "points": [
+          [
+            1240,
+            1125
+          ],
+          [
+            1240,
+            1378
+          ],
+          [
+            1290,
+            1378
+          ]
+        ],
+        "radius": 8,
+        "startPoint": [
+          1275,
+          1125
+        ],
+        "endPoint": [
+          1290,
+          1406
+        ],
+        "orthogonal": true,
+        "startNode": "and",
+        "start": {
+          "side": "left",
+          "fraction": 0.9
+        },
+        "endNode": "you",
+        "end": {
+          "side": "top",
+          "fraction": 0.1
+        }
+      },
+      "[\"slava\",\"bogdan\",\"\",\"родитель — ребёнок\"]": {
+        "points": [
+          [
+            160,
+            1541
+          ],
+          [
+            160,
+            1794
+          ],
+          [
+            210,
+            1794
+          ]
+        ],
+        "radius": 8,
+        "startPoint": [
+          195,
+          1541
+        ],
+        "endPoint": [
+          210,
+          1822
+        ],
+        "orthogonal": true,
+        "startNode": "slava",
+        "start": {
+          "side": "left",
+          "fraction": 0.9
+        },
+        "endNode": "bogdan",
+        "end": {
+          "side": "top",
+          "fraction": 0.1
+        }
+      }
+    },
+    "boyko": {
+      "[\"kid\",\"ser2\",\"\",\"биологическая мать\"]": {
+        "points": [
+          [
+            808,
+            319
+          ],
+          [
+            808,
+            693
+          ]
+        ],
+        "radius": 8,
+        "startPoint": [
+          417,
+          319
+        ],
+        "endPoint": [
+          870,
+          693
+        ],
+        "orthogonal": true,
+        "startNode": "kid",
+        "start": {
+          "side": "right",
+          "fraction": 0.9
+        },
+        "endNode": "ser2",
+        "end": {
+          "side": "left",
+          "fraction": 0.1
+        }
+      },
+      "[\"luda\",\"gen\",\"\",\"супруги\"]": {
+        "points": [],
+        "radius": 8,
+        "startPoint": [
+          1767,
+          259
+        ],
+        "endPoint": [
+          1995,
+          259
+        ],
+        "orthogonal": true,
+        "startNode": "luda",
+        "start": {
+          "side": "right",
+          "fraction": 0.5
+        },
+        "endNode": "gen",
+        "end": {
+          "side": "left",
+          "fraction": 0.5
+        }
+      },
+      "[\"nina\",\"luda\",\"\",\"сёстры\"]": {
+        "points": [],
+        "radius": 8,
+        "startPoint": [
+          1335,
+          259
+        ],
+        "endPoint": [
+          1617,
+          259
+        ],
+        "orthogonal": true,
+        "startNode": "nina",
+        "start": {
+          "side": "right",
+          "fraction": 0.5
+        },
+        "endNode": "luda",
+        "end": {
+          "side": "left",
+          "fraction": 0.5
+        }
+      }
+    },
+    "perikov": {
+      "[\"pn\",\"witness\",\"blue\",\"поручители\"]": {
+        "points": [
+          [
+            1371,
+            173
+          ],
+          [
+            1371,
+            146
+          ],
+          [
+            1980,
+            146
+          ],
+          [
+            1980,
+            173
+          ]
+        ],
+        "radius": 8,
+        "startPoint": [
+          1173,
+          173
+        ],
+        "endPoint": [
+          2031,
+          173
+        ],
+        "orthogonal": true,
+        "startNode": "pn",
+        "start": {
+          "side": "right",
+          "fraction": 0.1
+        },
+        "endNode": "witness",
+        "end": {
+          "side": "left",
+          "fraction": 0.1
+        }
+      },
+      "[\"vasi\",\"evpi\",\"\",\"супруги\"]": {
+        "points": [],
+        "radius": 8,
+        "startPoint": [
+          2703,
+          805
+        ],
+        "endPoint": [
+          2913,
+          805
+        ],
+        "orthogonal": true,
+        "startNode": "vasi",
+        "start": {
+          "side": "right",
+          "fraction": 0.5
+        },
+        "endNode": "evpi",
+        "end": {
+          "side": "left",
+          "fraction": 0.5
+        }
+      },
+      "[\"io\",\"aga\",\"blue\",\"восприемница\"]": {
+        "points": [
+          [
+            552,
+            865
+          ]
+        ],
+        "radius": 8,
+        "startPoint": [
+          417,
+          865
+        ],
+        "endPoint": [
+          552,
+          1367
+        ],
+        "orthogonal": true,
+        "startNode": "io",
+        "start": {
+          "side": "right",
+          "fraction": 0.9
+        },
+        "endNode": "aga",
+        "end": {
+          "side": "top",
+          "fraction": 0.1
+        }
+      },
+      "[\"para\",\"aga\",\"blue\",\"восприемница\"]": {
+        "points": [
+          [
+            902,
+            865
+          ],
+          [
+            902,
+            1382
+          ]
+        ],
+        "radius": 8,
+        "startPoint": [
+          1167,
+          865
+        ],
+        "endPoint": [
+          687,
+          1382
+        ],
+        "orthogonal": true,
+        "startNode": "para",
+        "start": {
+          "side": "left",
+          "fraction": 0.9
+        },
+        "endNode": "aga",
+        "end": {
+          "side": "right",
+          "fraction": 0.1
+        }
+      },
+      "[\"famiv\",\"io\",\"\",\"один человек · по уточнению семьи\"]": {
+        "points": [
+          [
+            232,
+            293
+          ],
+          [
+            232,
+            702
+          ],
+          [
+            282,
+            702
+          ]
+        ],
+        "radius": 8,
+        "startPoint": [
+          267,
+          293
+        ],
+        "endPoint": [
+          282,
+          730
+        ],
+        "orthogonal": true,
+        "startNode": "famiv",
+        "start": {
+          "side": "left",
+          "fraction": 0.9
+        },
+        "endNode": "io",
+        "end": {
+          "side": "top",
+          "fraction": 0.1
+        }
+      },
+      "[\"aga\",\"pn\",\"\",\"сестра Никиты · по сообщению семьи\"]": {
+        "points": [
+          [
+            429,
+            173
+          ],
+          [
+            429,
+            146
+          ],
+          [
+            196,
+            146
+          ],
+          [
+            196,
+            1382
+          ]
+        ],
+        "radius": 8,
+        "startPoint": [
+          1023,
+          173
+        ],
+        "endPoint": [
+          537,
+          1382
+        ],
+        "orthogonal": true,
+        "startNode": "pn",
+        "start": {
+          "side": "left",
+          "fraction": 0.1
+        },
+        "endNode": "aga",
+        "end": {
+          "side": "left",
+          "fraction": 0.1
+        }
+      },
+      "[\"pn\",\"vasi\",\"\",\"братья · по сообщению семьи\"]": {
+        "points": [
+          [
+            1158,
+            130
+          ],
+          [
+            2568,
+            130
+          ]
+        ],
+        "radius": 8,
+        "startPoint": [
+          1158,
+          158
+        ],
+        "endPoint": [
+          2568,
+          730
+        ],
+        "orthogonal": true,
+        "startNode": "pn",
+        "start": {
+          "side": "top",
+          "fraction": 0.9
+        },
+        "endNode": "vasi",
+        "end": {
+          "side": "top",
+          "fraction": 0.1
+        }
+      },
+      "[\"pn\",\"arch\",\"red\",\"отец не установлен\"]": {
+        "points": [
+          [
+            1128,
+            110
+          ],
+          [
+            3432,
+            110
+          ]
+        ],
+        "radius": 8,
+        "startPoint": [
+          1128,
+          158
+        ],
+        "endPoint": [
+          3432,
+          730
+        ],
+        "orthogonal": true,
+        "startNode": "pn",
+        "start": {
+          "side": "top",
+          "fraction": 0.7
+        },
+        "endNode": "arch",
+        "end": {
+          "side": "top",
+          "fraction": 0.1
+        }
+      }
+    },
+    "leviny": {
+      "[\"feo16\",\"tik16\",\"blue\",\"восприемники\"]": {
+        "points": [
+          [
+            294,
+            683
+          ]
+        ],
+        "radius": 8,
+        "startPoint": [
+          348,
+          683
+        ],
+        "endPoint": [
+          294,
+          990
+        ],
+        "orthogonal": true,
+        "startNode": "feo16",
+        "start": {
+          "side": "left",
+          "fraction": 0.9
+        },
+        "endNode": "tik16",
+        "end": {
+          "side": "top",
+          "fraction": 0.9
+        }
+      },
+      "[\"feo16\",\"evd16\",\"blue\",\"восприемники\"]": {
+        "points": [
+          [
+            552,
+            683
+          ]
+        ],
+        "radius": 8,
+        "startPoint": [
+          498,
+          683
+        ],
+        "endPoint": [
+          552,
+          990
+        ],
+        "orthogonal": true,
+        "startNode": "feo16",
+        "start": {
+          "side": "right",
+          "fraction": 0.9
+        },
+        "endNode": "evd16",
+        "end": {
+          "side": "top",
+          "fraction": 0.1
+        }
+      },
+      "[\"ol17\",\"nik17\",\"blue\",\"восприемник\"]": {
+        "points": [
+          [
+            1536,
+            683
+          ]
+        ],
+        "radius": 8,
+        "startPoint": [
+          1590,
+          683
+        ],
+        "endPoint": [
+          1536,
+          990
+        ],
+        "orthogonal": true,
+        "startNode": "ol17",
+        "start": {
+          "side": "left",
+          "fraction": 0.9
+        },
+        "endNode": "nik17",
+        "end": {
+          "side": "top",
+          "fraction": 0.9
+        }
+      },
+      "[\"aga16\",\"ref12\",\"red\",\"возможно один человек\"]": {
+        "points": [],
+        "radius": 8,
+        "startPoint": [
+          687,
+          259
+        ],
+        "endPoint": [
+          969,
+          259
+        ],
+        "orthogonal": true,
+        "startNode": "aga16",
+        "start": {
+          "side": "right",
+          "fraction": 0.5
+        },
+        "endNode": "ref12",
+        "end": {
+          "side": "left",
+          "fraction": 0.5
+        }
+      },
+      "[\"ref12\",\"aga17\",\"red\",\"возможно один человек\"]": {
+        "points": [],
+        "radius": 8,
+        "startPoint": [
+          1119,
+          259
+        ],
+        "endPoint": [
+          1401,
+          259
+        ],
+        "orthogonal": true,
+        "startNode": "ref12",
+        "start": {
+          "side": "right",
+          "fraction": 0.5
+        },
+        "endNode": "aga17",
+        "end": {
+          "side": "left",
+          "fraction": 0.5
+        }
+      },
+      "[\"nik17\",\"ref05\",\"red\",\"возможно один человек\"]": {
+        "points": [],
+        "radius": 8,
+        "startPoint": [
+          1551,
+          1065
+        ],
+        "endPoint": [
+          1779,
+          1065
+        ],
+        "orthogonal": true,
+        "startNode": "nik17",
+        "start": {
+          "side": "right",
+          "fraction": 0.5
+        },
+        "endNode": "ref05",
+        "end": {
+          "side": "left",
+          "fraction": 0.5
+        }
+      }
+    },
+    "nikiforov": {
+      "[\"ef_mar93\",\"ak_mar93\",\"\",\"супруги\"]": {
+        "points": [],
+        "radius": 8,
+        "startPoint": [
+          1047,
+          233
+        ],
+        "endPoint": [
+          1257,
+          233
+        ],
+        "orthogonal": true,
+        "startNode": "ef_mar93",
+        "start": {
+          "side": "right",
+          "fraction": 0.5
+        },
+        "endNode": "ak_mar93",
+        "end": {
+          "side": "left",
+          "fraction": 0.5
+        }
+      },
+      "[\"d1909\",\"godnik\",\"blue\",\"восприемники\"]": {
+        "points": [
+          [
+            520,
+            1281
+          ],
+          [
+            520,
+            1398
+          ],
+          [
+            2988,
+            1398
+          ],
+          [
+            2988,
+            1281
+          ]
+        ],
+        "radius": 8,
+        "startPoint": [
+          345,
+          1281
+        ],
+        "endPoint": [
+          2937,
+          1281
+        ],
+        "orthogonal": true,
+        "startNode": "d1909",
+        "start": {
+          "side": "right",
+          "fraction": 0.9
+        },
+        "endNode": "godnik",
+        "end": {
+          "side": "right",
+          "fraction": 0.9
+        }
+      },
+      "[\"a1909\",\"godnik\",\"blue\",\"восприемники\"]": {
+        "points": [
+          [
+            880,
+            1281
+          ],
+          [
+            880,
+            1378
+          ],
+          [
+            2736,
+            1378
+          ],
+          [
+            2736,
+            1281
+          ]
+        ],
+        "radius": 8,
+        "startPoint": [
+          705,
+          1281
+        ],
+        "endPoint": [
+          2787,
+          1281
+        ],
+        "orthogonal": true,
+        "startNode": "a1909",
+        "start": {
+          "side": "right",
+          "fraction": 0.9
+        },
+        "endNode": "godnik",
+        "end": {
+          "side": "left",
+          "fraction": 0.9
+        }
+      },
+      "[\"ef_mar93\",\"ef2\",\"red\",\"возможно один человек\"]": {
+        "points": [
+          [
+            862,
+            293
+          ],
+          [
+            862,
+            585
+          ],
+          [
+            912,
+            585
+          ]
+        ],
+        "radius": 8,
+        "startPoint": [
+          897,
+          293
+        ],
+        "endPoint": [
+          912,
+          613
+        ],
+        "orthogonal": true,
+        "startNode": "ef_mar93",
+        "start": {
+          "side": "left",
+          "fraction": 0.9
+        },
+        "endNode": "ef2",
+        "end": {
+          "side": "top",
+          "fraction": 0.1
+        }
+      },
+      "[\"ak_mar93\",\"ak2\",\"red\",\"возможно один человек\"]": {
+        "points": [
+          [
+            1442,
+            293
+          ],
+          [
+            1442,
+            585
+          ],
+          [
+            1392,
+            585
+          ]
+        ],
+        "radius": 8,
+        "startPoint": [
+          1407,
+          293
+        ],
+        "endPoint": [
+          1392,
+          613
+        ],
+        "orthogonal": true,
+        "startNode": "ak_mar93",
+        "start": {
+          "side": "right",
+          "fraction": 0.9
+        },
+        "endNode": "ak2",
+        "end": {
+          "side": "top",
+          "fraction": 0.9
+        }
+      },
+      "[\"ak_mar93\",\"ak_baby74\",\"red\",\"возможно один человек\"]": {
+        "points": [
+          [
+            1467,
+            233
+          ],
+          [
+            1467,
+            688
+          ]
+        ],
+        "radius": 8,
+        "startPoint": [
+          1407,
+          233
+        ],
+        "endPoint": [
+          2517,
+          688
+        ],
+        "orthogonal": true,
+        "startNode": "ak_mar93",
+        "start": {
+          "side": "right",
+          "fraction": 0.5
+        },
+        "endNode": "ak_baby74",
+        "end": {
+          "side": "left",
+          "fraction": 0.5
+        }
+      }
+    },
+    "korkota": {
+      "[\"eli\",\"anak\",\"\",\"мать и дочь\"]": {
+        "points": [
+          [
+            848,
+            293
+          ],
+          [
+            848,
+            624
+          ],
+          [
+            798,
+            624
+          ]
+        ],
+        "radius": 8,
+        "startPoint": [
+          813,
+          293
+        ],
+        "endPoint": [
+          798,
+          652
+        ],
+        "orthogonal": true,
+        "startNode": "eli",
+        "start": {
+          "side": "right",
+          "fraction": 0.9
+        },
+        "endNode": "anak",
+        "end": {
+          "side": "top",
+          "fraction": 0.9
+        }
+      },
+      "[\"erm\",\"nat2\",\"red\",\"возможный отец\"]": {
+        "points": [
+          [
+            651,
+            173
+          ],
+          [
+            651,
+            146
+          ],
+          [
+            1254,
+            146
+          ]
+        ],
+        "radius": 8,
+        "startPoint": [
+          417,
+          173
+        ],
+        "endPoint": [
+          1254,
+          652
+        ],
+        "orthogonal": true,
+        "startNode": "erm",
+        "start": {
+          "side": "right",
+          "fraction": 0.1
+        },
+        "endNode": "nat2",
+        "end": {
+          "side": "top",
+          "fraction": 0.1
+        }
+      },
+      "[\"erm\",\"tk\",\"red\",\"возможное родство\"]": {
+        "points": [
+          [
+            628,
+            293
+          ],
+          [
+            628,
+            884
+          ],
+          [
+            1602,
+            884
+          ],
+          [
+            1602,
+            787
+          ]
+        ],
+        "radius": 8,
+        "startPoint": [
+          417,
+          293
+        ],
+        "endPoint": [
+          1653,
+          787
+        ],
+        "orthogonal": true,
+        "startNode": "erm",
+        "start": {
+          "side": "right",
+          "fraction": 0.9
+        },
+        "endNode": "tk",
+        "end": {
+          "side": "left",
+          "fraction": 0.9
+        }
+      },
+      "[\"erm\",\"fk\",\"red\",\"возможное родство\"]": {
+        "points": [
+          [
+            232,
+            293
+          ],
+          [
+            232,
+            1261
+          ],
+          [
+            1996,
+            1261
+          ],
+          [
+            1996,
+            757
+          ]
+        ],
+        "radius": 8,
+        "startPoint": [
+          267,
+          293
+        ],
+        "endPoint": [
+          2067,
+          757
+        ],
+        "orthogonal": true,
+        "startNode": "erm",
+        "start": {
+          "side": "left",
+          "fraction": 0.9
+        },
+        "endNode": "fk",
+        "end": {
+          "side": "left",
+          "fraction": 0.7
+        }
+      },
+      "[\"nat2\",\"vk\",\"red\",\"возможно родственницы\"]": {
+        "points": [
+          [
+            1641,
+            667
+          ],
+          [
+            1641,
+            640
+          ],
+          [
+            2430,
+            640
+          ],
+          [
+            2430,
+            667
+          ]
+        ],
+        "radius": 8,
+        "startPoint": [
+          1389,
+          667
+        ],
+        "endPoint": [
+          2481,
+          667
+        ],
+        "orthogonal": true,
+        "startNode": "nat2",
+        "start": {
+          "side": "right",
+          "fraction": 0.1
+        },
+        "endNode": "vk",
+        "end": {
+          "side": "left",
+          "fraction": 0.1
+        }
+      },
+      "[\"erm\",\"eli\",\"red\",\"связь не установлена\"]": {
+        "points": [],
+        "radius": 8,
+        "startPoint": [
+          417,
+          233
+        ],
+        "endPoint": [
+          663,
+          233
+        ],
+        "orthogonal": true,
+        "startNode": "erm",
+        "start": {
+          "side": "right",
+          "fraction": 0.5
+        },
+        "endNode": "eli",
+        "end": {
+          "side": "left",
+          "fraction": 0.5
+        }
+      },
+      "[\"tk\",\"korob\",\"\",\"брак · по метрике\"]": {
+        "points": [
+          [
+            1838,
+            787
+          ],
+          [
+            1838,
+            1001
+          ],
+          [
+            1788,
+            1001
+          ]
+        ],
+        "radius": 8,
+        "startPoint": [
+          1803,
+          787
+        ],
+        "endPoint": [
+          1788,
+          1029
+        ],
+        "orthogonal": true,
+        "startNode": "tk",
+        "start": {
+          "side": "right",
+          "fraction": 0.9
+        },
+        "endNode": "korob",
+        "end": {
+          "side": "top",
+          "fraction": 0.9
+        }
+      },
+      "[\"fk\",\"maria\",\"\",\"супруги · по метрике\"]": {
+        "points": [
+          [
+            2032,
+            787
+          ],
+          [
+            2032,
+            1001
+          ],
+          [
+            2082,
+            1001
+          ]
+        ],
+        "radius": 8,
+        "startPoint": [
+          2067,
+          787
+        ],
+        "endPoint": [
+          2082,
+          1029
+        ],
+        "orthogonal": true,
+        "startNode": "fk",
+        "start": {
+          "side": "left",
+          "fraction": 0.9
+        },
+        "endNode": "maria",
+        "end": {
+          "side": "top",
+          "fraction": 0.1
+        }
+      },
+      "[\"vk\",\"gorb\",\"\",\"брак · по метрике\"]": {
+        "points": [
+          [
+            2446,
+            787
+          ],
+          [
+            2446,
+            1001
+          ],
+          [
+            2496,
+            1001
+          ]
+        ],
+        "radius": 8,
+        "startPoint": [
+          2481,
+          787
+        ],
+        "endPoint": [
+          2496,
+          1029
+        ],
+        "orthogonal": true,
+        "startNode": "vk",
+        "start": {
+          "side": "left",
+          "fraction": 0.9
+        },
+        "endNode": "gorb",
+        "end": {
+          "side": "top",
+          "fraction": 0.1
         }
       }
     }
