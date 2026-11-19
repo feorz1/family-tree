@@ -165,7 +165,7 @@ def validate(data, db):
             for field in ("startPoint", "endPoint"):
                 if field in override:
                     demand(isinstance(override[field], list) and len(override[field]) == 2 and all(number(n, 0, 100000) for n in override[field]), "Конец линии вне схемы")
-            for field in ("hidden", "orthogonal", "frozen"):
+            for field in ("hidden", "orthogonal", "frozen", "automatic"):
                 if field in override:
                     demand(type(override[field]) is bool, "Некорректная настройка линии")
             if "children" in override:

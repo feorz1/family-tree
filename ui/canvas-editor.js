@@ -1,5 +1,7 @@
 import interact from 'interactjs';
 import G from '../admin/diagram-geometry.cjs';
+import Routing from '../admin/auto-router.cjs';
+const autoRoute=Routing.createAutoRouter();
 
 window.CanvasGeometry = G;
 const histories = new Map();
@@ -155,7 +157,7 @@ window.mountCanvasEditor = function (options) {
     if (!current) return;
     const model=current.model,previous=model.pointsFor(current.override),selection=options.selectedPoint();
     const keep=selection!==null&&points[selection]?[points[selection]]:[];
-    const primary=prepare(model,points,current.override,new Map(),keep);
+    const primary=prepare(model,points,{...current.override,automatic:false},new Map(),keep);
     const failed=()=>{
       if(pointSelection?.points===points)options.setSelectedPoint(pointSelection.previous);
       else if(selection>=previous.length)options.setSelectedPoint(null);
@@ -196,31 +198,19 @@ window.mountCanvasEditor = function (options) {
   function movement() {
     return {
       nodes:Object.fromEntries(scene().nodes.map(n=>[n.id,[n.x,n.y]])),
-      paths:scene().models.map(model=>({model,points:G.copy(model.pointsFor(savedRoutes()[model.key])),override:clone(savedRoutes()[model.key]||{})}))
+      paths:scene().models.map(model=>({model,points:G.copy(model.pointsFor(savedRoutes()[model.key])),override:clone({...savedRoutes()[model.key],...(model.role==='bus'?{children:[...model.routeChildren]}:{})})}))
     };
   }
   function moveNodes(positions, initial) {
-    const delta = id => positions[id] ? positions[id].map((v,i)=>v-initial.nodes[id][i]) : [0,0];
     const previous=Object.fromEntries(scene().nodes.map(n=>[n.id,[n.x,n.y]]));
     scene().setPositions(positions);
-    const nextPaths = new Map();
-    for (const {model,points} of initial.paths) {
-      const ds=delta(model.startNode),de=delta(model.endNode);
-      const groupDelta=delta(model.members[0]);
-      let next;
-      if (model.members.every(id=>positions[id]&&G.same(delta(id),groupDelta))) next=points.map(p=>p.map((v,i)=>v+groupDelta[i]));
-      else next=G.moveEnds(points,points[0].map((v,i)=>v+ds[i]),points.at(-1).map((v,i)=>v+de[i]),savedRoutes()[model.key]?.orthogonal??G.isOrthogonal(points));
-      nextPaths.set(model,next);
-    }
-    for (const {model,points} of initial.paths.filter(item=>item.model.union)) {
-      for (const stem of initial.paths.filter(item=>item.model.role==='stem'&&item.model.parents?.length===2&&item.model.parents.every(id=>model.union.includes(id)))) {
-        const fraction=stem.override.unionFraction??G.pathAnchor(points,stem.points[0]).fraction;
-        const next=nextPaths.get(stem.model),start=G.pointOnPath(nextPaths.get(model),fraction);
-        nextPaths.set(stem.model,G.moveEnds(next,start,next.at(-1),stem.override.orthogonal??G.isOrthogonal(stem.points)));
-      }
-    }
-    // Freeze the visible routes before the next save, avoiding a fresh auto-layout.
-    const changes=new Map(initial.paths.map(({model,override})=>[model,{points:nextPaths.get(model),base:{...override,frozen:true,...(model.role==='bus'?{children:[...model.routeChildren]}:{})}}]));
+    let planned;
+    try {planned=autoRoute(scene().nodes,initial);}
+    catch(error){scene().setPositions(previous);options.notify?.(error.message||'Не удалось перестроить линии.');return;}
+    const changes=new Map(initial.paths.map(({model,override})=>{
+      const plan=planned.get(model.key);
+      return [model,{points:plan.points,base:{...override,frozen:true,...(plan.automatic?{automatic:true,orthogonal:true}:{}),...(model.role==='bus'?{children:plan.children??override.children??[...model.routeChildren]}:{})}}];
+    }));
     if(!savePaths(changes)){scene().setPositions(previous);return;}
     for(const n of options.chart().nodes)if(positions[n.id])n.position=[...positions[n.id]];
     options.changed();

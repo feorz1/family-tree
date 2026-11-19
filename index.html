@@ -883,8 +883,10 @@ function render(c){
    ...(override?.points||path.slice(1,-1)),
    override?.end&&endNode?pointAt(endNode,override.end):override?.endPoint||path.at(-1)
   ];
+  const originalChildren=[...(info.children||[])];
   const paint=()=>{
    const override=chartRoutes[key];
+   if(info.role==='bus')group.classList.toggle('edge-red',info.family.kind==='red'||Boolean(info.children.length&&info.children.every(id=>info.family.uncertainChildren?.includes(id))));
    group.style.display=override?.hidden?'none':'';
    const hasCustomGroup=groupId&&Object.keys(chartRoutes).some(k=>k.startsWith('group:'+groupId+':'));
    const d=override||hasCustomGroup?roundedPath(pointsFor(override),override?.radius??8):info.family?familyPath(info.family,info.role,path):roundedPath(path);
@@ -903,6 +905,7 @@ function render(c){
     get start(){return startNode?{x:map[startNode].x+PORTRAIT_INSET,y:map[startNode].y,size:PORTRAIT}:null},
     get end(){return endNode?{x:map[endNode].x+PORTRAIT_INSET,y:map[endNode].y,size:PORTRAIT}:null},
     update(override){
+     if(info.role==='bus')info.children.splice(0,info.children.length,...(override?.children||originalChildren));
      if(override)chartRoutes[key]=override;else delete chartRoutes[key];
      editedPaths.get(bucket).forEach(repaint=>repaint());
     }
